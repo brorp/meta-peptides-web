@@ -19,6 +19,7 @@ const NAV_LINKS = [
   { name: "Home", href: "/" },
   { name: "Shop", href: "/shop" },
   { name: "About Us", href: "/about" },
+  { name: "Research", href: "/research" },
   { name: "FAQ", href: "/faq" },
 ];
 

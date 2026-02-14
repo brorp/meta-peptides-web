@@ -5,40 +5,35 @@ import { Card } from "@/components/ui/card";
 import { Navbar } from "@/components/navbar";
 import Link from "next/link";
 import {
-  Users,
-  Target,
-  Award,
-  Globe,
-  ArrowRight,
+  ShieldCheck,
+  FlaskConical,
+  Truck,
+  Lock,
+  FileSearch,
   CheckCircle2,
+  ChevronRight,
+  Globe,
 } from "lucide-react";
-import { teamMembers } from "@/contants/about-us";
 
-export default function AboutPageComponent() {
-  const values = [
+export default function OurCompanyPageComponent() {
+  const coreStrengths = [
     {
-      icon: <Target className="w-6 h-6" />,
-      title: "Quality First",
+      icon: <ShieldCheck className="w-6 h-6" />,
+      title: "Quality",
       description:
-        "Rigorous third-party testing via HPLC/MS ensures ≥99% purity and absolute consistency.",
+        "We partner with ISO 9001:2015 approved sources to ensure the highest purity products available in the Indonesian market.",
     },
     {
-      icon: <Globe className="w-6 h-6" />,
-      title: "Global Reach",
+      icon: <Truck className="w-6 h-6" />,
+      title: "Local Service",
       description:
-        "Supporting scientific discovery in over 50 countries with temperature-controlled logistics.",
+        "Efficient domestic logistics and responsive support tailored to the needs of the Indonesian scientific community.",
     },
     {
-      icon: <Users className="w-6 h-6" />,
-      title: "Radical Transparency",
+      icon: <Lock className="w-6 h-6" />,
+      title: "Value",
       description:
-        "Accessible COA reports for every batch. No hidden data, no compromised quality.",
-    },
-    {
-      icon: <Award className="w-6 h-6" />,
-      title: "ISO Standard",
-      description:
-        "Operating under ISO 9001:2015 standards to exceed industry quality benchmarks.",
+        "Providing access to premium synthetic compounds at competitive local prices without compromising molecular integrity.",
     },
   ];
 
@@ -48,175 +43,129 @@ export default function AboutPageComponent() {
 
       {/* --- HERO SECTION --- */}
       <section className="relative pt-32 pb-24 overflow-hidden bg-[#0F172A]">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px] -mr-40 -mt-40 animate-pulse" />
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px] -mr-40 -mt-40" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-3xl space-y-6">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent text-[10px] font-black uppercase tracking-[0.2em]">
-              Our Identity
+              Identity & Mission
             </div>
-            <h1 className="text-6xl lg:text-8xl font-black text-white tracking-tighter leading-[0.85]">
-              BEYOND THE <br />
-              <span className="text-accent italic">MOLECULE.</span>
+            <h1 className="text-6xl lg:text-8xl font-black text-white tracking-tighter leading-[0.85] uppercase">
+              Our <br />
+              <span className="text-accent italic">Company.</span>
             </h1>
             <p className="text-slate-400 text-xl font-medium leading-relaxed italic max-w-2xl">
-              Leading the global scientific community by providing
-              high-precision research compounds that define the gold standard of
-              purity.
+              MetaPeptides is Indonesia&apos;s premier provider of research
+              peptides, committed to uncompromising quality through partnerships
+              with global certified sources.
             </p>
           </div>
         </div>
       </section>
 
-      {/* --- MISSION & VISION (Split Layout) --- */}
-      <section className="py-24 relative">
+      {/* --- PHILOSOPHY SECTION --- */}
+      <section className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-20 items-center">
-            <div className="space-y-12">
+          <div className="grid lg:grid-cols-12 gap-16 items-start">
+            <div className="lg:col-span-7 space-y-10">
               <div className="space-y-6">
-                <h2 className="text-4xl font-black tracking-tighter uppercase italic">
-                  Our Mission
+                <h2 className="text-4xl font-black tracking-tighter uppercase italic border-l-4 border-accent pl-6">
+                  Quality. Service. Value.
                 </h2>
                 <p className="text-lg text-muted-foreground leading-relaxed">
-                  At MetaPeptides, we bridge the gap between complex
-                  biochemistry and laboratory efficiency. We believe that{" "}
-                  <span className="text-foreground font-bold">
-                    breakthrough research
-                  </span>{" "}
-                  requires tools that are beyond reproach.
+                  MetaPeptides is your safe, convenient, and private online
+                  source for the highest purity research peptides in Indonesia.
+                  We work hard to bring exceptional value to our customers by
+                  sourcing our products through the most reputable research
+                  chemical companies in the world.
                 </p>
-                <div className="h-1 w-20 bg-accent rounded-full" />
-              </div>
-              <div className="space-y-6">
-                <h2 className="text-4xl font-black tracking-tighter uppercase italic text-right lg:text-left">
-                  Our Vision
-                </h2>
-                <p className="text-lg text-muted-foreground leading-relaxed text-right lg:text-left">
-                  To be the world’s most trusted catalyst for scientific
-                  advancement, ensuring every researcher has access to the{" "}
-                  <span className="text-foreground font-bold">
-                    purest synthetic compounds
-                  </span>
-                  available on the market.
-                </p>
-                <div className="h-1 w-20 bg-accent rounded-full ml-auto lg:ml-0" />
-              </div>
-            </div>
-            {/* Visual Element */}
-            <div className="relative aspect-square bg-muted rounded-[3rem] overflow-hidden flex items-center justify-center border border-border">
-              <div className="text-[12rem] opacity-20 filter grayscale">🧬</div>
-              <div className="absolute inset-0 bg-gradient-to-tr from-accent/10 via-transparent to-transparent" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* --- VALUES GRID --- */}
-      <section className="py-24 bg-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-20 space-y-4">
-            <h2 className="text-5xl font-black tracking-tighter uppercase">
-              Core Principles
-            </h2>
-            <div className="w-16 h-1 bg-accent mx-auto" />
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {values.map((value, i) => (
-              <Card
-                key={i}
-                className="group p-10 border-none bg-white shadow-xl shadow-slate-200/50 rounded-[2.5rem] hover:bg-accent transition-all duration-500"
-              >
-                <div className="w-12 h-12 bg-accent/10 text-accent rounded-xl flex items-center justify-center mb-8 group-hover:bg-white/20 group-hover:text-white transition-colors">
-                  {value.icon}
-                </div>
-                <h3 className="text-xl font-black mb-4 group-hover:text-white uppercase tracking-tight">
-                  {value.title}
-                </h3>
-                <p className="text-muted-foreground group-hover:text-white/80 text-sm leading-relaxed font-medium">
-                  {value.description}
-                </p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* --- TEAM SECTION (Professional Cards) --- */}
-      <section className="py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-20 gap-8">
-            <div className="space-y-4">
-              <h2 className="text-5xl font-black tracking-tighter uppercase">
-                The Experts
-              </h2>
-              <p className="text-muted-foreground font-medium italic">
-                Combining decades of pharmaceutical and quality assurance
-                expertise.
-              </p>
-            </div>
-          </div>
-
-          <div className="grid md:grid-cols-4 gap-8">
-            {teamMembers.map((member, i) => (
-              <div key={i} className="group">
-                <div className="aspect-[3/4] bg-muted rounded-[2rem] mb-6 overflow-hidden relative flex items-center justify-center border border-border group-hover:border-accent transition-all">
-                  <span className="text-5xl font-black text-muted-foreground/30 group-hover:text-accent/30 transition-colors uppercase">
-                    {member.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </span>
-                  <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-md p-2 rounded-xl border border-white/50 opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
-                    <ArrowRight className="w-4 h-4 text-accent" />
-                  </div>
-                </div>
-                <h3 className="text-xl font-bold uppercase tracking-tight">
-                  {member.name}
-                </h3>
-                <p className="text-xs font-black text-accent uppercase tracking-widest mb-3">
-                  {member.role}
-                </p>
-                <p className="text-xs text-muted-foreground leading-relaxed italic">
-                  {member.bio}
+                <p className="text-lg text-muted-foreground leading-relaxed">
+                  Ordering online is simple and efficient. Our shopping cart is
+                  completely secured using the latest SSL technology, ensuring
+                  your information remains encrypted and 100% discreet
+                  throughout the domestic transit process.
                 </p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
-      {/* --- QUALITY BADGE (The Premium Card) --- */}
-      <section className="py-24">
-        <div className="max-w-5xl mx-auto px-4">
-          <div className="bg-[#0F172A] rounded-[3rem] p-12 lg:p-20 relative overflow-hidden shadow-2xl">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-accent/10 blur-[100px]" />
-            <div className="relative z-10 grid md:grid-cols-2 gap-12 items-center">
-              <div className="space-y-8">
-                <h2 className="text-4xl lg:text-5xl font-black text-white tracking-tighter leading-none uppercase">
-                  Quality <br /> Commitment.
-                </h2>
-                <p className="text-white/60 font-medium">
-                  We don't just supply; we verify. Every single molecule is
-                  tracked, tested, and sealed.
-                </p>
-              </div>
-              <div className="grid gap-4">
-                {[
-                  "Independent 3rd Party Testing",
-                  "ISO 9001:2015 Management",
-                  "Full Batch Traceability",
-                  "Cold-Chain Logistics",
-                ].map((item, idx) => (
+              <div className="grid sm:grid-cols-2 gap-6">
+                {coreStrengths.map((item, idx) => (
                   <div
                     key={idx}
-                    className="flex items-center gap-4 bg-white/5 border border-white/10 p-4 rounded-2xl hover:bg-white/10 transition-colors"
+                    className="p-8 rounded-[2rem] bg-muted/50 border border-border hover:border-accent/30 transition-colors"
                   >
-                    <CheckCircle2 className="text-accent w-5 h-5 flex-shrink-0" />
-                    <span className="text-white font-bold text-sm tracking-tight">
-                      {item}
-                    </span>
+                    <div className="text-accent mb-4">{item.icon}</div>
+                    <h4 className="font-black uppercase tracking-tight mb-2">
+                      {item.title}
+                    </h4>
+                    <p className="text-sm text-muted-foreground font-medium leading-relaxed">
+                      {item.description}
+                    </p>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            <div className="lg:col-span-5">
+              <Card className="p-10 bg-[#0F172A] border-none rounded-[3rem] relative overflow-hidden shadow-2xl">
+                <div className="absolute top-0 right-0 p-8 opacity-5">
+                  <Globe className="w-40 h-40 text-white" />
+                </div>
+                <div className="relative z-10 space-y-8">
+                  <h3 className="text-2xl font-black text-white uppercase italic tracking-tight">
+                    Trusted Resource
+                  </h3>
+                  <p className="text-white/60 text-sm leading-relaxed">
+                    We are proud to be a trusted resource for the Indonesian
+                    scientific community, providing the latest publications to
+                    advance research and development of peptides and proteins.
+                  </p>
+                  <ul className="space-y-4">
+                    {[
+                      "WHO/GMP Approved Sources",
+                      "ISO 9001:2015 Compliance",
+                      "256-bit SSL Data Encryption",
+                      "Dedicated Local Support",
+                    ].map((list, i) => (
+                      <li
+                        key={i}
+                        className="flex items-center gap-3 text-white font-bold text-xs uppercase tracking-widest"
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-accent" />
+                        {list}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* --- RESEARCH COMMITMENT --- */}
+      <section className="py-24 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="max-w-3xl mx-auto space-y-8">
+            <FlaskConical className="w-16 h-16 text-accent mx-auto animate-pulse" />
+            <h2 className="text-5xl font-black tracking-tighter uppercase leading-none">
+              Empowering <br /> Indonesian Science.
+            </h2>
+            <p className="text-muted-foreground text-lg font-medium italic">
+              MetaPeptides offers comprehensive resources to support the latest
+              scientific publications and advance the local understanding of
+              peptide applications.
+            </p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <div className="px-6 py-3 bg-white rounded-full border border-border flex items-center gap-3 shadow-sm">
+                <FileSearch className="w-5 h-5 text-accent" />
+                <span className="text-xs font-black uppercase tracking-widest">
+                  Batch Analysis Reports
+                </span>
+              </div>
+              <div className="px-6 py-3 bg-white rounded-full border border-border flex items-center gap-3 shadow-sm">
+                <ShieldCheck className="w-5 h-5 text-accent" />
+                <span className="text-xs font-black uppercase tracking-widest">
+                  Verified Purity
+                </span>
               </div>
             </div>
           </div>
@@ -227,13 +176,14 @@ export default function AboutPageComponent() {
       <section className="py-32 text-center">
         <div className="max-w-4xl mx-auto space-y-12">
           <h2 className="text-6xl font-black tracking-tighter uppercase italic leading-none">
-            Ready to <span className="text-accent">Empower</span> <br /> Your
-            Research?
+            Your Research <br />{" "}
+            <span className="text-accent">Starts Here.</span>
           </h2>
-          <div className="flex justify-center gap-6">
+          <div className="flex flex-col sm:flex-row justify-center gap-6">
             <Link href="/shop">
-              <Button className="h-16 px-12 rounded-2xl bg-accent hover:bg-accent/90 text-white font-black text-xl shadow-2xl shadow-accent/40">
-                Browse Shop
+              <Button className="h-16 px-12 rounded-2xl bg-accent hover:bg-accent/90 text-white font-black text-xl shadow-2xl shadow-accent/40 group">
+                Shop Peptides{" "}
+                <ChevronRight className="ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
           </div>

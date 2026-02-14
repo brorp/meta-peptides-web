@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Shop High-Purity Research Peptides",
-    description: "Verified purity, lab-tested compounds, and global shipping.",
+    description: "Verified purity, lab-tested compounds.",
     images: ["/shop-banner.png"],
   },
 

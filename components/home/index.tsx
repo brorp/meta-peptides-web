@@ -143,7 +143,7 @@ export default function HomePageComponent() {
                     24h
                   </p>
                   <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
-                    Global Ship
+                    Avg. Dispatch
                   </p>
                 </div>
               </div>
@@ -233,7 +233,7 @@ export default function HomePageComponent() {
               },
               {
                 label: "Logistics",
-                val: "Global",
+                val: "International",
                 icon: <Globe2 className="w-5 h-5" />,
               },
               {

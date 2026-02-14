@@ -64,18 +64,18 @@ export default function NotFound() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
-            Sequence Not Identified
+            Error 404: Path Invalid
           </div>
 
           <h2 className="text-4xl lg:text-6xl font-black tracking-tighter uppercase italic leading-tight">
-            UNKNOWN <span className="text-green-500">STRAIN.</span>
+            PAGE <span className="text-green-500">LOST.</span>
           </h2>
 
           <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed font-medium uppercase tracking-widest">
-            The biological string you are looking for is not in our current
-            synthesis index. Check the{" "}
-            <span className="text-foreground font-bold">Lab Protocol</span> or
-            try another sequence.
+            The page you are looking for does not exist or has been moved to a
+            different sector. Please return to the{" "}
+            <span className="text-foreground font-bold underline">Home</span> or
+            contact our support.
           </p>
         </motion.div>
 
