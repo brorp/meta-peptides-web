@@ -1,4 +1,4 @@
-import ShopPageComponent from "@/components/shope";
+import ShopPageComponent from "@/components/shop";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {

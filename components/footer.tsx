@@ -49,6 +49,14 @@ export function Footer() {
               </li>
               <li>
                 <Link
+                  href="/research"
+                  className="hover:opacity-100 hover:text-accent transition"
+                >
+                  Research
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/faq"
                   className="hover:opacity-100 hover:text-accent transition"
                 >
