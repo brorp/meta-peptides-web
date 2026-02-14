@@ -15,16 +15,17 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { email } from "@/contants/contact";
+import { SendEmailRequest, useSendEmail } from "@/hooks/api/usePostSendEmail";
 
 export default function ContactPageComponent() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    subject: "",
     message: "",
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+
+  const { mutate, isPending, isSuccess } = useSendEmail();
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -35,20 +36,18 @@ export default function ContactPageComponent() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    const formData = new FormData(e.currentTarget);
 
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const data: SendEmailRequest = {
+      name: formData.get("name") as string,
+      email: formData.get("email") as string,
+      subject: formData.get("subject") as string,
+      message: formData.get("message") as string,
+    };
 
-    console.log("Form submitted:", formData);
-    setSubmitted(true);
-    setIsSubmitting(false);
-
-    setTimeout(() => {
-      setSubmitted(false);
-      setFormData({ name: "", email: "", subject: "", message: "" });
-    }, 5000);
+    mutate(data);
   };
 
   const contactInfo = [
@@ -137,17 +136,17 @@ export default function ContactPageComponent() {
                 <div className="h-1 w-20 bg-accent rounded-full" />
               </div>
 
-              {submitted ? (
+              {isSuccess ? (
                 <div className="p-10 bg-accent/5 border border-accent/20 rounded-[2.5rem] flex flex-col items-center text-center space-y-4 animate-in fade-in zoom-in duration-500">
                   <div className="w-20 h-20 bg-accent text-white rounded-full flex items-center justify-center shadow-2xl shadow-accent/40">
                     <CheckCircle2 className="w-10 h-10" />
                   </div>
                   <h3 className="text-2xl font-black tracking-tight">
-                    Transmission Received
+                    Email Received
                   </h3>
                   <p className="text-muted-foreground max-w-xs mx-auto italic font-medium">
-                    Thank you, researcher. Our team will review your inquiry and
-                    respond within 24 business hours.
+                    Thank you. Our team will review your inquiry and respond
+                    within 24 business hours.
                   </p>
                 </div>
               ) : (
@@ -185,29 +184,6 @@ export default function ContactPageComponent() {
 
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">
-                      Subject Matter
-                    </label>
-                    <div className="relative">
-                      <select
-                        name="subject"
-                        value={formData.subject}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full px-6 py-4 border-2 border-slate-100 rounded-2xl bg-white focus:border-accent outline-none appearance-none transition-all font-bold cursor-pointer"
-                      >
-                        <option value="">Select Inquiry Type...</option>
-                        <option value="technical">
-                          Technical Support / COA Request
-                        </option>
-                        <option value="sales">Wholesale & Bulk Orders</option>
-                        <option value="shipping">Logistics & Tracking</option>
-                        <option value="custom">Custom Synthesis</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-2">
                       Message Detail
                     </label>
                     <textarea
@@ -223,10 +199,10 @@ export default function ContactPageComponent() {
 
                   <Button
                     type="submit"
-                    disabled={isSubmitting}
+                    disabled={isPending}
                     className="w-full h-16 bg-accent hover:bg-accent/90 text-white rounded-2xl font-black text-lg shadow-xl shadow-accent/30 transition-all active:scale-[0.98]"
                   >
-                    {isSubmitting ? (
+                    {isPending ? (
                       "TRANSMITTING..."
                     ) : (
                       <span className="flex items-center gap-2 italic">
@@ -255,7 +231,7 @@ export default function ContactPageComponent() {
                   <div className="space-y-4">
                     <div className="flex justify-between items-center border-b border-white/10 pb-2 text-sm font-bold">
                       <span>Mon - Fri</span>
-                      <span className="text-accent">09:00 - 17:00 MST</span>
+                      <span className="text-accent">09:00 - 17:00 WIB</span>
                     </div>
                     <div className="flex justify-between items-center border-b border-white/10 pb-2 text-sm font-bold opacity-50">
                       <span>Weekends</span>
@@ -280,30 +256,11 @@ export default function ContactPageComponent() {
                   please bypass the form and email our specialized department.
                 </p>
                 <Link
-                  href="mailto:sales@metapeptides.com"
+                  href={`mailto:${email}`}
                   className="text-accent font-black text-sm uppercase underline underline-offset-8 decoration-2 hover:text-slate-900 transition-colors"
                 >
-                  sales@metapeptides.com
+                  {email}
                 </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* --- MAP SECTION --- */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="bg-muted rounded-[4rem] h-[500px] w-full relative overflow-hidden border border-border group">
-            <div className="absolute inset-0 bg-slate-200 flex items-center justify-center grayscale group-hover:grayscale-0 transition-all duration-1000">
-              {/* Placeholder for real map */}
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-accent text-white rounded-full flex items-center justify-center mx-auto shadow-2xl animate-bounce">
-                  <MapPin className="w-8 h-8" />
-                </div>
-                <p className="font-black uppercase tracking-[0.3em] text-slate-400">
-                  Boulder Laboratory HQ
-                </p>
               </div>
             </div>
           </div>

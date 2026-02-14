@@ -1,19 +1,19 @@
-import type { Metadata, Viewport } from "next"; // Tambahkan Viewport
+import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import { LayoutClient } from "@/components/layout-client";
+import Providers from "./providers";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
-// Konfigurasi Viewport untuk kontrol tema di browser mobile
 export const viewport: Viewport = {
-  themeColor: "#0F172A", // Warna bar browser (disesuaikan dengan warna primary kita)
+  themeColor: "#0F172A",
   width: "device-width",
   initialScale: 1,
 };
 
 export const metadata: Metadata = {
-  // Title template agar setiap halaman otomatis punya akhiran "| MetaPeptides"
   title: {
     default: "MetaPeptides | Premium Research Peptides",
     template: "%s | MetaPeptides",
@@ -22,7 +22,6 @@ export const metadata: Metadata = {
     "High-purity research peptides verified for laboratory excellence. Providing scientific compounds with ≥99% purity standards.",
   metadataBase: new URL("http://localhost:3000"),
 
-  // Keywords global
   keywords: [
     "Research Peptides",
     "Buy Peptides",
@@ -31,14 +30,12 @@ export const metadata: Metadata = {
     "MetaPeptides",
   ],
 
-  // Favicon & Icons
   icons: {
-    icon: "/favicon.ico", // Standar favicon
+    icon: "/favicon.ico",
     shortcut: "/logo.png",
-    apple: "/logo.png", // Icon saat di-save di iPhone
+    apple: "/logo.png",
   },
 
-  // OpenGraph (SEO untuk Facebook, WhatsApp, dll)
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -57,16 +54,14 @@ export const metadata: Metadata = {
     ],
   },
 
-  // Twitter (SEO untuk X/Twitter)
   twitter: {
     card: "summary",
     title: "MetaPeptides",
     description: "Verified Research Peptides for Scientific Advancement.",
     images: ["/logo.png"],
-    creator: "@metapeptides", // Ganti dengan username twitter jika ada
+    creator: "@metapeptides",
   },
 
-  // Robot crawling
   robots: {
     index: true,
     follow: true,
@@ -81,7 +76,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} font-sans antialiased`}>
-        <LayoutClient>{children}</LayoutClient>
+        <Providers>
+          <LayoutClient>{children}</LayoutClient>
+        </Providers>
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   );
