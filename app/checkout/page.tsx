@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -13,6 +13,8 @@ export default function CheckoutPage() {
   const [step, setStep] = useState<
     "cart" | "shipping" | "payment" | "confirmation"
   >("cart");
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     email: "",
     firstName: "",
@@ -26,6 +28,8 @@ export default function CheckoutPage() {
     cardNumber: "",
     expiry: "",
     cvc: "",
+    receiptPreview: null as string | null,
+    receiptFile: null as File | null,
   });
 
   const cartItems = [
@@ -59,10 +63,34 @@ export default function CheckoutPage() {
     else if (step === "payment") setStep("shipping");
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]; // Mengambil file pertama yang dipilih
+
+    if (file) {
+      // 1. Validasi Ukuran (Contoh: Max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File is too large. Maximum size is 5MB.");
+        return;
+      }
+
+      // 2. Membuat Preview menggunakan FileReader
+      const reader = new FileReader();
+
+      reader.onloadend = () => {
+        // Menyimpan file asli dan string base64 untuk preview ke dalam state
+        setFormData((prev) => ({
+          ...prev,
+          receiptFile: file, // File objek (untuk dikirim ke API)
+          receiptPreview: reader.result as string, // Base64 string (untuk tag <img />)
+        }));
+      };
+
+      reader.readAsDataURL(file); // Memulai proses pembacaan file
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <Navbar />
-
       {/* Checkout Header */}
       <section className="bg-gradient-to-b from-primary to-primary/80 text-primary-foreground py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -81,7 +109,11 @@ export default function CheckoutPage() {
               <div key={i} className="flex items-center flex-1">
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
-                    (i === 0 && step === "cart") ||
+                    (i === 0 &&
+                      (step === "cart" ||
+                        step === "shipping" ||
+                        step === "payment" ||
+                        step === "confirmation")) ||
                     (i === 1 &&
                       (step === "shipping" ||
                         step === "payment" ||
@@ -268,70 +300,183 @@ export default function CheckoutPage() {
 
             {/* Payment Information */}
             {step === "payment" && (
-              <Card className="border border-border p-8 space-y-6">
-                <h2 className="text-2xl font-bold">Payment Information</h2>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Cardholder Name
-                    </label>
-                    <input
-                      type="text"
-                      name="cardName"
-                      value={formData.cardName}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-accent"
-                      placeholder="John Doe"
-                    />
+              <Card className="border border-border p-8 space-y-8 bg-muted/20 rounded-[2.5rem]">
+                {/* Header */}
+                <div className="space-y-2">
+                  <h2 className="text-3xl font-black uppercase italic tracking-tighter">
+                    Manual <span className="text-accent">Transfer.</span>
+                  </h2>
+                  <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em]">
+                    Please complete the payment to one of the accounts below.
+                  </p>
+                </div>
+
+                {/* Bank Account Details */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-6 rounded-3xl bg-white border border-border group hover:border-accent transition-colors">
+                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">
+                      Bank Central Asia (BCA)
+                    </p>
+                    <p className="text-2xl font-black text-foreground tracking-tighter">
+                      1234 567 890
+                    </p>
+                    <p className="text-[10px] font-bold text-accent uppercase mt-2">
+                      PT. METAPEPTIDES INDONESIA
+                    </p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Card Number
-                    </label>
-                    <input
-                      type="text"
-                      name="cardNumber"
-                      value={formData.cardNumber}
-                      onChange={handleInputChange}
-                      maxLength={19}
-                      className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-accent"
-                      placeholder="4242 4242 4242 4242"
-                    />
-                  </div>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Expiry Date
-                      </label>
-                      <input
-                        type="text"
-                        name="expiry"
-                        value={formData.expiry}
-                        onChange={handleInputChange}
-                        maxLength={5}
-                        className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-accent"
-                        placeholder="MM/YY"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        CVC
-                      </label>
-                      <input
-                        type="text"
-                        name="cvc"
-                        value={formData.cvc}
-                        onChange={handleInputChange}
-                        maxLength={4}
-                        className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-accent"
-                        placeholder="123"
-                      />
-                    </div>
+                  <div className="p-6 rounded-3xl bg-white border border-border group hover:border-accent transition-colors">
+                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">
+                      Bank Mandiri
+                    </p>
+                    <p className="text-2xl font-black text-foreground tracking-tighter">
+                      0987 654 321
+                    </p>
+                    <p className="text-[10px] font-bold text-accent uppercase mt-2">
+                      PT. METAPEPTIDES INDONESIA
+                    </p>
                   </div>
                 </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-900">
-                  This is a demonstration checkout. No real charges will be
-                  made.
+
+                {/* Upload Section */}
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block px-2">
+                    Payment Confirmation / Upload Receipt
+                  </label>
+
+                  <div className="space-y-4">
+                    {!formData.receiptPreview ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Tombol Kamera */}
+                        <button
+                          onClick={() => cameraInputRef.current?.click()}
+                          className="flex flex-col items-center justify-center gap-4 p-10 rounded-[2rem] border-2 border-dashed border-border hover:border-accent bg-white/50 transition-all group"
+                        >
+                          <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <svg
+                              className="w-6 h-6 text-accent"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2.5}
+                                d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
+                              />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2.5}
+                                d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
+                              />
+                            </svg>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-[11px] font-black uppercase tracking-widest">
+                              Take Photo
+                            </p>
+                            <p className="text-[9px] text-muted-foreground font-bold uppercase mt-1">
+                              Directly from camera
+                            </p>
+                          </div>
+                        </button>
+
+                        {/* Tombol Galeri/File */}
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex flex-col items-center justify-center gap-4 p-10 rounded-[2rem] border-2 border-dashed border-border hover:border-accent bg-white/50 transition-all group"
+                        >
+                          <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <svg
+                              className="w-6 h-6 text-accent"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2.5}
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                              />
+                            </svg>
+                          </div>
+                          <div className="text-center">
+                            <p className="text-[11px] font-black uppercase tracking-widest">
+                              Upload File
+                            </p>
+                            <p className="text-[9px] text-muted-foreground font-bold uppercase mt-1">
+                              Screenshot or Gallery
+                            </p>
+                          </div>
+                        </button>
+                      </div>
+                    ) : (
+                      /* Preview State */
+                      <div className="relative rounded-[2rem] overflow-hidden border border-accent bg-black">
+                        <img
+                          src={formData.receiptPreview}
+                          className="w-full h-64 object-contain opacity-80"
+                          alt="Preview"
+                        />
+                        <button
+                          onClick={() =>
+                            setFormData({
+                              ...formData,
+                              receiptPreview: null,
+                              receiptFile: null,
+                            })
+                          }
+                          className="absolute top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-xl"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Hidden Inputs */}
+                    <input
+                      ref={cameraInputRef}
+                      type="file"
+                      accept="image/*"
+                      capture="environment" // KHUSUS KAMERA
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      // TANPA CAPTURE (UNTUK FILE/GALERI)
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+
+                {/* Verification Notice */}
+                <div className="p-5 rounded-2xl bg-accent/5 border border-accent/10 flex items-start gap-4">
+                  <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
+                    <svg
+                      className="w-4 h-4 text-accent"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-[9px] font-bold text-accent/80 uppercase tracking-widest leading-relaxed">
+                    Our administrative team will verify your laboratory
+                    transaction within 1x24 business hours. You will receive an
+                    email confirmation once the sequence is ready for dispatch.
+                  </p>
                 </div>
               </Card>
             )}

@@ -16,11 +16,20 @@ interface Product {
   stock: number;
 }
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({
+  product,
+  onClick,
+}: {
+  product: Product;
+  onClick?: () => void;
+}) {
   const addToCart = useCartStore((state) => state.addToCart);
 
   return (
-    <Card className="group relative border border-border/50 bg-card hover:border-accent/40 transition-all duration-500 rounded-3xl overflow-hidden flex flex-col shadow-sm hover:shadow-2xl hover:shadow-accent/5 hover:-translate-y-1">
+    <Card
+      onClick={onClick}
+      className="group relative border border-border/50 bg-card hover:border-accent/40 transition-all duration-500 rounded-3xl overflow-hidden flex flex-col shadow-sm hover:shadow-2xl hover:shadow-accent/5 hover:-translate-y-1"
+    >
       {/* Visual Top Section */}
       <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-muted/50 to-accent/5 flex items-center justify-center">
         {/* Animated DNA/Icon background */}
@@ -114,7 +123,10 @@ export function ProductCard({ product }: { product: Product }) {
 
           {/* Action Button */}
           <Button
-            onClick={() => addToCart(product.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              addToCart(product.id);
+            }}
             disabled={product.stock === 0}
             className={cn(
               "w-full rounded-2xl py-6 h-auto font-bold transition-all duration-300",

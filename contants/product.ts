@@ -2,82 +2,105 @@ export const products = [
   {
     id: 1,
     name: "SEMA-20",
+    label: "Semaglutide",
+    slug: "sema-20-semaglutide", // Diambil dari name + label
     price: 55.2,
     original: 69.0,
-    purity: "≥99%",
-    volume: "2ml",
+    purity: "≥99.4%",
+    volume: "20mg",
     stock: 12,
+    formula: "C₁₈₇H₂₉₁N₄₅O₅₉",
+    cas: "910463-68-2",
+    shortDesc:
+      "GLP-1 receptor agonist designed for metabolic research and glucose signaling analysis.",
+    overview:
+      "A long-acting glucagon-like peptide-1 receptor agonist. It enhances insulin secretion and suppresses glucagon release via a glucose-dependent mechanism.",
+    storage:
+      "Store at -20°C for up to 24 months. Reconstituted solution should be kept at 2-8°C.",
+    usage:
+      "Reconstitute with Bacteriostatic Water. Avoid vigorous shaking to prevent molecular degradation.",
   },
   {
     id: 2,
     name: "TIRZ-30",
+    label: "Tirzepatide",
+    slug: "tirz-30-tirzepatide",
     price: 71.2,
     original: 89.0,
-    purity: "≥99%",
-    volume: "3ml",
+    purity: "≥99.2%",
+    volume: "30mg",
     stock: 8,
+    formula: "C₂₂₅H₃₄₈N₄₈O₆₈",
+    cas: "2023788-19-2",
+    shortDesc:
+      "Dual GIP and GLP-1 receptor agonist sequence for advanced adipocyte research.",
+    overview:
+      "A 39-amino acid peptide that exhibits potent agonist activity at both GIP and GLP-1 receptors, integrated into a single molecule for synergistic metabolic signaling.",
+    storage: "Keep lyophilized at -20°C. Protect from light exposure.",
+    usage:
+      "Gently swirl during reconstitution. Research-use only for laboratory titration.",
   },
   {
     id: 3,
     name: "RETA-30",
+    label: "Retatrutide",
+    slug: "reta-30-retatrutide",
     price: 79.2,
     original: 99.0,
-    purity: "≥99%",
-    volume: "3ml",
+    purity: "≥99.1%",
+    volume: "30mg",
     stock: 15,
-  },
-  {
-    id: 4,
-    name: "NAD+ 500mg",
-    price: 47.2,
-    original: 59.0,
-    purity: "≥99%",
-    volume: "500mg",
-    stock: 20,
-  },
-  {
-    id: 5,
-    name: "MOTS-C",
-    price: 39.2,
-    original: 49.0,
-    purity: "≥99%",
-    volume: "1ml",
-    stock: 10,
+    formula: "C₂₂₁H₃₄₂N₄₆O₆₈",
+    cas: "2381089-83-2",
+    shortDesc:
+      "Triple-agonist (GIP/GLP-1/Glucagon) peptide sequence for intensive metabolic studies.",
+    overview:
+      "Retatrutide is a synthetic peptide that acts as an agonist for the glucose-dependent insulinotropic polypeptide, glucagon-like peptide-1, and glucagon receptors.",
+    storage:
+      "Lyophilized powder: 2 years at -20°C. Cold chain maintenance is strictly recommended.",
+    usage:
+      "Standard laboratory reconstitution protocols apply. Maintain aseptic environment.",
   },
   {
     id: 6,
     name: "BPC-157",
+    label: "Body Protection Compound",
+    slug: "bpc-157-body-protection-compound",
     price: 39.2,
     original: 49.0,
-    purity: "≥99%",
-    volume: "1ml",
+    purity: "≥99.5%",
+    volume: "5mg",
     stock: 18,
+    formula: "C₆₂H₉₈N₁₆O₂₂",
+    cas: "137525-51-0",
+    shortDesc:
+      "Pentadecapeptide sequence verified for localized tissue regeneration research.",
+    overview:
+      "Composed of 15 amino acids, BPC-157 is a partial sequence of body protection compound that is found in human gastric juice. Highly stable regenerative sequence.",
+    storage:
+      "Highly stable. Store at 4°C for short term, -20°C for long-term research integrity.",
+    usage:
+      "Arginate salt form allows for higher stability. Reconstitute with sterile saline or BAC water.",
   },
   {
-    id: 7,
-    name: "GLP-1",
-    price: 95.0,
-    original: 125.0,
-    purity: "≥99%",
-    volume: "5ml",
-    stock: 5,
-  },
-  {
-    id: 8,
-    name: "AOD-9604",
-    price: 45.0,
-    original: 60.0,
-    purity: "≥99%",
-    volume: "2ml",
-    stock: 14,
-  },
-  {
-    id: 9,
-    name: "Melanotan II",
-    price: 35.0,
-    original: 45.0,
-    purity: "≥99%",
-    volume: "1ml",
-    stock: 9,
+    id: 4,
+    name: "NAD+ 500mg",
+    label: "Nicotinamide Adenine Dinucleotide",
+    slug: "nad-500mg-nicotinamide-adenine-dinucleotide",
+    price: 47.2,
+    original: 59.0,
+    purity: "≥99.8%",
+    volume: "500mg",
+    stock: 20,
+    formula: "C₂₁H₂₇N₇O₁₄P₂",
+    cas: "53-84-9",
+    shortDesc:
+      "Essential coenzyme for mitochondrial function and cellular redox signaling research.",
+    overview:
+      "A critical coenzyme found in all living cells. Involved in redox reactions, carrying electrons from one reaction to another, and as a substrate for NAD+-consuming enzymes.",
+    storage:
+      "Store in a cool, dry place. Keep away from moisture to prevent hydrolysis.",
+    usage:
+      "Verify pH levels post-reconstitution for specific laboratory assays.",
   },
 ];

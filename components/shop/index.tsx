@@ -2,19 +2,14 @@
 
 import { ProductCard } from "@/components/product-card";
 import { products as localProducts } from "@/contants/product"; // Alias sementara
-import {
-  LayoutGrid,
-  Search,
-  X,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-} from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
 
 export default function ShopPageComponent() {
+  const router = useRouter();
   // State untuk API integration
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -126,7 +121,10 @@ export default function ShopPageComponent() {
                       key={product.id}
                       className="transition-all duration-500 hover:-translate-y-3"
                     >
-                      <ProductCard product={product} />
+                      <ProductCard
+                        product={product}
+                        onClick={() => router.push(`/shop/${product.slug}`)}
+                      />
                     </div>
                   ))}
                 </div>
