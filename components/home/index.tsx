@@ -109,24 +109,6 @@ export default function HomePageComponent() {
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link href="/shop" className="w-full sm:w-auto">
-                  <Button
-                    size="lg"
-                    className="w-full sm:h-16 sm:px-10 rounded-2xl bg-accent hover:bg-accent/90 text-white font-bold text-lg shadow-2xl shadow-accent/30 transition-all hover:-translate-y-1"
-                  >
-                    Start Researching <ArrowRight className="ml-2 w-5 h-5" />
-                  </Button>
-                </Link>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="w-full sm:h-16 sm:px-10 rounded-2xl border-2 font-bold text-lg hover:bg-muted/50 transition-all"
-                >
-                  COA Library
-                </Button>
-              </div>
-
               {/* Stats Mini */}
               <div className="flex items-center justify-center lg:justify-start gap-6 lg:gap-10 pt-6 border-t border-border w-full lg:w-fit">
                 <div className="group cursor-default">

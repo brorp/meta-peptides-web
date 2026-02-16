@@ -8,6 +8,10 @@ import { Navbar } from "@/components/navbar";
 import Link from "next/link";
 import { ChevronRight, AlertCircle } from "lucide-react";
 import { useState } from "react";
+import { format } from "path";
+import { formatCurrency } from "@/lib/format";
+import { useCartStore } from "@/store/useCartStore";
+import { products } from "@/contants/product";
 
 export default function CheckoutPage() {
   const [step, setStep] = useState<
@@ -15,6 +19,18 @@ export default function CheckoutPage() {
   >("cart");
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { cart, updateQuantity, removeFromCart } = useCartStore();
+
+  const cartItems = Object.keys(cart)
+    .map((id: any) => {
+      const product = products.find((p) => p.id === Number(id));
+      return {
+        ...product,
+        quantity: cart[id],
+      };
+    })
+    .filter((item) => item.id !== undefined);
+
   const [formData, setFormData] = useState({
     email: "",
     firstName: "",
@@ -31,17 +47,11 @@ export default function CheckoutPage() {
     receiptPreview: null as string | null,
     receiptFile: null as File | null,
   });
-
-  const cartItems = [
-    { id: 1, name: "SEMA-20", quantity: 2, price: 55.2 },
-    { id: 3, name: "RETA-30", quantity: 1, price: 79.2 },
-  ];
-
   const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) => sum + (item?.price || 0) * item.quantity,
     0,
   );
-  const shipping = 15.0;
+  const shipping = 19000;
   const tax = subtotal * 0.1;
   const total = subtotal + shipping + tax;
 
@@ -161,7 +171,7 @@ export default function CheckoutPage() {
                         </p>
                       </div>
                       <p className="font-bold">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        {formatCurrency((item?.price || 0) * item.quantity)}
                       </p>
                     </div>
                   ))}
@@ -530,7 +540,7 @@ export default function CheckoutPage() {
                       {item.name} x{item.quantity}
                     </span>
                     <span className="font-medium">
-                      ${(item.price * item.quantity).toFixed(2)}
+                      {formatCurrency((item?.price || 0) * item.quantity)}
                     </span>
                   </div>
                 ))}
@@ -539,22 +549,22 @@ export default function CheckoutPage() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal:</span>
-                  <span>{subtotal.toFixed(2)} IDR</span>
+                  <span>{formatCurrency(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Shipping:</span>
-                  <span>{shipping.toFixed(2)} IDR</span>
+                  <span>{formatCurrency(shipping)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Tax:</span>
-                  <span>{tax.toFixed(2)} IDR</span>
+                  <span>{formatCurrency(tax)}</span>
                 </div>
               </div>
 
               <div className="border-t border-border pt-4">
                 <div className="flex justify-between font-bold text-lg mb-6">
                   <span>Total:</span>
-                  <span className="text-accent">${total.toFixed(2)}</span>
+                  <span className="text-accent">{formatCurrency(total)}</span>
                 </div>
 
                 <div className="space-y-3">
