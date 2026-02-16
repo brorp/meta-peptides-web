@@ -14,18 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ShoppingCart, Plus, Minus, X } from "lucide-react";
 import Link from "next/link";
-
-const products = [
-  { id: 1, name: "SEMA-20", price: 55.2, purity: "≥99%", volume: "2ml" },
-  { id: 2, name: "TIRZ-30", price: 71.2, purity: "≥99%", volume: "3ml" },
-  { id: 3, name: "RETA-30", price: 79.2, purity: "≥99%", volume: "3ml" },
-  { id: 4, name: "NAD+ 500mg", price: 47.2, purity: "≥99%", volume: "500mg" },
-  { id: 5, name: "MOTS-C", price: 39.2, purity: "≥99%", volume: "1ml" },
-  { id: 6, name: "BPC-157", price: 39.2, purity: "≥99%", volume: "1ml" },
-  { id: 7, name: "GLP-1", price: 95.0, purity: "≥99%", volume: "5ml" },
-  { id: 8, name: "AOD-9604", price: 45.0, purity: "≥99%", volume: "2ml" },
-  { id: 9, name: "Melanotan II", price: 35.0, purity: "≥99%", volume: "1ml" },
-];
+import { formatCurrency } from "@/lib/format";
+import { products } from "@/contants/product";
 
 export function GlobalCart() {
   const {
@@ -96,7 +86,7 @@ export function GlobalCart() {
 
                     <div className="flex justify-between items-center">
                       <span className="font-bold text-accent">
-                        ${(product!.price * qty).toFixed(2)}
+                        {formatCurrency(product!.price * qty)}
                       </span>
 
                       {/* Controls */}
@@ -132,7 +122,7 @@ export function GlobalCart() {
               <div className="flex justify-between items-center px-2">
                 <span className="text-muted-foreground">Subtotal</span>
                 <span className="text-xl font-bold text-foreground">
-                  ${cartTotal.toFixed(2)}
+                  {formatCurrency(cartTotal)}
                 </span>
               </div>
 

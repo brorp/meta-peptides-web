@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, Beaker, ShieldCheck, Zap } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/format";
 
 interface Product {
   id: number;
@@ -77,19 +78,15 @@ export function ProductCard({
               {product.volume}
             </span>
           </div>
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Zap className="w-3 h-3 text-orange-400 fill-orange-400" />
-            <span className="text-[11px] font-medium">Verified Compound</span>
-          </div>
         </div>
 
         {/* Pricing Area */}
-        <div className="flex items-end gap-2 mb-4">
+        <div className="flex flex-col items-end gap-2 mb-4">
           <span className="text-2xl font-black text-foreground tracking-tighter">
-            ${product.price.toFixed(2)}
+            {formatCurrency(product.price)}
           </span>
           <span className="text-sm text-muted-foreground line-through mb-1 decoration-red-500/30">
-            ${product.original.toFixed(2)}
+            {formatCurrency(product.original)}
           </span>
         </div>
 

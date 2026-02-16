@@ -539,15 +539,15 @@ export default function CheckoutPage() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Subtotal:</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>{subtotal.toFixed(2)} IDR</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Shipping:</span>
-                  <span>${shipping.toFixed(2)}</span>
+                  <span>{shipping.toFixed(2)} IDR</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span>Tax:</span>
-                  <span>${tax.toFixed(2)}</span>
+                  <span>{tax.toFixed(2)} IDR</span>
                 </div>
               </div>
 

@@ -3,9 +3,9 @@ export const products = [
     id: 1,
     name: "SEMA-20",
     label: "Semaglutide",
-    slug: "sema-20-semaglutide", // Diambil dari name + label
-    price: 55.2,
-    original: 69.0,
+    slug: "sema-20-semaglutide",
+    price: 850000, // Kurs adj + pembulatan
+    original: 1100000,
     purity: "≥99.4%",
     volume: "20mg",
     stock: 12,
@@ -25,8 +25,8 @@ export const products = [
     name: "TIRZ-30",
     label: "Tirzepatide",
     slug: "tirz-30-tirzepatide",
-    price: 71.2,
-    original: 89.0,
+    price: 1150000,
+    original: 1450000,
     purity: "≥99.2%",
     volume: "30mg",
     stock: 8,
@@ -45,8 +45,8 @@ export const products = [
     name: "RETA-30",
     label: "Retatrutide",
     slug: "reta-30-retatrutide",
-    price: 79.2,
-    original: 99.0,
+    price: 1250000,
+    original: 1600000,
     purity: "≥99.1%",
     volume: "30mg",
     stock: 15,
@@ -66,8 +66,8 @@ export const products = [
     name: "BPC-157",
     label: "Body Protection Compound",
     slug: "bpc-157-body-protection-compound",
-    price: 39.2,
-    original: 49.0,
+    price: 650000,
+    original: 800000,
     purity: "≥99.5%",
     volume: "5mg",
     stock: 18,
@@ -76,7 +76,7 @@ export const products = [
     shortDesc:
       "Pentadecapeptide sequence verified for localized tissue regeneration research.",
     overview:
-      "Composed of 15 amino acids, BPC-157 is a partial sequence of body protection compound that is found in human gastric juice. Highly stable regenerative sequence.",
+      "Composed of 15 amino acids, BPC-157 is a partial sequence of body protection compound that is found in human gastric juice.",
     storage:
       "Highly stable. Store at 4°C for short term, -20°C for long-term research integrity.",
     usage:
@@ -87,8 +87,8 @@ export const products = [
     name: "NAD+ 500mg",
     label: "Nicotinamide Adenine Dinucleotide",
     slug: "nad-500mg-nicotinamide-adenine-dinucleotide",
-    price: 47.2,
-    original: 59.0,
+    price: 750000,
+    original: 950000,
     purity: "≥99.8%",
     volume: "500mg",
     stock: 20,
@@ -97,7 +97,7 @@ export const products = [
     shortDesc:
       "Essential coenzyme for mitochondrial function and cellular redox signaling research.",
     overview:
-      "A critical coenzyme found in all living cells. Involved in redox reactions, carrying electrons from one reaction to another, and as a substrate for NAD+-consuming enzymes.",
+      "A critical coenzyme found in all living cells involved in redox reactions.",
     storage:
       "Store in a cool, dry place. Keep away from moisture to prevent hydrolysis.",
     usage:

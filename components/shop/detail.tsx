@@ -3,8 +3,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-// Import komponen Tabs
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatCurrency } from "@/lib/format";
 import { useCartStore } from "@/store/useCartStore";
 import {
   Beaker,
@@ -19,11 +19,6 @@ import {
 
 export default function ProductDetailComponent({ product }: any) {
   const addToCart = useCartStore((state) => state.addToCart);
-
-  const formattedPrice = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-  }).format(product?.price || 0);
 
   return (
     <div className="min-h-screen bg-background pt-32 pb-20">
@@ -86,7 +81,7 @@ export default function ProductDetailComponent({ product }: any) {
             <div className="pt-6 space-y-6">
               <div className="flex items-end gap-3">
                 <span className="text-4xl font-black tracking-tighter">
-                  {formattedPrice}
+                  {formatCurrency(product?.price || 0)}
                 </span>
                 <span className="text-muted-foreground font-bold mb-1 uppercase text-xs tracking-widest">
                   / {product?.volume} Unit

@@ -58,7 +58,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ],
 
     alternates: {
-      canonical: `https://metapeptides.com/shop/${product.slug}`,
+      canonical: `http://localhost:3000/shop/${product.slug}`,
     },
   };
 }
