@@ -11,6 +11,9 @@ export type ProductInterface = {
   image_url: string;
   category: string;
   formula: string;
+  overview: string;
+  storage_instruction: string;
+  usage_instruction: string;
   cas: string;
   short_desc: string;
 };

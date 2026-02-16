@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProductInterface } from "@/interface/products";
 import { formatCurrency } from "@/lib/format";
 import { useCartStore } from "@/store/useCartStore";
 import {
@@ -17,7 +18,11 @@ import {
   Download,
 } from "lucide-react";
 
-export default function ProductDetailComponent({ product }: any) {
+export default function ProductDetailComponent({
+  product,
+}: {
+  product: ProductInterface;
+}) {
   const addToCart = useCartStore((state) => state.addToCart);
 
   return (
@@ -29,7 +34,7 @@ export default function ProductDetailComponent({ product }: any) {
             <div className="absolute -inset-4 bg-accent/5 rounded-[3rem] blur-2xl group-hover:bg-accent/10 transition-colors" />
             <div className="relative aspect-square rounded-[2.5rem] border border-border bg-muted/30 overflow-hidden flex items-center justify-center p-12">
               <img
-                src={product?.image || "/product/product1.png"}
+                src={product?.image_url || "/product/product1.png"}
                 alt={product?.name}
                 className="w-full h-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-110"
               />
@@ -48,7 +53,7 @@ export default function ProductDetailComponent({ product }: any) {
               <div className="flex items-start gap-4 p-4 bg-muted/50 rounded-2xl border-l-4 border-accent">
                 <Info className="w-5 h-5 text-accent flex-shrink-0 mt-1" />
                 <p className="text-slate-600 text-sm leading-relaxed font-medium">
-                  {product?.shortDesc}
+                  {product?.short_desc}
                   <sup
                     className="text-accent font-bold ml-1 cursor-help"
                     title="HPLC/MS Verified Reference"
@@ -111,6 +116,7 @@ export default function ProductDetailComponent({ product }: any) {
               <p className="text-slate-600 text-sm leading-relaxed">
                 {product?.overview ||
                   "Technical data pending laboratory verification."}
+                "Technical data pending laboratory verification."
               </p>
             </section>
 
@@ -145,7 +151,7 @@ export default function ProductDetailComponent({ product }: any) {
                       Preservation Requirements
                     </h4>
                     <p className="text-sm leading-relaxed text-slate-300 font-medium whitespace-pre-line">
-                      {product?.storage}
+                      {product?.storage_instruction}
                     </p>
                   </div>
                   <ThermometerSnowflake className="absolute -bottom-6 -right-6 w-32 h-32 text-white/5 rotate-12" />
@@ -163,7 +169,7 @@ export default function ProductDetailComponent({ product }: any) {
                       Reconstitution & Application
                     </h4>
                     <p className="text-sm leading-relaxed font-bold italic">
-                      {product?.usage}
+                      {product?.usage_instruction}
                     </p>
                   </div>
                   <Beaker className="absolute -bottom-6 -right-6 w-32 h-32 text-black/10 -rotate-12" />
