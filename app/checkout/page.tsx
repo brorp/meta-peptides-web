@@ -12,6 +12,7 @@ import { format } from "path";
 import { formatCurrency } from "@/lib/format";
 import { useCartStore } from "@/store/useCartStore";
 import { products } from "@/contants/product";
+import { persentegeTax } from "@/contants/tax";
 
 export default function CheckoutPage() {
   const [step, setStep] = useState<
@@ -51,8 +52,9 @@ export default function CheckoutPage() {
     (sum, item) => sum + (item?.price || 0) * item.quantity,
     0,
   );
+
   const shipping = 19000;
-  const tax = subtotal * 0.1;
+  const tax = subtotal * persentegeTax;
   const total = subtotal + shipping + tax;
 
   const handleInputChange = (
@@ -530,7 +532,7 @@ export default function CheckoutPage() {
 
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <Card className="border border-border p-6 sticky top-32 space-y-6">
+            <Card className="border border-border p-6 top-32 space-y-6">
               <h3 className="font-bold text-lg">Order Summary</h3>
 
               <div className="space-y-3 pb-6 border-b border-border">
@@ -556,7 +558,7 @@ export default function CheckoutPage() {
                   <span>{formatCurrency(shipping)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span>Tax:</span>
+                  <span>Tax ({(persentegeTax * 100).toFixed(0)}%):</span>
                   <span>{formatCurrency(tax)}</span>
                 </div>
               </div>
