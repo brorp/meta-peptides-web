@@ -11,10 +11,12 @@ import {
   ArrowRight,
   Globe2,
   Lock,
+  ClipboardCheck,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { features, GOLD_STANDARD_FEATURES } from "@/contants/home";
 
 function Annotation({
   number,
@@ -267,29 +269,13 @@ export default function HomePageComponent() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: <Microscope />,
-                title: "3rd Party HPLC",
-                desc: "Proven analysis with accessible HPLC/MS reports for every batch.",
-              },
-              {
-                icon: <Zap />,
-                title: "Cold Chain Ops",
-                desc: "Molecular integrity protected by temperature-controlled logistics.",
-              },
-              {
-                icon: <Dna />,
-                title: "Synthetic Origin",
-                desc: "100% biological contaminant-free compounds produced in sterile labs.",
-              },
-            ].map((item, i) => (
+            {features.map((item, i) => (
               <Card
                 key={i}
                 className="p-10 border-none bg-white shadow-xl shadow-slate-100/50 rounded-[3rem] group hover:bg-[#0F172A] transition-all duration-500 hover:-translate-y-2"
               >
                 <div className="w-14 h-14 bg-accent/10 text-accent rounded-2xl flex items-center justify-center mb-10 group-hover:bg-accent group-hover:text-white transition-colors">
-                  {item.icon}
+                  {item.icon && <item.icon className="w-6 h-6" />}
                 </div>
                 <h3 className="text-2xl font-black mb-4 group-hover:text-white transition-colors uppercase tracking-tight">
                   {item.title}
@@ -306,44 +292,34 @@ export default function HomePageComponent() {
       {/* 4. ABOUT (Premium Dark) */}
       <section className="py-24 px-4">
         <div className="max-w-7xl mx-auto bg-[#0F172A] rounded-[4rem] overflow-hidden relative shadow-2xl">
+          {/* Decorative DNA Icon */}
           <div className="absolute top-0 right-0 p-12 opacity-5">
             <Dna className="w-96 h-96 text-white rotate-45" />
           </div>
 
           <div className="grid lg:grid-cols-2 items-center p-12 md:p-24 gap-20 relative z-10">
             <div className="space-y-8">
+              <div className="flex items-center gap-3 text-accent font-black text-[10px] uppercase tracking-[0.4em]">
+                <span className="w-8 h-px bg-accent" />
+                Domestic Research Excellence
+              </div>
               <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter leading-[0.85]">
-                THE GOLD <br />{" "}
-                <span className="text-accent italic">STANDARD.</span>
+                INDONESIA'S <br />{" "}
+                <span className="text-accent italic">PREMIER SOURCE.</span>
               </h2>
               <p className="text-white/70 text-lg leading-relaxed font-medium italic">
-                At MetaPeptides, we bridge the gap between complex biochemistry
-                and laboratory efficiency. Our mission is to provide the most
-                reliable synthetic compounds for researchers worldwide.
+                MetaPeptides is the nation's definitive bridge between
+                high-purity biochemistry and laboratory precision. We facilitate
+                Indonesia's most demanding research through strictly audited
+                synthetic sequences.
               </p>
-              <Button className="bg-white text-black hover:bg-accent hover:text-white font-black rounded-2xl px-10 h-16 text-lg transition-all shadow-xl">
-                Our Lab Process
+              <Button className="bg-white text-black hover:bg-accent hover:text-white font-black rounded-2xl px-10 h-16 text-lg transition-all shadow-xl uppercase tracking-widest">
+                Laboratory Standards
               </Button>
             </div>
 
             <div className="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-12 space-y-10">
-              {[
-                {
-                  n: "01",
-                  t: "Ethical Sourcing",
-                  d: "Strict regulatory compliance in all labs.",
-                },
-                {
-                  n: "02",
-                  t: "Precise Lyophilization",
-                  d: "Freeze-dried for long term shelf stability.",
-                },
-                {
-                  n: "03",
-                  t: "Vacuum Sealed",
-                  d: "100% moisture and oxygen protected.",
-                },
-              ].map((step, idx) => (
+              {GOLD_STANDARD_FEATURES.map((step, idx) => (
                 <div key={idx} className="flex gap-6 group">
                   <div className="text-accent font-black text-2xl group-hover:scale-125 transition-transform">
                     {step.n}
@@ -352,7 +328,9 @@ export default function HomePageComponent() {
                     <h4 className="text-xl font-bold text-white mb-1 uppercase tracking-tight">
                       {step.t}
                     </h4>
-                    <p className="text-white/40 text-sm">{step.d}</p>
+                    <p className="text-white/40 text-sm font-medium">
+                      {step.d}
+                    </p>
                   </div>
                 </div>
               ))}
