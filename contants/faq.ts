@@ -4,15 +4,15 @@ export const faqCategories = [
     questions: [
       {
         q: "What is MetaPeptides?",
-        a: "MetaPeptides is a leading supplier of premium research-grade peptides. We specialize in providing high-purity compounds for scientific research purposes only.",
+        a: "MetaPeptides is Indonesia's leading supplier of premium research-grade peptides. We specialize in providing high-purity synthetic compounds exclusively for the Indonesian scientific community.",
       },
       {
-        q: "Are your peptides suitable for my research?",
-        a: "Our peptides are designed for research purposes in academic institutions, pharmaceutical companies, and independent research laboratories. Please review our product specifications to ensure compatibility with your research needs.",
+        q: "Can I order from outside Indonesia?",
+        a: "No. Currently, MetaPeptides operates exclusively within Indonesia to ensure the highest standards of domestic logistics and regulatory compliance.",
       },
       {
         q: 'What does "research purposes only" mean?',
-        a: "This means our products are strictly intended for laboratory research and scientific study. They are not intended for human consumption, veterinary use, or therapeutic applications.",
+        a: "This means our products are strictly intended for laboratory research and scientific study within Indonesia. They are not intended for human consumption, veterinary use, or any therapeutic applications.",
       },
       {
         q: "How long has MetaPeptides been in business?",
@@ -45,20 +45,20 @@ export const faqCategories = [
     category: "Ordering & Shipping",
     questions: [
       {
-        q: "How do I place an order?",
-        a: "Simply browse our shop, add products to your cart, and proceed to checkout. The process is secure and straightforward. If you need assistance, contact our support team.",
+        q: "Is shipping really free?",
+        a: "Yes! We provide Free Express Shipping for all orders across Indonesia. There are no hidden delivery fees at checkout.",
       },
       {
         q: "How quickly do you ship orders?",
-        a: "Orders placed before 12 PM MST are typically shipped the same day. Standard shipping within the U.S. takes 3-5 business days. Expedited options are available.",
+        a: "Orders with confirmed payment before 14:00 WIB are typically dispatched the same business day via express domestic courier.",
       },
       {
-        q: "What is your shipping cost?",
-        a: "Shipping costs vary depending on order size and destination. A shipping fee is calculated at checkout. Most orders to the continental U.S. ship for $15-30.",
+        q: "How do I confirm my payment?",
+        a: "Since we use manual bank transfers for security, you must upload your transfer receipt on the checkout page or via our confirmation portal for our team to verify.",
       },
       {
         q: "Can I track my order?",
-        a: "Yes! You will receive a tracking number via email once your order ships. You can use this to monitor your package in real-time.",
+        a: "Absolutely. Once your order is processed, you will receive a tracking number to monitor your shipment via our local courier partners.",
       },
     ],
   },
