@@ -49,10 +49,6 @@ export const faqCategories = [
         a: "Simply browse our shop, add products to your cart, and proceed to checkout. The process is secure and straightforward. If you need assistance, contact our support team.",
       },
       {
-        q: "Do you ship internationally?",
-        a: "We currently ship to all 50 U.S. States and Canada. We are expanding our international shipping capabilities. Contact us for inquiries about other regions.",
-      },
-      {
         q: "How quickly do you ship orders?",
         a: "Orders placed before 12 PM MST are typically shipped the same day. Standard shipping within the U.S. takes 3-5 business days. Expedited options are available.",
       },

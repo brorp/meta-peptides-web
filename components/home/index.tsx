@@ -12,6 +12,7 @@ import {
   Globe2,
   Lock,
   ClipboardCheck,
+  Truck,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -217,7 +218,7 @@ export default function HomePageComponent() {
               },
               {
                 label: "Logistics",
-                val: "International",
+                val: "National",
                 icon: <Globe2 className="w-5 h-5" />,
               },
               {
@@ -226,9 +227,9 @@ export default function HomePageComponent() {
                 icon: <Lock className="w-5 h-5" />,
               },
               {
-                label: "Fast Dispatch",
-                val: "Same Day",
-                icon: <Zap className="w-5 h-5" />,
+                label: "Free Shipping",
+                val: "All Indonesia",
+                icon: <Truck className="w-5 h-5" />, // Pakai icon Truck lebih relevan untuk pengiriman
               },
             ].map((t, i) => (
               <div key={i} className="flex items-center gap-4 group">

@@ -53,9 +53,10 @@ export default function CheckoutPage() {
     0,
   );
 
-  const shipping = 19000;
-  const tax = subtotal * persentegeTax;
-  const total = subtotal + shipping + tax;
+  const shipping = 0;
+  const serviceFeeOrigin = subtotal * persentegeTax;
+  const serviceFee = subtotal * persentegeTax * 0;
+  const total = subtotal + shipping + serviceFee;
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -532,49 +533,75 @@ export default function CheckoutPage() {
 
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <Card className="border border-border p-6 top-32 space-y-6">
-              <h3 className="font-bold text-lg">Order Summary</h3>
+            <Card className="border border-border p-6 sticky top-32 space-y-6 rounded-[2rem]">
+              <h3 className="font-black uppercase tracking-tighter text-xl italic">
+                Order Summary
+              </h3>
 
+              {/* Cart Items List */}
               <div className="space-y-3 pb-6 border-b border-border">
                 {cartItems.map((item) => (
                   <div key={item.id} className="flex justify-between text-sm">
-                    <span>
-                      {item.name} x{item.quantity}
+                    <span className="text-muted-foreground font-medium">
+                      {item.name}{" "}
+                      <span className="text-[10px] opacity-50 px-1 font-black">
+                        X{item.quantity}
+                      </span>
                     </span>
-                    <span className="font-medium">
+                    <span className="font-bold">
                       {formatCurrency((item?.price || 0) * item.quantity)}
                     </span>
                   </div>
                 ))}
               </div>
 
-              <div className="space-y-2">
+              {/* Pricing Breakdown */}
+              <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span>Subtotal:</span>
-                  <span>{formatCurrency(subtotal)}</span>
+                  <span className="text-muted-foreground">Subtotal</span>
+                  <span className="font-bold">{formatCurrency(subtotal)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span>Shipping:</span>
-                  <span>{formatCurrency(shipping)}</span>
+
+                {/* BAGIAN SHIPPING FREE */}
+                <div className="flex justify-between text-sm items-center">
+                  <span className="text-muted-foreground">Shipping</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] line-through text-muted-foreground/50 font-bold">
+                      {formatCurrency(25000)} {/* Harga aslinya dicoret */}
+                    </span>
+                    <span className="text-accent font-black uppercase tracking-widest text-[11px] bg-accent/10 px-2 py-0.5 rounded-md">
+                      FREE
+                    </span>
+                  </div>
                 </div>
+
                 <div className="flex justify-between text-sm">
-                  <span>Tax ({(persentegeTax * 100).toFixed(0)}%):</span>
-                  <span>{formatCurrency(tax)}</span>
+                  <span className="text-muted-foreground">Service Fee</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] line-through text-muted-foreground/50 font-bold">
+                      {formatCurrency(serviceFeeOrigin)}
+                    </span>
+                    <span className="text-accent font-black uppercase tracking-widest text-[11px] bg-accent/10 px-2 py-0.5 rounded-md">
+                      FREE
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="border-t border-border pt-4">
-                <div className="flex justify-between font-bold text-lg mb-6">
-                  <span>Total:</span>
+              {/* Total */}
+              <div className="border-t-2 border-dashed border-border pt-6">
+                <div className="flex justify-between font-black text-2xl tracking-tighter uppercase italic mb-6">
+                  <span>Total</span>
                   <span className="text-accent">{formatCurrency(total)}</span>
                 </div>
 
+                {/* Action Buttons */}
                 <div className="space-y-3">
                   {step !== "confirmation" && (
                     <>
                       <Button
                         onClick={handleNext}
-                        className="w-full bg-accent hover:bg-accent/90 text-accent-foreground"
+                        className="w-full h-14 rounded-2xl bg-black hover:bg-accent text-white font-black uppercase tracking-widest transition-all"
                       >
                         {step === "payment" ? "Complete Order" : "Continue"}
                       </Button>
@@ -582,7 +609,7 @@ export default function CheckoutPage() {
                         <Button
                           onClick={handleBack}
                           variant="outline"
-                          className="w-full bg-transparent"
+                          className="w-full h-14 rounded-2xl border-border font-black uppercase tracking-widest text-[10px]"
                         >
                           Back
                         </Button>
@@ -591,7 +618,7 @@ export default function CheckoutPage() {
                   )}
                   {step === "confirmation" && (
                     <Link href="/shop">
-                      <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
+                      <Button className="w-full h-14 rounded-2xl bg-accent text-white font-black uppercase tracking-widest">
                         Continue Shopping
                       </Button>
                     </Link>
@@ -599,7 +626,8 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <div className="text-xs text-muted-foreground text-center pt-4 border-t border-border">
+              <div className="flex items-center justify-center gap-2 text-[9px] text-muted-foreground font-black uppercase tracking-widest pt-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                 Secure 256-bit SSL encryption
               </div>
             </Card>
