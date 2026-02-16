@@ -13,7 +13,7 @@ interface CartState {
   isCartOpen: boolean;
   toggleCart: () => void;
   setIsCartOpen: (open: boolean) => void;
-  addToCart: (productId: number) => void;
+  addToCart: (productId: string) => void;
   updateQuantity: (productId: number, newQty: number) => void;
   removeFromCart: (productId: number) => void;
   getCartCount: () => number;
@@ -29,7 +29,10 @@ export const useCartStore = create<CartState>((set, get) => ({
 
   addToCart: (productId) =>
     set((state) => ({
-      cart: { ...state.cart, [productId]: (state.cart[productId] || 0) + 1 },
+      cart: {
+        ...state.cart,
+        [productId]: (state.cart[productId as any] || 0) + 1,
+      },
       isCartOpen: true,
     })),
 

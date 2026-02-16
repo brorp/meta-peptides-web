@@ -1,27 +1,19 @@
 "use client";
 
+import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Beaker, ShieldCheck, Zap } from "lucide-react";
+import { ShoppingCart, Beaker, ShieldCheck } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/format";
-
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-  original: number;
-  purity: string;
-  volume: string;
-  stock: number;
-}
+import { ProductInterface } from "@/interface/products";
 
 export function ProductCard({
   product,
   onClick,
 }: {
-  product: Product;
+  product: ProductInterface;
   onClick?: () => void;
 }) {
   const addToCart = useCartStore((state) => state.addToCart);
@@ -29,23 +21,32 @@ export function ProductCard({
   return (
     <Card
       onClick={onClick}
-      className="group relative border border-border/50 bg-card hover:border-accent/40 transition-all duration-500 rounded-3xl overflow-hidden flex flex-col shadow-sm hover:shadow-2xl hover:shadow-accent/5 hover:-translate-y-1"
+      className="group relative border border-border/50 bg-card hover:border-accent/40 transition-all duration-500 rounded-3xl overflow-hidden flex flex-col shadow-sm hover:shadow-2xl hover:shadow-accent/5 hover:-translate-y-1 cursor-pointer"
     >
-      {/* Visual Top Section */}
-      <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-muted/50 to-accent/5 flex items-center justify-center">
-        {/* Animated DNA/Icon background */}
-        <div className="absolute inset-0 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity duration-500">
-          <Beaker className="w-full h-full scale-150 rotate-12" />
-        </div>
+      <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-muted/50 to-accent/5">
+        {product.image_url ? (
+          <Image
+            src={product.image_url}
+            alt={product.name}
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-cover transition-transform duration-700 group-hover:scale-110"
+            priority={false}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full w-full">
+            <div className="relative z-10 text-6xl transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 ease-out">
+              🧬
+            </div>
+          </div>
+        )}
 
-        <div className="relative z-10 text-6xl transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 ease-out">
-          🧬
-        </div>
+        {/* Overlay for hover effect */}
+        <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-        {/* Badges Overlay */}
-        <div className="absolute top-3 left-3 flex flex-col gap-2">
+        <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
           {product.purity && (
-            <div className="backdrop-blur-md bg-white/70 border border-white/20 text-accent text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1">
+            <div className="backdrop-blur-md bg-white/80 border border-white/20 text-accent text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1">
               <ShieldCheck className="w-3 h-3" />
               {product.purity} PURITY
             </div>
@@ -53,7 +54,7 @@ export function ProductCard({
         </div>
 
         {product.stock <= 5 && product.stock > 0 && (
-          <div className="absolute top-3 right-3 bg-orange-500/90 backdrop-blur-sm text-white text-[9px] font-black px-2 py-1 rounded-md shadow-lg animate-pulse">
+          <div className="absolute top-3 right-3 z-10 bg-orange-500/90 backdrop-blur-sm text-white text-[9px] font-black px-2 py-1 rounded-md shadow-lg animate-pulse">
             CRITICAL STOCK
           </div>
         )}
@@ -78,15 +79,19 @@ export function ProductCard({
               {product.volume}
             </span>
           </div>
+          {/* Tambahan: Nama Label (Kimia) */}
+          <p className="text-xs text-muted-foreground italic line-clamp-1">
+            {product.label}
+          </p>
         </div>
 
         {/* Pricing Area */}
-        <div className="flex flex-col items-end gap-2 mb-4">
+        <div className="flex flex-col items-start gap-0.5 mb-4">
+          <span className="text-sm text-muted-foreground line-through decoration-red-500/30">
+            {formatCurrency(product.original_price)}
+          </span>
           <span className="text-2xl font-black text-foreground tracking-tighter">
             {formatCurrency(product.price)}
-          </span>
-          <span className="text-sm text-muted-foreground line-through mb-1 decoration-red-500/30">
-            {formatCurrency(product.original)}
           </span>
         </div>
 
@@ -104,7 +109,7 @@ export function ProductCard({
               )}
             >
               {product.stock > 0
-                ? `Availability: ${product.stock} Units`
+                ? `Stock Availability: ${product.stock}`
                 : "Discontinued"}
             </span>
           </div>
@@ -118,7 +123,6 @@ export function ProductCard({
             />
           </div>
 
-          {/* Action Button */}
           <Button
             onClick={(e) => {
               e.stopPropagation();
