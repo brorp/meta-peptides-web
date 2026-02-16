@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   ShoppingCart,
@@ -10,10 +10,13 @@ import {
   UserCircle2,
   Dna,
   Fingerprint,
+  LogOut,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/store/useCartStore";
+import { useUserStore } from "@/store/useUserStore";
+import { supabaseClient } from "@/lib/supabase-client";
 
 const NAV_LINKS = [
   { name: "Home", href: "/" },
@@ -24,6 +27,9 @@ const NAV_LINKS = [
 ];
 
 export function Navbar() {
+  const router = useRouter();
+  const { user, clearUser } = useUserStore((state) => state);
+
   const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -40,6 +46,13 @@ export function Navbar() {
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
+
+  const handleLogout = async () => {
+    await supabaseClient.auth.signOut();
+    clearUser();
+    router.refresh();
+    router.push("/");
+  };
 
   return (
     <>
@@ -101,22 +114,38 @@ export function Navbar() {
                 )}
               </button>
 
-              {/* Login Button (NEW) */}
-              <Link href="/auth">
+              {/* Auth Button (Login / Profile) */}
+              {user?.email ? (
                 <button
+                  onClick={handleLogout}
                   className={cn(
                     "group flex items-center gap-2 p-2 md:pl-2 md:pr-4 rounded-full transition-all duration-300",
-                    pathname === "/auth"
-                      ? "bg-accent/20 text-accent"
-                      : "hover:bg-accent/10 text-foreground",
+                    "hover:bg-red-500 hover:text-white text-red-500 bg-red-500/10",
                   )}
                 >
-                  <Fingerprint className="w-5 h-5" />
+                  <LogOut className="w-5 h-5 transition-transform group-hover:translate-x-0.5" />
                   <span className="hidden md:block text-sm font-bold">
-                    Login
+                    Logout
                   </span>
                 </button>
-              </Link>
+              ) : (
+                // Jika BELUM login, arahkan ke Auth/Login
+                <Link href="/auth">
+                  <button
+                    className={cn(
+                      "group flex items-center gap-2 p-2 md:pl-2 md:pr-4 rounded-full transition-all duration-300",
+                      pathname === "/auth"
+                        ? "bg-accent/20 text-accent"
+                        : "hover:bg-accent/10 text-foreground",
+                    )}
+                  >
+                    <Fingerprint className="w-5 h-5" />
+                    <span className="hidden md:block text-sm font-bold">
+                      Login
+                    </span>
+                  </button>
+                </Link>
+              )}
 
               <Link href="/contact" className="hidden lg:block">
                 <Button className="rounded-full px-6 bg-foreground text-background hover:bg-foreground/90 transition-all active:scale-95">
