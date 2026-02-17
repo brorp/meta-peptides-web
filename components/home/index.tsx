@@ -18,6 +18,7 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { features, GOLD_STANDARD_FEATURES } from "@/contants/home";
+import { useRouter } from "next/navigation";
 
 function Annotation({
   number,
@@ -77,6 +78,7 @@ function Annotation({
 }
 
 export default function HomePageComponent() {
+  const router = useRouter();
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-accent/30">
       {/* 1. HERO SECTION */}
@@ -90,8 +92,9 @@ export default function HomePageComponent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
             {/* Left Content */}
-            <div className="space-y-8 lg:space-y-10 text-center lg:text-left order-2 lg:order-1">
-              <div className="space-y-6">
+            <div className="space-y-8 text-center lg:text-left order-2 lg:order-1 relative z-10 mt-1 md:mt-20 ">
+              <div className="space-y-4 ">
+                {/* Status Badge */}
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-black uppercase tracking-widest">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-2 rounded-full bg-accent opacity-75"></span>
@@ -99,36 +102,79 @@ export default function HomePageComponent() {
                   </span>
                   ISO 9001:2015 CERTIFIED LAB
                 </div>
-                <h1 className="text-5xl md:text-6xl lg:text-[90px] xl:text-[100px] font-black tracking-tighter leading-[0.9] lg:leading-[0.85] text-foreground">
-                  PRECISION <br />
-                  <span className="text-accent italic">SCIENCE.</span>
-                </h1>
-                <p className="text-base lg:text-lg text-muted-foreground max-w-lg mx-auto lg:mx-0 leading-relaxed font-medium italic">
-                  Empowering global research with{" "}
-                  <span className="text-foreground font-bold">
-                    ≥99% high-purity
-                  </span>{" "}
-                  synthetic peptides. Verified by mass spectrometry.
-                </p>
+
+                {/* Typography Headline */}
+                <div className="space-y-6">
+                  <h1 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-black tracking-[-0.03em] leading-[1.1] lg:leading-[1] text-slate-900">
+                    Indonesia’s <br />
+                    <span className="text-slate-400 font-light italic">
+                      Reliable
+                    </span>{" "}
+                    Source <br />
+                    <span className="text-accent italic tracking-[-0.04em]">
+                      for Research Peptides.
+                    </span>
+                  </h1>
+
+                  <p className="text-base lg:text-xl text-slate-500 max-w-xl mx-auto lg:mx-0 leading-relaxed font-medium">
+                    Verified sourcing with{" "}
+                    <span className="text-slate-900 font-bold underline decoration-accent/30 decoration-2 underline-offset-8">
+                      99%+ purity
+                    </span>{" "}
+                    and secure packaging—delivering professionally across
+                    Indonesia.
+                  </p>
+                </div>
+
+                {/* CTA Buttons */}
+                <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
+                  <Button
+                    onClick={() => {
+                      router.push("/shop");
+                    }}
+                    className="h-14 px-8 rounded-2xl bg-slate-900 hover:bg-accent text-white font-bold uppercase tracking-widest text-xs transition-all shadow-xl shadow-slate-200 group"
+                  >
+                    Explore Products
+                    <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="h-14 px-8 rounded-2xl border-slate-200 text-slate-600 font-bold uppercase tracking-widest text-xs hover:bg-slate-50 transition-all"
+                    onClick={() => {
+                      router.push("/about");
+                    }}
+                  >
+                    Learn more about Peptides
+                  </Button>
+                </div>
               </div>
 
-              {/* Stats Mini */}
-              <div className="flex items-center justify-center lg:justify-start gap-6 lg:gap-10 pt-6 border-t border-border w-full lg:w-fit">
+              {/* Stats Section */}
+              <div className="flex  items-center justify-center lg:justify-start gap-8 lg:gap-14 pt-2 border-t border-slate-100 w-full lg:w-fit">
                 <div className="group cursor-default">
-                  <p className="text-2xl lg:text-3xl font-black tracking-tighter group-hover:text-accent transition-colors">
-                    99.8%
-                  </p>
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
+                  <div className="flex items-baseline gap-1">
+                    <p className="text-3xl lg:text-4xl font-black tracking-tighter text-slate-900 group-hover:text-accent transition-all duration-300">
+                      99.8%
+                    </p>
+                    <span className="w-1 h-1 rounded-full bg-accent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-[0.2em] mt-1">
                     Avg. Purity
                   </p>
                 </div>
-                <div className="w-px h-10 bg-border" />
+
+                <div className="w-px h-12 bg-slate-100 rotate-[15deg]" />
+
                 <div className="group cursor-default">
-                  <p className="text-2xl lg:text-3xl font-black tracking-tighter group-hover:text-accent transition-colors">
-                    24h
-                  </p>
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
-                    Avg. Dispatch
+                  <div className="flex items-baseline gap-1">
+                    <p className="text-3xl lg:text-4xl font-black tracking-tighter text-slate-900 group-hover:text-accent transition-all duration-300">
+                      24h
+                    </p>
+                    <span className="w-1 h-1 rounded-full bg-accent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-[0.2em] mt-1">
+                    Dispatch Time
                   </p>
                 </div>
               </div>
