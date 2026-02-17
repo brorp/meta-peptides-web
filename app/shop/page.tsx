@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     title: "MetaPeptides Virtual Catalog - Premium Research Compounds",
     description:
       "Explore our collection of clinical-grade peptides. Tested for precision, delivered with speed.",
-    url: "http://localhost:3000//shop",
+    url: "http://localhost:3000/shop",
     siteName: "MetaPeptides",
     images: [
       {

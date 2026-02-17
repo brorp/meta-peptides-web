@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   ],
 
   alternates: {
-    canonical: "http://localhost:3000//contact",
+    canonical: "http://localhost:3000/contact",
   },
 };
 

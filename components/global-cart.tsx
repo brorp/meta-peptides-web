@@ -14,10 +14,12 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, Plus, Minus, X, Trash2, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/format";
-import { cn } from "@/lib/utils";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { supabaseClient } from "@/lib/supabase-client";
 
 export function GlobalCart() {
+  const router = useRouter();
   const {
     items: cartProducts,
     isCartOpen,
@@ -29,6 +31,23 @@ export function GlobalCart() {
   } = useCartStore();
 
   const cartTotal = getTotalPrice();
+
+  const handleCheckout = async (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    const {
+      data: { session },
+    } = await supabaseClient.auth.getSession();
+
+    if (!session) {
+      setIsCartOpen(false);
+      router.push("/auth?redirect=/checkout");
+      return;
+    }
+
+    setIsCartOpen(false);
+    router.push("/checkout");
+  };
 
   return (
     <Drawer open={isCartOpen} onOpenChange={setIsCartOpen}>
@@ -168,16 +187,13 @@ export function GlobalCart() {
               </div>
 
               <div className="flex flex-col gap-3">
-                <Link
-                  href="/checkout"
-                  className="w-full"
-                  onClick={() => setIsCartOpen(false)}
+                <Button
+                  onClick={handleCheckout}
+                  className="w-full bg-slate-900 hover:bg-accent text-white h-14 rounded-2xl text-sm font-bold transition-all shadow-lg shadow-slate-200 group flex items-center justify-center gap-2"
                 >
-                  <Button className="w-full bg-slate-900 hover:bg-accent text-white h-14 rounded-2xl text-sm font-bold transition-all shadow-lg shadow-slate-200 group flex items-center justify-center gap-2">
-                    Proceed to Checkout
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </Button>
-                </Link>
+                  Proceed to Checkout
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </Button>
 
                 <DrawerClose asChild>
                   <Button
