@@ -94,7 +94,7 @@ export default function ProductDetailComponent({
               </div>
               <Button
                 onClick={() => {
-                  addToCart(product.id);
+                  addToCart(product);
                 }}
                 className="w-full h-16 rounded-2xl bg-black hover:bg-accent text-white font-black uppercase tracking-widest transition-all group"
               >

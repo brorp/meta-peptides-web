@@ -126,7 +126,7 @@ export function ProductCard({
           <Button
             onClick={(e) => {
               e.stopPropagation();
-              addToCart(product.id);
+              addToCart(product);
             }}
             disabled={product.stock === 0}
             className={cn(

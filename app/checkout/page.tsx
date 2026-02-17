@@ -1,634 +1,577 @@
 "use client";
 
-import React, { useRef } from "react";
-
+import React, { useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Navbar } from "@/components/navbar";
 import Link from "next/link";
-import { ChevronRight, AlertCircle } from "lucide-react";
-import { useState } from "react";
-import { format } from "path";
+import {
+  ChevronRight,
+  CreditCard,
+  ShieldCheck,
+  ArrowRight,
+  Camera,
+  Image as ImageIcon,
+} from "lucide-react";
 import { formatCurrency } from "@/lib/format";
 import { useCartStore } from "@/store/useCartStore";
-import { products } from "@/contants/product";
+import { useUserStore } from "@/store/useUserStore";
 import { persentegeTax } from "@/contants/tax";
+import { cn } from "@/lib/utils";
+import { InputGroup } from "@/components/ui/input-group";
+
+// --- VALIDATION SCHEMA WITH ZOD ---
+const checkoutSchema = z.object({
+  // Step: Shipping
+  email: z.string().email("Invalid email address"),
+  firstName: z.string().min(2, "First name must be at least 2 characters"),
+  lastName: z.string().optional(),
+  phone: z.string().min(10, "Phone number must be at least 10 digits"),
+  address: z.string().min(20, "Full address is required (Street, Unit, etc.)"),
+  city: z.string().min(2, "City is required"),
+  zip: z.string().min(5, "ZIP/Postal code must be at least 5 digits"),
+
+  // Step: Payment
+  receiptFile: z.any().optional(),
+  receiptPreview: z.string().nullable().optional(),
+
+  // Optional Note & Voucher
+  note: z.string().max(200, "Note cannot exceed 200 characters").optional(),
+  voucherCode: z.string().toUpperCase().optional().or(z.literal("")),
+});
+
+type CheckoutValues = z.infer<typeof checkoutSchema>;
 
 export default function CheckoutPage() {
-  const [step, setStep] = useState<
-    "cart" | "shipping" | "payment" | "confirmation"
-  >("cart");
+  const tabs = ["Shipping", "Payment", "Confirmation"];
+
+  type Step = (typeof tabs)[number];
+
+  const [step, setStep] = useState<Step>("Shipping");
+
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { cart, updateQuantity, removeFromCart } = useCartStore();
 
-  const cartItems = Object.keys(cart)
-    .map((id: any) => {
-      const product = products.find((p) => p.id === Number(id));
-      return {
-        ...product,
-        quantity: cart[id],
-      };
-    })
-    .filter((item) => item.id !== undefined);
+  const {
+    items: cartItems,
+    getTotalPrice,
+    setShipping,
+    shipping: storedShipping,
+  } = useCartStore();
+  const user = useUserStore((state) => state.user);
 
-  const [formData, setFormData] = useState({
-    email: "",
-    firstName: "",
-    lastName: "",
-    address: "",
-    city: "",
-    state: "",
-    zip: "",
-    phone: "",
-    cardName: "",
-    cardNumber: "",
-    expiry: "",
-    cvc: "",
-    receiptPreview: null as string | null,
-    receiptFile: null as File | null,
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    trigger,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<CheckoutValues>({
+    resolver: zodResolver(checkoutSchema),
+    defaultValues: {
+      email: storedShipping?.email || user?.email || "",
+      firstName:
+        storedShipping?.firstName || user?.user_metadata?.first_name || "",
+      lastName:
+        storedShipping?.lastName || user?.user_metadata?.last_name || "",
+      phone: storedShipping?.phone || "",
+      address: storedShipping?.address || "",
+      city: storedShipping?.city || "",
+      zip: storedShipping?.zip || "",
+      note: storedShipping?.note || "",
+      voucherCode: storedShipping?.voucherCode || "",
+      receiptPreview: null,
+    },
   });
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + (item?.price || 0) * item.quantity,
-    0,
-  );
 
-  const shipping = 0;
+  React.useEffect(() => {
+    if (storedShipping) {
+      reset({
+        ...storedShipping,
+        receiptPreview: null,
+      });
+    }
+  }, [storedShipping, reset]);
+
+  const watchAllFields = watch();
+
+  const receiptPreview = watch("receiptPreview");
+
+  // --- PRICING CALCULATION ---
+  const subtotal = getTotalPrice();
   const serviceFeeOrigin = subtotal * persentegeTax;
-  const serviceFee = subtotal * persentegeTax * 0;
-  const total = subtotal + shipping + serviceFee;
+  const total = subtotal; // Free shipping & service fee based on your logic
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleNext = () => {
-    if (step === "cart") setStep("shipping");
-    else if (step === "shipping") setStep("payment");
-    else if (step === "payment") setStep("confirmation");
-  };
-
-  const handleBack = () => {
-    if (step === "shipping") setStep("cart");
-    else if (step === "payment") setStep("shipping");
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]; // Mengambil file pertama yang dipilih
-
-    if (file) {
-      // 1. Validasi Ukuran (Contoh: Max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert("File is too large. Maximum size is 5MB.");
-        return;
+  // --- HANDLERS ---
+  const handleNext = async () => {
+    if (step === "Shipping") {
+      const isValid = await trigger([
+        "email",
+        "firstName",
+        "lastName",
+        "phone",
+        "address",
+        "city",
+        "zip",
+      ]);
+      if (isValid) {
+        setStep("Payment");
+        setShipping({
+          ...watchAllFields,
+          lastName: watchAllFields.lastName ?? "",
+        });
       }
-
-      // 2. Membuat Preview menggunakan FileReader
-      const reader = new FileReader();
-
-      reader.onloadend = () => {
-        // Menyimpan file asli dan string base64 untuk preview ke dalam state
-        setFormData((prev) => ({
-          ...prev,
-          receiptFile: file, // File objek (untuk dikirim ke API)
-          receiptPreview: reader.result as string, // Base64 string (untuk tag <img />)
-        }));
-      };
-
-      reader.readAsDataURL(file); // Memulai proses pembacaan file
+    } else if (step === "Payment") {
+      // Form submit handle di button final
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024)
+        return alert("File terlalu besar (Max 5MB)");
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setValue("receiptFile", file);
+        setValue("receiptPreview", reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const onSubmit = async (data: CheckoutValues) => {
+    console.log("Submitting Order to BE...", { data, cartItems, total });
+    // Simulasi API call
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    setStep("Confirmation");
+  };
+
+  const inputStyles = cn(
+    "w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm transition-all duration-200",
+    "placeholder:text-slate-300 text-slate-700",
+    "hover:border-slate-300",
+    "focus:border-accent focus:ring-[3px] focus:ring-accent/10 focus:outline-none",
+    "disabled:bg-slate-50 disabled:text-slate-400",
+  );
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Checkout Header */}
-      <section className="bg-gradient-to-b from-primary to-primary/80 text-primary-foreground py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold">Secure Checkout</h1>
-          <p className="text-sm opacity-90 mt-2">
-            Research purposes only • 100% Secure Payment
+    <div className="min-h-screen bg-[#fafafa] text-foreground pb-20">
+      {/* Header */}
+      <section className="bg-black text-white py-12 pt-32">
+        <div className="max-w-7xl mx-auto px-6">
+          <h1 className="text-4xl font-bold uppercase italic tracking-tighter">
+            Secure <span className="text-accent">Checkout.</span>
+          </h1>
+          <p className="text-xs font-bold opacity-60 uppercase tracking-[0.3em] mt-2">
+            Professional Research Sequence Only
           </p>
         </div>
       </section>
 
-      {/* Progress Steps */}
-      <div className="bg-white border-b border-border sticky top-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            {["Cart", "Shipping", "Payment", "Confirmation"].map((label, i) => (
-              <div key={i} className="flex items-center flex-1">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm ${
-                    (i === 0 &&
-                      (step === "cart" ||
-                        step === "shipping" ||
-                        step === "payment" ||
-                        step === "confirmation")) ||
-                    (i === 1 &&
-                      (step === "shipping" ||
-                        step === "payment" ||
-                        step === "confirmation")) ||
-                    (i === 2 &&
-                      (step === "payment" || step === "confirmation")) ||
-                    (i === 3 && step === "confirmation")
-                      ? "bg-accent text-accent-foreground"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {i + 1}
+      {/* Progress Bar */}
+      <div className="bg-white border-b border-muted sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex items-center justify-center md:justify-around overflow-x-auto gap-4">
+            {tabs.map((label, i) => {
+              const isActive = tabs.indexOf(step) >= i;
+              return (
+                <div key={label} className="flex items-center flex-shrink-0">
+                  <div
+                    className={cn(
+                      "w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs transition-colors",
+                      isActive
+                        ? "bg-accent text-white"
+                        : "bg-muted text-muted-foreground",
+                    )}
+                  >
+                    {i + 1}
+                  </div>
+                  <span
+                    className={cn(
+                      "ml-3 text-xs font-bold uppercase",
+                      isActive ? "text-foreground" : "text-muted-foreground",
+                    )}
+                  >
+                    {label}
+                  </span>
+                  {i < 3 && (
+                    <ChevronRight className="w-4 h-4 mx-4 text-muted/50" />
+                  )}
                 </div>
-                <span className="ml-3 font-medium hidden sm:inline">
-                  {label}
-                </span>
-                {i < 3 && (
-                  <ChevronRight className="w-5 h-5 mx-4 text-muted-foreground" />
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Form Section */}
-          <div className="lg:col-span-2">
-            {/* Cart Review */}
-            {step === "cart" && (
-              <Card className="border border-border p-8 space-y-6">
-                <div className="space-y-4">
-                  <h2 className="text-2xl font-bold">Order Review</h2>
-                  {cartItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex justify-between items-center pb-4 border-b border-border"
-                    >
-                      <div>
-                        <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Quantity: {item.quantity}
-                        </p>
-                      </div>
-                      <p className="font-bold">
-                        {formatCurrency((item?.price || 0) * item.quantity)}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-                <div className="bg-accent/10 border border-accent/20 rounded-lg p-4 flex gap-3">
-                  <AlertCircle className="w-5 h-5 text-accent flex-shrink-0 mt-0.5" />
-                  <div className="text-sm">
-                    <p className="font-medium text-foreground">
-                      Research Use Only
-                    </p>
-                    <p className="text-muted-foreground mt-1">
-                      These products are strictly for laboratory research and
-                      not intended for human consumption.
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            )}
-
-            {/* Shipping Information */}
-            {step === "shipping" && (
-              <Card className="border border-border p-8 space-y-6">
-                <h2 className="text-2xl font-bold">Shipping Information</h2>
-                <div className="space-y-4">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        First Name
-                      </label>
-                      <input
-                        type="text"
-                        name="firstName"
-                        value={formData.firstName}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-accent"
-                        placeholder="John"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Last Name
-                      </label>
-                      <input
-                        type="text"
-                        name="lastName"
-                        value={formData.lastName}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-accent"
-                        placeholder="Doe"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-accent"
-                      placeholder="john@example.com"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Phone
-                    </label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-accent"
-                      placeholder="+1 (555) 000-0000"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Street Address
-                    </label>
-                    <input
-                      type="text"
-                      name="address"
-                      value={formData.address}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-accent"
-                      placeholder="123 Main St"
-                    />
-                  </div>
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        City
-                      </label>
-                      <input
-                        type="text"
-                        name="city"
-                        value={formData.city}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-accent"
-                        placeholder="New York"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        State
-                      </label>
-                      <input
-                        type="text"
-                        name="state"
-                        value={formData.state}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-accent"
-                        placeholder="NY"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        ZIP Code
-                      </label>
-                      <input
-                        type="text"
-                        name="zip"
-                        value={formData.zip}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-accent"
-                        placeholder="10001"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            )}
-
-            {/* Payment Information */}
-            {step === "payment" && (
-              <Card className="border border-border p-8 space-y-8 bg-muted/20 rounded-[2.5rem]">
-                {/* Header */}
-                <div className="space-y-2">
-                  <h2 className="text-3xl font-black uppercase italic tracking-tighter">
-                    Manual <span className="text-accent">Transfer.</span>
-                  </h2>
-                  <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em]">
-                    Please complete the payment to one of the accounts below.
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="grid lg:grid-cols-12 gap-12">
+          {/* LEFT COLUMN: FORMS */}
+          <div className="lg:col-span-7 space-y-6">
+            {/* 1. Shipping Form */}
+            {step === "Shipping" && (
+              <Card className="p-6 md:p-8 rounded-[2rem] border-none shadow-xl shadow-slate-200/50 space-y-8 bg-white">
+                <div className="space-y-1">
+                  <h3 className="text-xl font-black uppercase italic tracking-tighter border-b border-muted pb-4">
+                    Shipping <span className="text-accent">Details.</span>
+                  </h3>
+                  <p className="text-sm text-slate-500">
+                    Provide your laboratory delivery information.
                   </p>
                 </div>
 
-                {/* Bank Account Details */}
+                <div className="grid md:grid-cols-2 gap-x-6 gap-y-5">
+                  <InputGroup
+                    label="First Name"
+                    error={errors.firstName?.message}
+                  >
+                    <input
+                      {...register("firstName")}
+                      className={inputStyles}
+                      placeholder="John"
+                    />
+                  </InputGroup>
+
+                  <InputGroup
+                    label="Last Name"
+                    error={errors.lastName?.message}
+                  >
+                    <input
+                      {...register("lastName")}
+                      className={inputStyles}
+                      placeholder="Doe"
+                    />
+                  </InputGroup>
+
+                  <InputGroup
+                    label="Email Address"
+                    error={errors.email?.message}
+                  >
+                    <input
+                      {...register("email")}
+                      className={inputStyles}
+                      placeholder="researcher@lab.com"
+                    />
+                  </InputGroup>
+
+                  <InputGroup
+                    label="Phone Number"
+                    error={errors.phone?.message}
+                  >
+                    <input
+                      {...register("phone")}
+                      className={inputStyles}
+                      placeholder="08123456789"
+                    />
+                  </InputGroup>
+
+                  <div className="md:col-span-2">
+                    <InputGroup
+                      label="Street Address"
+                      error={errors.address?.message}
+                    >
+                      <textarea
+                        {...register("address")}
+                        className={cn(inputStyles, "min-h-[100px] resize-none")}
+                        placeholder="Street Name, Building, Suite..."
+                      />
+                    </InputGroup>
+                  </div>
+
+                  <InputGroup label="City" error={errors.city?.message}>
+                    <input
+                      {...register("city")}
+                      className={inputStyles}
+                      placeholder="South Jakarta"
+                    />
+                  </InputGroup>
+
+                  <InputGroup label="Postal Code" error={errors.zip?.message}>
+                    <input
+                      {...register("zip")}
+                      className={inputStyles}
+                      placeholder="12190"
+                    />
+                  </InputGroup>
+                </div>
+                {/* Note & Voucher Section */}
+                <div className="grid md:grid-cols-2 gap-x-6 gap-y-5">
+                  <InputGroup label="Order Note (Optional)">
+                    <input
+                      {...register("note")}
+                      className={inputStyles}
+                      placeholder="e.g. Leave at front desk"
+                    />
+                  </InputGroup>
+
+                  <InputGroup label="Voucher Code">
+                    <input
+                      {...register("voucherCode")}
+                      className={cn(
+                        inputStyles,
+                        "font-mono tracking-wider uppercase",
+                      )}
+                      placeholder="LAB2026"
+                    />
+                  </InputGroup>
+                </div>
+              </Card>
+            )}
+
+            {/* 2. Payment Form */}
+            {step === "Payment" && (
+              <Card className="p-8 rounded-[2.5rem] border-muted bg-white shadow-xl space-y-8">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xl font-bold uppercase italic tracking-tighter border-b border-muted pb-4">
+                    Manual <span className="text-accent">Transfer.</span>
+                  </h3>
+                  <div className="px-3 py-1 bg-green-500/10 text-green-600 rounded-full text-[9px] font-bold uppercase tracking-widest flex items-center gap-1">
+                    <div className="w-1 h-1 rounded-full bg-green-500 animate-pulse" />{" "}
+                    Direct Verification
+                  </div>
+                </div>
+
+                {/* Bank Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-6 rounded-3xl bg-white border border-border group hover:border-accent transition-colors">
-                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">
-                      Bank Central Asia (BCA)
-                    </p>
-                    <p className="text-2xl font-black text-foreground tracking-tighter">
+                  <div className="p-6 rounded-[2rem] bg-gradient-to-br from-white to-muted/20 border border-muted group hover:border-accent transition-all cursor-pointer">
+                    <div className="flex justify-between items-start mb-6">
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                        BCA
+                      </p>
+                      <CreditCard className="w-5 h-5 text-accent" />
+                    </div>
+                    <p className="text-2xl font-bold text-foreground tracking-tighter mb-1">
                       1234 567 890
                     </p>
-                    <p className="text-[10px] font-bold text-accent uppercase mt-2">
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase">
                       PT. METAPEPTIDES INDONESIA
                     </p>
                   </div>
-                  <div className="p-6 rounded-3xl bg-white border border-border group hover:border-accent transition-colors">
-                    <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">
-                      Bank Mandiri
-                    </p>
-                    <p className="text-2xl font-black text-foreground tracking-tighter">
+                  <div className="p-6 rounded-[2rem] bg-gradient-to-br from-white to-muted/20 border border-muted group hover:border-accent transition-all cursor-pointer">
+                    <div className="flex justify-between items-start mb-6">
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                        MANDIRI
+                      </p>
+                      <CreditCard className="w-5 h-5 text-accent" />
+                    </div>
+                    <p className="text-2xl font-bold text-foreground tracking-tighter mb-1">
                       0987 654 321
                     </p>
-                    <p className="text-[10px] font-bold text-accent uppercase mt-2">
+                    <p className="text-[9px] font-bold text-muted-foreground uppercase">
                       PT. METAPEPTIDES INDONESIA
                     </p>
                   </div>
                 </div>
 
-                {/* Upload Section */}
+                {/* Upload Area */}
                 <div className="space-y-4">
-                  <label className="text-[10px] font-black uppercase text-muted-foreground tracking-widest block px-2">
-                    Payment Confirmation / Upload Receipt
-                  </label>
-
-                  <div className="space-y-4">
-                    {!formData.receiptPreview ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Tombol Kamera */}
-                        <button
-                          onClick={() => cameraInputRef.current?.click()}
-                          className="flex flex-col items-center justify-center gap-4 p-10 rounded-[2rem] border-2 border-dashed border-border hover:border-accent bg-white/50 transition-all group"
-                        >
-                          <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <svg
-                              className="w-6 h-6 text-accent"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2.5}
-                                d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2.5}
-                                d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                            </svg>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-[11px] font-black uppercase tracking-widest">
-                              Take Photo
-                            </p>
-                            <p className="text-[9px] text-muted-foreground font-bold uppercase mt-1">
-                              Directly from camera
-                            </p>
-                          </div>
-                        </button>
-
-                        {/* Tombol Galeri/File */}
-                        <button
-                          onClick={() => fileInputRef.current?.click()}
-                          className="flex flex-col items-center justify-center gap-4 p-10 rounded-[2rem] border-2 border-dashed border-border hover:border-accent bg-white/50 transition-all group"
-                        >
-                          <div className="w-14 h-14 rounded-full bg-accent/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <svg
-                              className="w-6 h-6 text-accent"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2.5}
-                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                              />
-                            </svg>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-[11px] font-black uppercase tracking-widest">
-                              Upload File
-                            </p>
-                            <p className="text-[9px] text-muted-foreground font-bold uppercase mt-1">
-                              Screenshot or Gallery
-                            </p>
-                          </div>
-                        </button>
-                      </div>
-                    ) : (
-                      /* Preview State */
-                      <div className="relative rounded-[2rem] overflow-hidden border border-accent bg-black">
-                        <img
-                          src={formData.receiptPreview}
-                          className="w-full h-64 object-contain opacity-80"
-                          alt="Preview"
-                        />
-                        <button
-                          onClick={() =>
-                            setFormData({
-                              ...formData,
-                              receiptPreview: null,
-                              receiptFile: null,
-                            })
-                          }
-                          className="absolute top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest shadow-xl"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Hidden Inputs */}
-                    <input
-                      ref={cameraInputRef}
-                      type="file"
-                      accept="image/*"
-                      capture="environment" // KHUSUS KAMERA
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      // TANPA CAPTURE (UNTUK FILE/GALERI)
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                  </div>
-                </div>
-
-                {/* Verification Notice */}
-                <div className="p-5 rounded-2xl bg-accent/5 border border-accent/10 flex items-start gap-4">
-                  <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center flex-shrink-0">
-                    <svg
-                      className="w-4 h-4 text-accent"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <p className="text-[9px] font-bold text-accent/80 uppercase tracking-widest leading-relaxed">
-                    Our administrative team will verify your laboratory
-                    transaction within 1x24 business hours. You will receive an
-                    email confirmation once the sequence is ready for dispatch.
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                    Proof of Laboratory Transaction
                   </p>
+
+                  {!receiptPreview ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      <button
+                        type="button"
+                        onClick={() => cameraInputRef.current?.click()}
+                        className="flex flex-col items-center gap-3 p-8 rounded-[2rem] border-2 border-dashed border-muted hover:border-accent bg-muted/5 transition-all"
+                      >
+                        <Camera className="w-6 h-6 text-accent" />
+                        <span className="text-xs font-bold uppercase tracking-widest">
+                          Take Photo
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex flex-col items-center gap-3 p-8 rounded-[2rem] border-2 border-dashed border-muted hover:border-accent bg-muted/5 transition-all"
+                      >
+                        <ImageIcon className="w-6 h-6 text-accent" />
+                        <span className="text-xs font-bold uppercase tracking-widest">
+                          Gallery
+                        </span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative rounded-[2rem] overflow-hidden border-2 border-accent aspect-video bg-black">
+                      <img
+                        src={receiptPreview}
+                        className="w-full h-full object-contain"
+                        alt="Preview"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setValue("receiptPreview", null);
+                          setValue("receiptFile", null);
+                        }}
+                        className="absolute top-4 right-4 bg-red-500 text-white px-4 py-2 rounded-full text-[9px] font-bold uppercase"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+
+                  <input
+                    ref={cameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
                 </div>
               </Card>
             )}
 
-            {/* Confirmation */}
-            {step === "confirmation" && (
-              <Card className="border border-border p-8 space-y-6 text-center">
-                <div className="w-16 h-16 bg-accent/20 rounded-full flex items-center justify-center mx-auto">
-                  <div className="text-3xl">✓</div>
+            {/* 3. Confirmation */}
+            {step === "Confirmation" && (
+              <Card className="p-12 rounded-[3rem] border-accent/20 bg-white shadow-2xl text-center space-y-6">
+                <div className="w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <ShieldCheck className="w-10 h-10 text-accent" />
                 </div>
-                <div>
-                  <h2 className="text-3xl font-bold mb-2">Order Confirmed!</h2>
-                  <p className="text-muted-foreground mb-6">
-                    Thank you for your order. A confirmation email has been sent
-                    to {formData.email}.
-                  </p>
-                  <div className="bg-muted/30 rounded-lg p-6 text-left mb-6">
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Order Number
-                    </p>
-                    <p className="font-bold text-lg">
-                      #ORD-2025-
-                      {Math.random().toString(36).substr(2, 9).toUpperCase()}
-                    </p>
-                  </div>
+                <h2 className="text-4xl font-bold uppercase italic tracking-tighter">
+                  Order <span className="text-accent">Confirmed.</span>
+                </h2>
+                <p className="text-muted-foreground text-sm font-medium">
+                  Lab Sequence Request has been logged. Our administrators will
+                  verify the transaction and update your status via email.
+                </p>
+                <div className="bg-muted/30 p-2 rounded-xl font-mono text-xs uppercase tracking-widest font-bold">
+                  Reference: #MP-
+                  {Math.random().toString(36).substring(7).toUpperCase()}
                 </div>
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    Your order will be processed and shipped within 1-2 business
-                    days.
-                  </p>
-                  <Link href="/">
-                    <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground">
-                      Return to Home
-                    </Button>
-                  </Link>
-                </div>
+                <Link href="/shop" className="block">
+                  <Button className="w-full py-8 rounded-[2rem] bg-black text-white font-bold uppercase tracking-widest hover:bg-accent transition-all">
+                    Return to Shoping
+                  </Button>
+                </Link>
               </Card>
             )}
           </div>
 
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <Card className="border border-border p-6 sticky top-32 space-y-6 rounded-[2rem]">
-              <h3 className="font-black uppercase tracking-tighter text-xl italic">
-                Order Summary
-              </h3>
+          {/* RIGHT COLUMN: SUMMARY */}
+          <div className="lg:col-span-5">
+            <Card className="p-6 md:p-8 rounded-[2rem] border-none shadow-xl shadow-slate-200/50 sticky top-32 space-y-6 bg-white">
+              {/* Title */}
+              <div className="border-b border-slate-100 pb-4">
+                <h3 className="text-lg font-bold tracking-tight text-slate-800">
+                  Order <span className="text-accent italic">Summary</span>
+                </h3>
+              </div>
 
               {/* Cart Items List */}
-              <div className="space-y-3 pb-6 border-b border-border">
+              <div className="space-y-4 max-h-[240px] overflow-y-auto pr-2 custom-scrollbar">
                 {cartItems.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <span className="text-muted-foreground font-medium">
-                      {item.name}{" "}
-                      <span className="text-[10px] opacity-50 px-1 font-black">
-                        X{item.quantity}
-                      </span>
-                    </span>
-                    <span className="font-bold">
-                      {formatCurrency((item?.price || 0) * item.quantity)}
-                    </span>
+                  <div
+                    key={item.id}
+                    className="flex justify-between items-start group"
+                  >
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium text-slate-700 leading-tight">
+                        {item.name}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                          Qty: {item.quantity}
+                        </span>
+                      </div>
+                    </div>
+                    <p className="font-semibold text-sm text-slate-900">
+                      {formatCurrency(item.price * item.quantity)}
+                    </p>
                   </div>
                 ))}
               </div>
 
               {/* Pricing Breakdown */}
-              <div className="space-y-3">
+              <div className="space-y-3 pt-4 border-t border-slate-100">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span className="font-bold">{formatCurrency(subtotal)}</span>
+                  <span className="text-slate-500">Subtotal</span>
+                  <span className="font-medium text-slate-800">
+                    {formatCurrency(subtotal)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-slate-500">Shipping</span>
+                  <span className="text-[10px] font-bold text-accent bg-accent/5 px-2 py-1 rounded-lg italic">
+                    Free Dispatch
+                  </span>
                 </div>
 
-                {/* BAGIAN SHIPPING FREE */}
-                <div className="flex justify-between text-sm items-center">
-                  <span className="text-muted-foreground">Shipping</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] line-through text-muted-foreground/50 font-bold">
-                      {formatCurrency(25000)} {/* Harga aslinya dicoret */}
-                    </span>
-                    <span className="text-accent font-black uppercase tracking-widest text-[11px] bg-accent/10 px-2 py-0.5 rounded-md">
-                      FREE
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Service Fee</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] line-through text-muted-foreground/50 font-bold">
-                      {formatCurrency(serviceFeeOrigin)}
-                    </span>
-                    <span className="text-accent font-black uppercase tracking-widest text-[11px] bg-accent/10 px-2 py-0.5 rounded-md">
-                      FREE
+                {/* Grand Total */}
+                <div className="flex justify-between items-end pt-5 border-t-2 border-dashed border-slate-100 mt-4">
+                  <span className="text-sm font-bold text-slate-800">
+                    Total Due
+                  </span>
+                  <div className="text-right">
+                    <span className="block text-2xl font-bold text-accent tracking-tighter">
+                      {formatCurrency(total)}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Total */}
-              <div className="border-t-2 border-dashed border-border pt-6">
-                <div className="flex justify-between font-black text-2xl tracking-tighter uppercase italic mb-6">
-                  <span>Total</span>
-                  <span className="text-accent">{formatCurrency(total)}</span>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="space-y-3">
-                  {step !== "confirmation" && (
-                    <>
-                      <Button
-                        onClick={handleNext}
-                        className="w-full h-14 rounded-2xl bg-black hover:bg-accent text-white font-black uppercase tracking-widest transition-all"
-                      >
-                        {step === "payment" ? "Complete Order" : "Continue"}
-                      </Button>
-                      {step !== "cart" && (
-                        <Button
-                          onClick={handleBack}
-                          variant="outline"
-                          className="w-full h-14 rounded-2xl border-border font-black uppercase tracking-widest text-[10px]"
-                        >
-                          Back
-                        </Button>
+              {/* Action Buttons */}
+              <div className="pt-4 space-y-4">
+                {step !== "Confirmation" && (
+                  <>
+                    <Button
+                      onClick={
+                        step === "Payment" ? handleSubmit(onSubmit) : handleNext
+                      }
+                      disabled={isSubmitting}
+                      className="w-full h-14 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm transition-all shadow-lg shadow-slate-200 group flex items-center justify-center gap-2"
+                    >
+                      {isSubmitting ? (
+                        <span className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Verifying...
+                        </span>
+                      ) : (
+                        <>
+                          {step === "Payment"
+                            ? "Submit Transaction"
+                            : "Continue to Delivery"}
+                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </>
                       )}
-                    </>
-                  )}
-                  {step === "confirmation" && (
-                    <Link href="/shop">
-                      <Button className="w-full h-14 rounded-2xl bg-accent text-white font-black uppercase tracking-widest">
-                        Continue Shopping
-                      </Button>
-                    </Link>
-                  )}
-                </div>
+                    </Button>
+
+                    {step !== "Shipping" && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (step === "Payment") setStep("Shipping");
+                        }}
+                        className="w-full text-xs font-semibold text-slate-400 hover:text-slate-600 transition-colors py-2"
+                      >
+                        Back to Previous Step
+                      </button>
+                    )}
+                  </>
+                )}
               </div>
 
-              <div className="flex items-center justify-center gap-2 text-[9px] text-muted-foreground font-black uppercase tracking-widest pt-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                Secure 256-bit SSL encryption
+              {/* Trust Badge */}
+              <div className="flex items-center justify-center gap-2.5 pt-6 border-t border-slate-50 mt-4 opacity-60">
+                <ShieldCheck className="w-4 h-4 text-slate-400" />
+                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">
+                  Secure SSL Encryption
+                </span>
               </div>
             </Card>
           </div>

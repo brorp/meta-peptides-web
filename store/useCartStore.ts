@@ -1,59 +1,107 @@
+import { ProductInterface } from "@/interface/products";
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
+export interface ShippingData {
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  address: string;
+  city: string;
+  zip: string;
+  note?: string;
+  voucherCode?: string;
+}
 
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-  volume: string;
-  purity: string;
+interface CartItem extends ProductInterface {
+  quantity: number;
 }
 
 interface CartState {
-  cart: Record<number, number>; // { productId: quantity }
+  items: CartItem[];
   isCartOpen: boolean;
+  shipping: ShippingData | null;
   toggleCart: () => void;
   setIsCartOpen: (open: boolean) => void;
-  addToCart: (productId: string) => void;
-  updateQuantity: (productId: number, newQty: number) => void;
-  removeFromCart: (productId: number) => void;
+  addToCart: (product: ProductInterface) => void;
+  updateQuantity: (productId: string | number, newQty: number) => void;
+  removeFromCart: (productId: string | number) => void;
   getCartCount: () => number;
+  getTotalPrice: () => number;
+  clearCart: () => void;
+  setShipping: (data: ShippingData) => void;
+  clearShipping: () => void;
 }
 
-export const useCartStore = create<CartState>((set, get) => ({
-  cart: {},
-  isCartOpen: false,
+export const useCartStore = create<CartState>()(
+  persist(
+    (set, get) => ({
+      items: [],
+      isCartOpen: false,
+      shipping: null, // Initial state
 
-  toggleCart: () => set((state) => ({ isCartOpen: !state.isCartOpen })),
+      toggleCart: () => set((state) => ({ isCartOpen: !state.isCartOpen })),
 
-  setIsCartOpen: (open) => set({ isCartOpen: open }),
+      setIsCartOpen: (open) => set({ isCartOpen: open }),
 
-  addToCart: (productId) =>
-    set((state) => ({
-      cart: {
-        ...state.cart,
-        [productId]: (state.cart[productId as any] || 0) + 1,
+      addToCart: (product) =>
+        set((state) => {
+          const existingItem = state.items.find(
+            (item) => item.id === product.id,
+          );
+
+          if (existingItem) {
+            return {
+              items: state.items.map((item) =>
+                item.id === product.id
+                  ? { ...item, quantity: item.quantity + 1 }
+                  : item,
+              ),
+            };
+          }
+
+          return {
+            items: [...state.items, { ...product, quantity: 1 }],
+          };
+        }),
+
+      updateQuantity: (productId, newQty) => {
+        if (newQty <= 0) {
+          get().removeFromCart(productId);
+        } else {
+          set((state) => ({
+            items: state.items.map((item) =>
+              item.id === productId ? { ...item, quantity: newQty } : item,
+            ),
+          }));
+        }
       },
-      isCartOpen: true,
-    })),
 
-  updateQuantity: (productId, newQty) => {
-    if (newQty <= 0) {
-      get().removeFromCart(productId);
-    } else {
-      set((state) => ({
-        cart: { ...state.cart, [productId]: newQty },
-      }));
-    }
-  },
+      removeFromCart: (productId) =>
+        set((state) => ({
+          items: state.items.filter((item) => item.id !== productId),
+        })),
 
-  removeFromCart: (productId) =>
-    set((state) => {
-      const updatedCart = { ...state.cart };
-      delete updatedCart[productId];
-      return { cart: updatedCart };
+      getCartCount: () => {
+        return get().items.reduce((acc, item) => acc + item.quantity, 0);
+      },
+
+      getTotalPrice: () => {
+        return get().items.reduce(
+          (acc, item) => acc + item.price * item.quantity,
+          0,
+        );
+      },
+
+      clearCart: () => set({ items: [] }),
+
+      // Implementasi fungsi baru
+      setShipping: (data) => set({ shipping: data }),
+
+      clearShipping: () => set({ shipping: null }),
     }),
-
-  getCartCount: () => {
-    return Object.values(get().cart).reduce((acc, qty) => acc + qty, 0);
-  },
-}));
+    {
+      name: "metapeptides-cart-storage",
+    },
+  ),
+);
