@@ -8,6 +8,7 @@ interface UseGetProductsParams {
   limit?: number;
   category?: string;
   keyword?: string;
+  sort?: string;
 }
 
 export function useGetProducts(
@@ -17,15 +18,15 @@ export function useGetProducts(
     "queryKey" | "queryFn"
   >,
 ) {
-  const { page = 1, limit = 10, category, keyword } = params;
+  const { page = 1, limit = 10, category, keyword, sort } = params;
 
   return useQuery({
-    queryKey: ["products", page, limit, category, keyword],
+    queryKey: ["products", page, limit, category, keyword, sort],
     queryFn: async () => {
       const { data } = await axios.get<GetProductsResponseInterface>(
         "/api/products",
         {
-          params: { page, limit, category, keyword },
+          params: { page, limit, category, keyword, sort },
         },
       );
 

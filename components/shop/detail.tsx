@@ -51,28 +51,13 @@ export default function ProductDetailComponent({
                 <span className="text-accent italic">{product?.label}.</span>
               </h1>
               <div className="flex items-start gap-4 p-4 bg-muted/50 rounded-2xl border-l-4 border-accent">
-                <Info className="w-5 h-5 text-accent flex-shrink-0 mt-1" />
                 <p className="text-slate-600 text-sm leading-relaxed font-medium">
                   {product?.short_desc}
-                  <sup
-                    className="text-accent font-bold ml-1 cursor-help"
-                    title="HPLC/MS Verified Reference"
-                  >
-                    [REF-01]
-                  </sup>
                 </p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl border border-border bg-white shadow-sm">
-                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">
-                  Molecular Formula
-                </p>
-                <p className="text-sm font-bold tracking-tight">
-                  {product?.formula || "N/A"}
-                </p>
-              </div>
               <div className="p-4 rounded-2xl border border-border bg-white shadow-sm">
                 <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">
                   CAS Number
@@ -98,7 +83,7 @@ export default function ProductDetailComponent({
                 }}
                 className="w-full h-16 rounded-2xl bg-black hover:bg-accent text-white font-black uppercase tracking-widest transition-all group"
               >
-                Add to chart
+                Add to cart
                 <ChevronRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Button>
             </div>
