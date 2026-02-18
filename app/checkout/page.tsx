@@ -1,13 +1,11 @@
-import CheckoutPageComponent from "@/components/checkout";
-import { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-  title: "MetaPeptides",
-  description:
-    "Checkout securely with MetaPeptides. Review your order, enter shipping details, and complete payment for a seamless purchasing experience.",
-  robots: { index: false, follow: false },
-};
+import dynamic from "next/dynamic";
 
-export default function CheckoutPage() {
+const CheckoutPageComponent = dynamic(() => import("@/components/checkout"), {
+  ssr: false,
+});
+
+export default function CheckoutClient() {
   return <CheckoutPageComponent />;
 }
