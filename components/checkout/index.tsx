@@ -1,0 +1,257 @@
+"use client";
+
+import React, { useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useCartStore } from "@/store/useCartStore";
+import { useUserStore } from "@/store/useUserStore";
+import { persentegeTax } from "@/contants/tax";
+import { cn } from "@/lib/utils";
+import { useCheckout } from "@/hooks/api/useCheckout";
+import { toast } from "sonner";
+import { CheckoutSteps } from "./checkout-steps";
+import { ShippingForm } from "./shipping-form";
+import { OrderSummary } from "./order-summary";
+import { PaymentForm } from "./payment-form";
+import { ConfirmationCard } from "./confirmation-card";
+
+// --- VALIDATION SCHEMA WITH ZOD ---
+const checkoutSchema = z.object({
+  // Step: Shipping
+  email: z.string().email("Invalid email address"),
+  firstName: z.string().min(2, "First name must be at least 2 characters"),
+  lastName: z.string().optional(),
+  phone: z.string().min(10, "Phone number must be at least 10 digits"),
+  address: z.string().min(20, "Full address is required (Street, Unit, etc.)"),
+  regional: z.string().min(2, "City or Town is required"),
+  zip: z.string().min(5, "ZIP/Postal code must be at least 5 digits"),
+
+  // Step: Payment
+  receiptFile: z.any().optional(),
+  receiptPreview: z.string().nullable().optional(),
+
+  // Optional Note & Voucher
+  note: z.string().max(200, "Note cannot exceed 200 characters").optional(),
+  voucherCode: z.string().toUpperCase().optional().or(z.literal("")),
+});
+
+type CheckoutValues = z.infer<typeof checkoutSchema>;
+
+export default function CheckoutPageComponent() {
+  const tabs = ["Shipping", "Payment", "Confirmation"];
+
+  type Step = (typeof tabs)[number];
+
+  const [step, setStep] = useState<Step>("Shipping");
+
+  const {
+    items: cartItems,
+    getTotalPrice,
+    setShipping,
+    shipping: storedShipping,
+    clearCart,
+    clearShipping,
+  } = useCartStore();
+  const user = useUserStore((state) => state.user);
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    trigger,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<CheckoutValues>({
+    resolver: zodResolver(checkoutSchema),
+    defaultValues: {
+      email: storedShipping?.email || user?.email || "",
+      firstName:
+        storedShipping?.firstName || user?.user_metadata?.first_name || "",
+      lastName:
+        storedShipping?.lastName || user?.user_metadata?.last_name || "",
+      phone: storedShipping?.phone || "",
+      address: storedShipping?.address || "",
+      regional: storedShipping?.regional || "",
+      zip: storedShipping?.zip || "",
+      note: storedShipping?.note || "",
+      voucherCode: storedShipping?.voucherCode || "",
+      receiptPreview: null,
+    },
+  });
+
+  const {
+    data: responseSubmit,
+    mutate: submitOrder,
+    isPending: isLoadingSubmit,
+  } = useCheckout({
+    onSuccess: () => {
+      clearCart();
+      clearShipping();
+      setStep("Confirmation");
+    },
+  });
+
+  const isLoading = isSubmitting || isLoadingSubmit;
+
+  React.useEffect(() => {
+    if (storedShipping) {
+      reset({
+        ...storedShipping,
+        receiptPreview: null,
+      });
+    }
+  }, [storedShipping, reset]);
+
+  const watchAllFields = watch();
+
+  const receiptPreview = watch("receiptPreview");
+
+  const subtotal = getTotalPrice();
+  const serviceFeeOrigin = subtotal * persentegeTax;
+  const total = subtotal;
+
+  const handleNext = async () => {
+    if (step === "Shipping") {
+      const isValid = await trigger([
+        "email",
+        "firstName",
+        "lastName",
+        "phone",
+        "address",
+        "regional",
+        "zip",
+      ]);
+      if (isValid) {
+        setStep("Payment");
+        setShipping({
+          ...watchAllFields,
+          lastName: watchAllFields.lastName ?? "",
+        });
+      }
+    } else if (step === "Payment") {
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024)
+        return alert("File terlalu besar (Max 5MB)");
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setValue("receiptFile", file);
+        setValue("receiptPreview", reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const onSubmit = async (data: CheckoutValues) => {
+    if (!data.receiptFile && step === "Payment") {
+      return toast("Please upload your payment receipt first.");
+    }
+
+    const formData = new FormData();
+
+    formData.append("file", data.receiptFile);
+
+    const orderPayload = {
+      email: data.email,
+      first_name: data.firstName,
+      last_name: data.lastName,
+      phone: data.phone,
+      shipping_address: data.address,
+      shipping_regional: data.regional,
+      shipping_name: `${data.firstName} ${data.lastName || ""}`.trim(),
+      shipping_phone: data.phone,
+      zip: data.zip,
+      note: data.note,
+      voucher_code: data.voucherCode,
+      total_price: total,
+      subtotal: subtotal,
+      items: cartItems.map((item) => ({
+        product_id: item.id,
+        quantity: item.quantity,
+        price_at_purchase: item.price,
+      })),
+    };
+
+    formData.append("orderData", JSON.stringify(orderPayload));
+
+    submitOrder(formData);
+  };
+
+  const inputStyles = cn(
+    "w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm transition-all duration-200",
+    "placeholder:text-slate-300 text-slate-700",
+    "hover:border-slate-300",
+    "focus:border-accent focus:ring-[3px] focus:ring-accent/10 focus:outline-none",
+    "disabled:bg-slate-50 disabled:text-slate-400",
+  );
+
+  return (
+    <div className="min-h-screen bg-[#fafafa] pb-20">
+      <section className="bg-black text-white py-12 pt-40">
+        <div className="max-w-7xl mx-auto px-6">
+          <h1 className="text-4xl font-bold uppercase italic tracking-tighter">
+            Secure <span className="text-accent">Checkout.</span>
+          </h1>
+          <p className="text-xs font-bold opacity-60 uppercase tracking-[0.3em] mt-2">
+            Professional Research Sequence Only
+          </p>
+        </div>
+      </section>
+
+      <CheckoutSteps steps={tabs} currentStep={step} />
+
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <div className="grid lg:grid-cols-12 gap-12">
+          <div
+            className={cn(
+              "lg:col-span-7",
+              step === "Confirmation" && "lg:col-span-12",
+            )}
+          >
+            {step === "Shipping" && (
+              <ShippingForm
+                register={register}
+                errors={errors}
+                setValue={setValue}
+                watch={watch}
+                inputStyles={inputStyles}
+              />
+            )}
+            {step === "Payment" && (
+              <PaymentForm
+                receiptPreview={watch("receiptPreview")}
+                setValue={setValue}
+                onFileChange={handleFileChange}
+              />
+            )}
+            {step === "Confirmation" && (
+              <ConfirmationCard data={responseSubmit} />
+            )}
+          </div>
+
+          {step !== "Confirmation" && (
+            <div className="lg:col-span-5">
+              <OrderSummary
+                items={cartItems}
+                subtotal={subtotal}
+                step={step}
+                isLoading={isLoading}
+                onNext={
+                  step === "Payment" ? handleSubmit(onSubmit) : handleNext
+                }
+                onBack={() => setStep("Shipping")}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -7,6 +7,7 @@ import { Footer } from "./footer";
 import { GlobalCart } from "./global-cart";
 import { useUserStore } from "@/store/useUserStore";
 import { createClientComponentClient } from "@/lib/supabase-client";
+import { PromoModal } from "./promo-modal";
 
 export function LayoutClient({ children }: { children: React.ReactNode }) {
   const setUser = useUserStore((state) => state.setUser);
@@ -32,6 +33,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
     <>
       <Navbar />
       <main>{children}</main>
+      <PromoModal />
       <FloatingActions />
       <Footer />
       <GlobalCart />

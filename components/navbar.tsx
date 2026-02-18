@@ -7,22 +7,22 @@ import {
   ShoppingCart,
   Menu,
   X,
-  UserCircle2,
-  Dna,
-  Fingerprint,
   LogOut,
+  Fingerprint,
+  Sparkles,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/store/useCartStore";
 import { useUserStore } from "@/store/useUserStore";
 import { createClientComponentClient } from "@/lib/supabase-client";
+import Marquee from "react-fast-marquee";
+import { discount } from "@/contants/discount";
 
 const NAV_LINKS = [
   { name: "Home", href: "/" },
   { name: "Shop", href: "/shop" },
   { name: "About Us", href: "/about" },
-  // { name: "Research", href: "/research" },
   { name: "Our Peptides' Lab Test", href: "/peptide-labtest" },
   { name: "Peptides Guides", href: "/peptide-guides" },
   { name: "FAQ", href: "/faq" },
@@ -30,14 +30,17 @@ const NAV_LINKS = [
 
 export function Navbar() {
   const router = useRouter();
-  const { user, clearUser } = useUserStore((state) => state);
-
+  const { user, clearUser } = useUserStore(); // Langsung ambil user object
   const pathname = usePathname();
+
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const { getCartCount, setIsCartOpen } = useCartStore();
   const cartCount = getCartCount();
+
+  // Boolean helper untuk cek login
+  const isLoggedIn = !!user && Object.keys(user).length > 0;
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -58,9 +61,32 @@ export function Navbar() {
 
   return (
     <>
+      {/* 1. ANNOUNCEMENT MARQUEE BANNER */}
+      {isLoggedIn && (
+        <div className="fixed top-0 w-full z-[60] bg-[#0F172A] border-b border-white/5 h-10 flex items-center">
+          <Marquee gradient={false} speed={50} pauseOnHover={true}>
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="flex items-center gap-10 px-4">
+                <span className="text-white text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                  <Sparkles className="w-3 h-3 text-accent" />
+                  Welcome back! Use code{" "}
+                  <span className="text-accent underline decoration-accent/30 underline-offset-4">
+                    WELCOME10
+                  </span>{" "}
+                  for {discount * 100}% OFF your first order
+                </span>
+                <span className="text-white/30 text-[10px]">•</span>
+              </div>
+            ))}
+          </Marquee>
+        </div>
+      )}
+
       <nav
         className={cn(
-          "fixed top-0 w-full z-50 transition-all duration-300 px-4 md:px-10 pt-6",
+          "fixed w-full z-50 transition-all duration-300 px-4 md:px-10",
+          // Penyesuaian jarak top jika banner muncul
+          isLoggedIn ? (isScrolled ? "top-8" : "top-10") : "top-0",
           isScrolled ? "pt-2" : "pt-6",
         )}
       >
@@ -103,7 +129,6 @@ export function Navbar() {
 
             {/* Actions */}
             <div className="flex items-center gap-1 md:gap-3">
-              {/* Cart Button */}
               <button
                 onClick={() => setIsCartOpen(true)}
                 className="group relative p-2 hover:bg-accent/10 rounded-full transition-colors"
@@ -116,13 +141,11 @@ export function Navbar() {
                 )}
               </button>
 
-              {/* Auth Button (Login / Profile) */}
-              {user?.email ? (
+              {isLoggedIn ? (
                 <button
                   onClick={handleLogout}
                   className={cn(
-                    "group flex items-center gap-2 p-2 md:pl-2 md:pr-4 rounded-full transition-all duration-300",
-                    "hover:bg-red-500 hover:text-white text-red-500 bg-red-500/10",
+                    "group flex items-center gap-2 p-2 md:pl-2 md:pr-4 rounded-full transition-all duration-300 hover:bg-red-500 hover:text-white text-red-500 bg-red-500/10",
                   )}
                 >
                   <LogOut className="w-5 h-5 transition-transform group-hover:translate-x-0.5" />
@@ -131,7 +154,6 @@ export function Navbar() {
                   </span>
                 </button>
               ) : (
-                // Jika BELUM login, arahkan ke Auth/Login
                 <Link href="/auth">
                   <button
                     className={cn(
@@ -149,13 +171,6 @@ export function Navbar() {
                 </Link>
               )}
 
-              {/* <Link href="/contact" className="hidden lg:block">
-                <Button className="rounded-full px-6 bg-foreground text-background hover:bg-foreground/90 transition-all active:scale-95">
-                  Contact Us
-                </Button>
-              </Link> */}
-
-              {/* Mobile Toggle Button */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -195,18 +210,6 @@ export function Navbar() {
               {link.name}
             </Link>
           ))}
-          <Link
-            href="/auth"
-            className={cn(
-              "text-lg font-medium p-3 rounded-2xl transition-colors flex items-center gap-3",
-              pathname === "/auth"
-                ? "bg-accent/10 text-accent"
-                : "text-foreground hover:bg-muted",
-            )}
-          >
-            <UserCircle2 className="w-6 h-6" />
-            Researcher Login
-          </Link>
           <hr className="border-muted my-2" />
           <Link href="/contact" className="w-full">
             <Button className="w-full rounded-2xl py-6 bg-foreground text-background text-lg">
