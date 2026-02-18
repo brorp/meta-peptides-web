@@ -49,7 +49,7 @@ export default function OurCompanyPageComponent() {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent text-[10px] font-black uppercase tracking-[0.2em]">
               Identity & Mission
             </div>
-            <h1 className="text-6xl lg:text-8xl font-black text-white tracking-tighter leading-[0.85] uppercase">
+            <h1 className="text-5xl lg:text-7xl font-black text-white tracking-tighter leading-[0.85] uppercase">
               Our <br />
               <span className="text-accent italic">Company.</span>
             </h1>

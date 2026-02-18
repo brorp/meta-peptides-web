@@ -23,6 +23,7 @@ const NAV_LINKS = [
   { name: "Shop", href: "/shop" },
   { name: "About Us", href: "/about" },
   { name: "Research", href: "/research" },
+  { name: "Peptide Labtest", href: "/peptide-labtest" },
   { name: "FAQ", href: "/faq" },
 ];
 

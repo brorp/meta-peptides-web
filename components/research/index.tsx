@@ -68,7 +68,7 @@ export default function ResearchPage() {
           <Badge className="mb-4 bg-green-500/10 text-green-400 border-green-500/20 uppercase tracking-[0.3em] font-black text-[10px]">
             Technical Intelligence
           </Badge>
-          <h1 className="text-6xl lg:text-8xl font-black text-white tracking-tighter leading-[0.85] uppercase italic">
+          <h1 className="text-5xl lg:text-7xl font-black text-white tracking-tighter leading-[0.85] uppercase italic">
             Research <br />
             <span className="text-green-500">Archives.</span>
           </h1>

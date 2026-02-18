@@ -78,16 +78,8 @@ export default function ShopPageComponent() {
   return (
     <div className="min-h-screen bg-[#FAFAFA] text-foreground">
       {/* Header Section */}
-      <section className="pt-32 pb-12 bg-[#0F172A] text-white relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/10 blur-[120px] -mr-40 -mt-40" />
-        <div className="max-w-7xl mx-auto px-6 relative z-10 text-center lg:text-left uppercase tracking-tighter font-black italic">
-          <Badge className="bg-accent/20 text-accent border-accent/30 mb-4 uppercase tracking-[0.2em]">
-            Precision Research
-          </Badge>
-          <h1 className="text-5xl lg:text-6xl">
-            CATALOG<span className="text-accent">.</span>
-          </h1>
-        </div>
+      <section className="pt-24 pb-12 bg-[#0F172A] text-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-[500px] h-[300px] bg-accent/10 blur-[120px] -mr-40 -mt-40" />
       </section>
 
       <div className="max-w-7xl mx-auto px-6 py-10">

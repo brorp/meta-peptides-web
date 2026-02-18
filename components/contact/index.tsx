@@ -85,7 +85,7 @@ export default function ContactPageComponent() {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent text-[10px] font-black uppercase tracking-[0.2em] mb-6">
             Global Support Desk
           </div>
-          <h1 className="text-6xl lg:text-8xl font-black text-white tracking-tighter leading-none mb-6">
+          <h1 className="text-5xl lg:text-7xl font-black text-white tracking-tighter leading-none mb-6">
             GET IN <br />
             <span className="text-accent italic">TOUCH.</span>
           </h1>
