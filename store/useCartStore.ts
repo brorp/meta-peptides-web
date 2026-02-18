@@ -7,7 +7,7 @@ export interface ShippingData {
   lastName: string;
   phone: string;
   address: string;
-  city: string;
+  city_or_town: string;
   zip: string;
   note?: string;
   voucherCode?: string;

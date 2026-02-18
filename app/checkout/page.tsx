@@ -21,6 +21,7 @@ import { useUserStore } from "@/store/useUserStore";
 import { persentegeTax } from "@/contants/tax";
 import { cn } from "@/lib/utils";
 import { InputGroup } from "@/components/ui/input-group";
+import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 
 // --- VALIDATION SCHEMA WITH ZOD ---
 const checkoutSchema = z.object({
@@ -30,7 +31,7 @@ const checkoutSchema = z.object({
   lastName: z.string().optional(),
   phone: z.string().min(10, "Phone number must be at least 10 digits"),
   address: z.string().min(20, "Full address is required (Street, Unit, etc.)"),
-  city: z.string().min(2, "City is required"),
+  city_or_town: z.string().min(2, "City or Town is required"),
   zip: z.string().min(5, "ZIP/Postal code must be at least 5 digits"),
 
   // Step: Payment
@@ -80,7 +81,7 @@ export default function CheckoutPage() {
         storedShipping?.lastName || user?.user_metadata?.last_name || "",
       phone: storedShipping?.phone || "",
       address: storedShipping?.address || "",
-      city: storedShipping?.city || "",
+      city_or_town: storedShipping?.city_or_town || "",
       zip: storedShipping?.zip || "",
       note: storedShipping?.note || "",
       voucherCode: storedShipping?.voucherCode || "",
@@ -98,6 +99,7 @@ export default function CheckoutPage() {
   }, [storedShipping, reset]);
 
   const watchAllFields = watch();
+  console.log(watchAllFields, "watchAllFields");
 
   const receiptPreview = watch("receiptPreview");
 
@@ -115,7 +117,7 @@ export default function CheckoutPage() {
         "lastName",
         "phone",
         "address",
-        "city",
+        "city_or_town",
         "zip",
       ]);
       if (isValid) {
@@ -284,11 +286,23 @@ export default function CheckoutPage() {
                     </InputGroup>
                   </div>
 
-                  <InputGroup label="City" error={errors.city?.message}>
-                    <input
-                      {...register("city")}
-                      className={inputStyles}
-                      placeholder="South Jakarta"
+                  <InputGroup
+                    label="City or Town"
+                    error={errors.city_or_town?.message}
+                  >
+                    <AddressAutocomplete
+                      defaultValue={watch("city_or_town")}
+                      onSelect={(data) => {
+                        setValue("city_or_town", data.label, {
+                          shouldValidate: true,
+                        });
+
+                        setValue("zip", data.postcode, {
+                          shouldValidate: true,
+                        });
+                      }}
+                      placeholder="Contoh: Balaraja atau Tangerang..."
+                      error={errors.city_or_town?.message}
                     />
                   </InputGroup>
 
