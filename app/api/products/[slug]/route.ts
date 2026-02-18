@@ -8,7 +8,6 @@ export async function GET(
 ) {
   const supabaseServer = await createClientCookies();
   try {
-    // 2. Await params-nya di sini
     const resolvedParams = await params;
     const slug = resolvedParams.slug;
 

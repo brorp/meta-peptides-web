@@ -435,7 +435,7 @@ export default function CheckoutPage() {
                 {/* Upload Area */}
                 <div className="space-y-4">
                   <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                    Proof of Laboratory Transaction
+                    Proof of Transaction
                   </p>
 
                   {!receiptPreview ? (

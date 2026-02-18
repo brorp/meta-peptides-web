@@ -10,19 +10,20 @@ import { useCartStore } from "@/store/useCartStore";
 import {
   Beaker,
   ClipboardCheck,
-  FlaskConical,
   ThermometerSnowflake,
-  Info,
   ChevronRight,
   ShieldCheck,
-  Download,
+  Activity,
 } from "lucide-react";
+import Link from "next/link";
 
 export default function ProductDetailComponent({
   product,
 }: {
   product: ProductInterface;
 }) {
+  console.log(product, "product");
+
   const addToCart = useCartStore((state) => state.addToCart);
 
   return (
@@ -46,10 +47,12 @@ export default function ProductDetailComponent({
 
           <div className="flex flex-col justify-center space-y-8">
             <div className="space-y-4">
-              <h1 className="text-5xl lg:text-7xl font-black tracking-tighter uppercase leading-none">
+              <h1 className="text-xl lg:text-3xl font-black tracking-tighter uppercase leading-none">
                 {product?.name} <br />
-                <span className="text-accent italic">{product?.label}.</span>
               </h1>
+              <span className="text-xs lg:text-base font-semibold italic">
+                Category : {product?.category}.
+              </span>
               <div className="flex items-start gap-4 p-4 bg-muted/50 rounded-2xl border-l-4 border-accent">
                 <p className="text-slate-600 text-sm leading-relaxed font-medium">
                   {product?.short_desc}
@@ -93,49 +96,45 @@ export default function ProductDetailComponent({
         {/* --- BOTTOM SECTION: TECHNICAL DOCUMENTATION --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           <div className="lg:col-span-2 space-y-10">
-            <section className="space-y-4">
-              <h3 className="flex items-center gap-3 text-xl font-black uppercase tracking-tighter italic">
-                <FlaskConical className="text-accent" />
-                Technical Overview
-              </h3>
-              <p className="text-slate-600 text-sm leading-relaxed">
-                {product?.overview ||
-                  "Technical data pending laboratory verification."}
-                "Technical data pending laboratory verification."
-              </p>
-            </section>
-
             {/* --- IMPLEMENTASI TABS --- */}
             <Tabs defaultValue="storage" className="w-full">
-              {/* List Pilihan Tab */}
-              <TabsList className="grid w-full grid-cols-2 bg-muted/50 h-14 p-1 rounded-2xl border border-border">
+              <TabsList className="flex w-full bg-slate-100 h-12 p-1 rounded-xl border border-slate-200">
                 <TabsTrigger
                   value="storage"
-                  className="rounded-xl h-full font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-black data-[state=active]:text-white transition-all"
+                  className="flex-1 rounded-lg h-full font-black uppercase tracking-widest text-[9px] data-[state=active]:bg-black data-[state=active]:text-white transition-all"
                 >
                   <ThermometerSnowflake className="w-3 h-3 mr-2" />
-                  Storage Protocol
+                  Storage
                 </TabsTrigger>
                 <TabsTrigger
                   value="usage"
-                  className="rounded-xl h-full font-black uppercase tracking-widest text-[10px] data-[state=active]:bg-accent data-[state=active]:text-white transition-all"
+                  className="flex-1 rounded-lg h-full font-black uppercase tracking-widest text-[9px] data-[state=active]:bg-accent data-[state=active]:text-white transition-all"
                 >
                   <Beaker className="w-3 h-3 mr-2" />
-                  Usage Guidelines
+                  Guidelines
+                </TabsTrigger>
+                <TabsTrigger
+                  value="dosing"
+                  className="flex-1 rounded-lg h-full font-black uppercase tracking-widest text-[9px] data-[state=active]:bg-black data-[state=active]:text-white transition-all"
+                >
+                  <Activity className="w-3 h-3 mr-2" />
+                  Dosing
                 </TabsTrigger>
               </TabsList>
 
-              {/* Konten untuk Tab Storage */}
               <TabsContent
                 value="storage"
                 className="mt-6 focus-visible:outline-none"
               >
-                <Card className="p-8 border-none bg-[#0F172A] text-white rounded-[2.5rem] shadow-2xl relative overflow-hidden">
-                  <div className="relative z-10">
-                    <h4 className="font-black uppercase tracking-widest text-xs mb-4 text-accent">
-                      Preservation Requirements
-                    </h4>
-                    <p className="text-sm leading-relaxed text-slate-300 font-medium whitespace-pre-line">
+                <Card className="p-8 border-none bg-slate-900 text-white rounded-[2rem] shadow-xl relative overflow-hidden">
+                  <div className="relative z-10 space-y-4">
+                    <Badge
+                      variant="outline"
+                      className="text-accent border-accent/30 text-[9px] font-black"
+                    >
+                      STABILITY PROTOCOL
+                    </Badge>
+                    <p className="text-[13px] leading-relaxed text-slate-300 font-bold uppercase tracking-wide whitespace-pre-line">
                       {product?.storage_instruction}
                     </p>
                   </div>
@@ -143,21 +142,44 @@ export default function ProductDetailComponent({
                 </Card>
               </TabsContent>
 
-              {/* Konten untuk Tab Usage */}
               <TabsContent
                 value="usage"
                 className="mt-6 focus-visible:outline-none"
               >
-                <Card className="p-8 border-none bg-accent text-white rounded-[2.5rem] shadow-2xl relative overflow-hidden">
-                  <div className="relative z-10">
-                    <h4 className="font-black uppercase tracking-widest text-xs mb-4 text-white/80">
-                      Reconstitution & Application
-                    </h4>
-                    <p className="text-sm leading-relaxed font-bold italic">
+                <Card className="p-8 border-none bg-accent text-white rounded-[2rem] shadow-xl relative overflow-hidden">
+                  <div className="relative z-10 space-y-4">
+                    <Badge
+                      variant="outline"
+                      className="text-white border-white/30 text-[9px] font-black italic"
+                    >
+                      RECONSTITUTION GUIDE
+                    </Badge>
+                    <p className="text-[13px] leading-relaxed font-black uppercase tracking-tight italic">
                       {product?.usage_instruction}
                     </p>
                   </div>
                   <Beaker className="absolute -bottom-6 -right-6 w-32 h-32 text-black/10 -rotate-12" />
+                </Card>
+              </TabsContent>
+
+              <TabsContent
+                value="dosing"
+                className="mt-6 focus-visible:outline-none"
+              >
+                <Card className="p-8 border-none bg-slate-900 text-white rounded-[2rem] shadow-xl relative overflow-hidden">
+                  <div className="relative z-10 space-y-4">
+                    <Badge
+                      variant="outline"
+                      className="text-accent border-accent/30 text-[9px] font-black"
+                    >
+                      RESEARCH DOSING
+                    </Badge>
+                    <p className="text-[13px] leading-relaxed text-slate-300 font-bold uppercase tracking-wide whitespace-pre-line">
+                      {product?.dosing ||
+                        "No specific dosing protocol defined for this sequence."}
+                    </p>
+                  </div>
+                  <ThermometerSnowflake className="absolute -bottom-6 -right-6 w-32 h-32 text-white/5 rotate-12" />
                 </Card>
               </TabsContent>
             </Tabs>
@@ -191,13 +213,14 @@ export default function ProductDetailComponent({
                 </div>
               </div>
 
-              <Button
-                variant="outline"
-                className="w-full rounded-xl border-border hover:bg-black hover:text-white text-[10px] font-black uppercase tracking-[0.2em] py-6 shadow-sm transition-all"
-              >
-                <Download className="w-3 h-3 mr-2" />
-                Download HPLC Report
-              </Button>
+              <Link href="/peptide-labtest" className="block w-full">
+                <Button
+                  variant="outline"
+                  className="w-full rounded-xl border-border hover:bg-black hover:text-white text-[10px] font-black uppercase tracking-[0.2em] py-6 shadow-sm transition-all"
+                >
+                  View Lab Test Reports
+                </Button>
+              </Link>
 
               <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                 <ShieldCheck className="w-4 h-4 text-accent" />

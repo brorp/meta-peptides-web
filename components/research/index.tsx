@@ -223,22 +223,6 @@ export default function ResearchPage() {
               ))}
             </div>
           </div>
-
-          {/* --- FOOTER CTA --- */}
-          <div className="text-center py-10 space-y-6">
-            <FileText className="mx-auto w-12 h-12 text-green-500/20" />
-            <h4 className="text-3xl font-black uppercase italic tracking-tighter">
-              Ready to Advance Your Research?
-            </h4>
-            <p className="text-muted-foreground text-sm uppercase tracking-[0.3em] font-bold">
-              MetaPeptides &bull; Indonesia Domestic Research Only
-            </p>
-            <Link href="/contact" className="inline-block pt-4">
-              <Button className="h-16 px-12 bg-green-500 hover:bg-green-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-2xl shadow-green-500/20">
-                Contact Specialist
-              </Button>
-            </Link>
-          </div>
         </div>
       </section>
     </div>

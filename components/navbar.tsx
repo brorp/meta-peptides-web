@@ -22,8 +22,9 @@ const NAV_LINKS = [
   { name: "Home", href: "/" },
   { name: "Shop", href: "/shop" },
   { name: "About Us", href: "/about" },
-  { name: "Research", href: "/research" },
-  { name: "Peptide Labtest", href: "/peptide-labtest" },
+  // { name: "Research", href: "/research" },
+  { name: "Our Peptides' Lab Test", href: "/peptide-labtest" },
+  { name: "Peptides Guides", href: "/peptide-guides" },
   { name: "FAQ", href: "/faq" },
 ];
 
@@ -148,11 +149,11 @@ export function Navbar() {
                 </Link>
               )}
 
-              <Link href="/contact" className="hidden lg:block">
+              {/* <Link href="/contact" className="hidden lg:block">
                 <Button className="rounded-full px-6 bg-foreground text-background hover:bg-foreground/90 transition-all active:scale-95">
                   Contact Us
                 </Button>
-              </Link>
+              </Link> */}
 
               {/* Mobile Toggle Button */}
               <Button

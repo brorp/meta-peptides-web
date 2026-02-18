@@ -1,4 +1,4 @@
-import { ApiResponse } from "@/lib/api-response";
+import { ApiResponse } from "@/interface/global";
 import { useMutation, UseMutationOptions } from "@tanstack/react-query";
 import axios from "axios";
 import { toast } from "sonner";

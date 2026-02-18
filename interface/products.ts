@@ -16,6 +16,7 @@ export type ProductInterface = {
   usage_instruction: string;
   cas: string;
   short_desc: string;
+  dosing: string;
 };
 
 export type GetProductsResponseInterface = {

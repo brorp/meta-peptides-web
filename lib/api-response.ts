@@ -1,19 +1,5 @@
+import { ApiResponse } from "@/interface/global";
 import { NextResponse } from "next/server";
-
-export type ApiResponse<T> = {
-  success: boolean;
-  message: string;
-  data?: T;
-  pagination?: {
-    total_items: number;
-    total_pages: number;
-    current_page: number;
-    limit: number;
-    has_next: boolean;
-    has_prev: boolean;
-  };
-  error?: any;
-};
 
 export const successResponse = <T>(
   data: T,

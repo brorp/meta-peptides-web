@@ -2,7 +2,7 @@ import { useQuery, UseQueryOptions } from "@tanstack/react-query";
 import axios from "axios";
 import { ProductInterface } from "@/interface/products";
 import { toast } from "sonner";
-import { ApiResponse } from "@/lib/api-response";
+import { ApiResponse } from "@/interface/global";
 
 export function useGetProductDetail(
   slug: string,
