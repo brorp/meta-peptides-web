@@ -1,5 +1,4 @@
 // store/useUserStore.ts
-import axios from "axios";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 

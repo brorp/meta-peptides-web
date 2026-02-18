@@ -30,7 +30,7 @@ const NAV_LINKS = [
 
 export function Navbar() {
   const router = useRouter();
-  const { user, clearUser } = useUserStore(); // Langsung ambil user object
+  const { user, clearUser } = useUserStore();
   const pathname = usePathname();
 
   const [isScrolled, setIsScrolled] = useState(false);
@@ -39,8 +39,9 @@ export function Navbar() {
   const { getCartCount, setIsCartOpen } = useCartStore();
   const cartCount = getCartCount();
 
-  // Boolean helper untuk cek login
   const isLoggedIn = !!user && Object.keys(user).length > 0;
+
+  const isMember = !!user && Object.keys(user).length > 0 && !user.isGuest;
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -61,8 +62,7 @@ export function Navbar() {
 
   return (
     <>
-      {/* 1. ANNOUNCEMENT MARQUEE BANNER */}
-      {isLoggedIn && (
+      {isMember && (
         <div className="fixed top-0 w-full z-[60] bg-[#0F172A] border-b border-white/5 h-10 flex items-center">
           <Marquee gradient={false} speed={50} pauseOnHover={true}>
             {[...Array(6)].map((_, i) => (
@@ -86,7 +86,7 @@ export function Navbar() {
         className={cn(
           "fixed w-full z-50 transition-all duration-300 px-4 md:px-10",
           // Penyesuaian jarak top jika banner muncul
-          isLoggedIn ? (isScrolled ? "top-8" : "top-10") : "top-0",
+          isMember ? (isScrolled ? "top-8" : "top-10") : "top-0",
           isScrolled ? "pt-2" : "pt-6",
         )}
       >
@@ -141,7 +141,7 @@ export function Navbar() {
                 )}
               </button>
 
-              {isLoggedIn ? (
+              {isMember || isLoggedIn ? (
                 <button
                   onClick={handleLogout}
                   className={cn(
@@ -150,7 +150,7 @@ export function Navbar() {
                 >
                   <LogOut className="w-5 h-5 transition-transform group-hover:translate-x-0.5" />
                   <span className="hidden md:block text-sm font-bold">
-                    Logout
+                    Logout {isLoggedIn && "as guest"}
                   </span>
                 </button>
               ) : (

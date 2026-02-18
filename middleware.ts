@@ -36,19 +36,23 @@ export async function middleware(request: NextRequest) {
   );
 
   // Sekarang user tidak akan null jika token ada di cookie
+  const isGuest = request.cookies.get("is-guest")?.value === "true";
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  console.log("User Status:", user);
-
   // 1. Proteksi Halaman Checkout
-  if (request.nextUrl.pathname.startsWith("/checkout") && !user) {
+  if (request.nextUrl.pathname.startsWith("/checkout") && !user && !isGuest) {
     return NextResponse.redirect(new URL("/auth", request.url));
   }
 
   // 2. Proteksi API Checkout
-  if (request.nextUrl.pathname.startsWith("/api/checkout") && !user) {
+  if (
+    request.nextUrl.pathname.startsWith("/api/checkout") &&
+    !user &&
+    !isGuest
+  ) {
     return NextResponse.json(
       { success: false, message: "Authentication required" },
       { status: 401 },

@@ -16,6 +16,7 @@ import {
   Fingerprint,
   Loader2,
   Chrome,
+  User,
 } from "lucide-react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
@@ -110,7 +111,18 @@ export default function AuthPageComponent() {
 
   const toggleMode = () => {
     setIsLogin(!isLogin);
-    reset(); // Clear form when switching
+    reset();
+  };
+
+  const handleGuestLogin = () => {
+    toast.info("Continuing as Guest", {
+      description:
+        "You can now browse products, proceed to checkout, and complete your payment.",
+    });
+
+    document.cookie = "is-guest=true; path=/; max-age=3600";
+    setUser({ isGuest: true, role: "guest" });
+    router.push("/shop");
   };
 
   return (
@@ -279,6 +291,15 @@ export default function AuthPageComponent() {
               >
                 <Chrome className="w-4 h-4 text-green-500" />
                 Login With Google
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={handleGuestLogin}
+                className="w-full h-14 bg-green-500/5 hover:bg-green-500/10 text-green-600 dark:text-green-400 rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 border border-green-500/10"
+              >
+                <User className="w-4 h-4" />
+                Continue as Guest
               </Button>
             </form>
 

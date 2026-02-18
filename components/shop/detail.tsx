@@ -16,14 +16,13 @@ import {
   Activity,
 } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 
 export default function ProductDetailComponent({
   product,
 }: {
   product: ProductInterface;
 }) {
-  console.log(product, "product");
-
   const addToCart = useCartStore((state) => state.addToCart);
 
   return (
@@ -83,6 +82,9 @@ export default function ProductDetailComponent({
               <Button
                 onClick={() => {
                   addToCart(product);
+                  toast.success("Added to Cart", {
+                    description: `${product.name} is now in your shopping bag.`,
+                  });
                 }}
                 className="w-full h-16 rounded-2xl bg-black hover:bg-accent text-white font-black uppercase tracking-widest transition-all group"
               >

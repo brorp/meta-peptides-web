@@ -90,6 +90,10 @@ export default function CheckoutPageComponent() {
       clearCart();
       clearShipping();
       setStep("Confirmation");
+      toast.success("Order Received", {
+        description:
+          "We've received your order. Please allow 1-3 hours for our team to verify your payment.",
+      });
     },
   });
 
@@ -106,10 +110,7 @@ export default function CheckoutPageComponent() {
 
   const watchAllFields = watch();
 
-  const receiptPreview = watch("receiptPreview");
-
   const subtotal = getTotalPrice();
-  const serviceFeeOrigin = subtotal * persentegeTax;
   const total = subtotal;
 
   const handleNext = async () => {
@@ -167,7 +168,8 @@ export default function CheckoutPageComponent() {
       shipping_regional: data.regional,
       shipping_name: `${data.firstName} ${data.lastName || ""}`.trim(),
       shipping_phone: data.phone,
-      zip: data.zip,
+      shipping_zip: data.zip,
+      shipping_email: data.email,
       note: data.note,
       voucher_code: data.voucherCode,
       total_price: total,

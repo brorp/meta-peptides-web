@@ -27,9 +27,10 @@ export function OrderSummary({
   onBack,
 }: OrderSummaryProps) {
   const { user } = useUserStore();
-  const isLoggedIn = !!user && Object.keys(user).length > 0;
+  const isMember = !!user && Object.keys(user).length > 0 && !user.isGuest;
 
-  const discountRate = isLoggedIn ? discount : 0;
+  // 2. Only members get the discount
+  const discountRate = isMember ? discount : 0;
   const discountAmount = subtotal * discountRate;
   const finalTotal = subtotal - discountAmount;
 
@@ -73,7 +74,7 @@ export function OrderSummary({
         </div>
 
         {/* Info Diskon Login */}
-        {isLoggedIn ? (
+        {isMember ? (
           <div className="flex justify-between items-center text-sm animate-in fade-in slide-in-from-right-2">
             <div className="flex items-center gap-1.5 text-green-600">
               <Tag className="w-3 h-3" />
@@ -110,7 +111,7 @@ export function OrderSummary({
             Total Due
           </span>
           <div className="text-right">
-            {isLoggedIn && (
+            {isMember && (
               <span className="block text-xs text-slate-400 line-through decoration-red-400/50 mb-0.5">
                 {formatCurrency(subtotal)}
               </span>

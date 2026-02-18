@@ -9,12 +9,7 @@ export async function POST(request: Request) {
 
     const {
       data: { user },
-      error: authError,
     } = await supabaseServer.auth.getUser();
-
-    if (authError || !user) {
-      return errorResponse("Unauthorized: Please login again", 401);
-    }
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
@@ -45,14 +40,16 @@ export async function POST(request: Request) {
     const { data: order, error: orderError } = await supabaseServer
       .from("orders")
       .insert({
-        user_id: user.id,
+        user_id: user ? user.id : null,
         total_price: orderData.total_price,
+        is_guest: !user ? true : false,
         subtotal: orderData.subtotal,
         shipping_address: orderData.shipping_address,
         shipping_regional: orderData.shipping_regional,
         shipping_name: orderData.shipping_name,
         shipping_phone: orderData.shipping_phone,
         shipping_zip: orderData.shipping_zip,
+        shipping_email: orderData.shipping_email,
         note: orderData.note,
         voucher_code: orderData.voucher_code,
         status: "pending_review",

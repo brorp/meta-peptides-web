@@ -8,6 +8,7 @@ import { useCartStore } from "@/store/useCartStore";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/format";
 import { ProductInterface } from "@/interface/products";
+import { toast } from "sonner";
 
 export function ProductCard({
   product,
@@ -127,6 +128,9 @@ export function ProductCard({
             onClick={(e) => {
               e.stopPropagation();
               addToCart(product);
+              toast.success("Added to Cart", {
+                description: `${product.name} is now in your shopping bag.`,
+              });
             }}
             disabled={product.stock === 0}
             className={cn(
