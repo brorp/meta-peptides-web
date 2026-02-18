@@ -6,7 +6,7 @@ import { FloatingCart } from "@/components/floating-cart";
 import { Footer } from "./footer";
 import { GlobalCart } from "./global-cart";
 import { useUserStore } from "@/store/useUserStore";
-import { supabaseClient } from "@/lib/supabase-client";
+import { createClientComponentClient } from "@/lib/supabase-client";
 
 export function LayoutClient({ children }: { children: React.ReactNode }) {
   const setUser = useUserStore((state) => state.setUser);
@@ -15,16 +15,18 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const {
       data: { subscription },
-    } = supabaseClient.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-      } else {
-        clearUser();
-      }
-    });
+    } = createClientComponentClient().auth.onAuthStateChange(
+      (event, session) => {
+        if (session?.user) {
+          setUser(session.user);
+        } else {
+          clearUser();
+        }
+      },
+    );
 
     return () => subscription.unsubscribe();
-  }, [supabaseClient, setUser, clearUser]);
+  }, [createClientComponentClient(), setUser, clearUser]);
 
   return (
     <>

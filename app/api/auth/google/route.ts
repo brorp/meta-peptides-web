@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabase-server";
+import { createClientCookies } from "@/lib/supabase-server";
 
 export async function GET(req: NextRequest) {
+  const supabaseServer = await createClientCookies();
   const { data, error } = await supabaseServer.auth.signInWithOAuth({
     provider: "google",
     options: {

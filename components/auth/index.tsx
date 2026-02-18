@@ -22,10 +22,10 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useRegisterUser } from "@/hooks/api/useRegisterUser";
 import { useLoginUser } from "@/hooks/api/useLoginUser";
 import { useGoogleLogin } from "@/hooks/api/useGoogleLogin";
-import { supabaseClient } from "@/lib/supabase-client";
 import { useUserStore } from "@/store/useUserStore";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { createClientComponentClient } from "@/lib/supabase-client";
 
 const authSchema = z.object({
   email: z.string().email("Invalid research email address"),
@@ -62,7 +62,7 @@ export default function AuthPageComponent() {
 
   const { mutate: login, isPending: isLoadingLogin } = useLoginUser({
     onSuccess: () => {
-      supabaseClient.auth.onAuthStateChange((event, session) => {
+      createClientComponentClient().auth.onAuthStateChange((event, session) => {
         if (session?.user) {
           setUser(session.user);
         } else {

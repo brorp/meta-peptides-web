@@ -1,10 +1,11 @@
 export const dynamic = "force-dynamic";
 
 import { errorResponse, successResponse } from "@/lib/api-response";
-import { supabaseServer } from "@/lib/supabase-server";
+import { createClientCookies } from "@/lib/supabase-server";
 
 export async function GET() {
   try {
+    const supabaseServer = await createClientCookies();
     const {
       data: { user },
       error: authError,

@@ -1,11 +1,12 @@
 import { NextRequest } from "next/server";
 import { errorResponse, successResponse } from "@/lib/api-response";
-import { supabaseServer } from "@/lib/supabase-server";
+import { createClientCookies } from "@/lib/supabase-server";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
 ) {
+  const supabaseServer = await createClientCookies();
   try {
     // 2. Await params-nya di sini
     const resolvedParams = await params;

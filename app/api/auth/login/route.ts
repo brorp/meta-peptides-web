@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { errorResponse, successResponse } from "@/lib/api-response";
-import { createClientCookies, supabaseServer } from "@/lib/supabase-server";
+import { createClientCookies } from "@/lib/supabase-server";
 
 export async function POST(req: NextRequest) {
   try {

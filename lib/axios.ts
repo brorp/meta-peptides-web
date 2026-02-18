@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { ApiResponse } from "@/types/api";
+import { ApiResponse } from "./api-response";
 
 export const api = axios.create({
   baseURL: "/api",
@@ -7,7 +7,6 @@ export const api = axios.create({
 
 api.interceptors.response.use(
   (response) => {
-    // 👇 unwrap response.data
     response.data = response.data as ApiResponse<any>;
     return response;
   },

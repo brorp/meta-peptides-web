@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
 import { errorResponse, successResponse } from "@/lib/api-response";
-import { supabaseServer } from "@/lib/supabase-server";
+import { createClientCookies } from "@/lib/supabase-server";
 
 export async function POST(req: NextRequest) {
   try {
+    const supabaseServer = await createClientCookies();
     const { email, password } = await req.json();
 
     if (!email || !password) {

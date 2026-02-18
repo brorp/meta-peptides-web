@@ -1,11 +1,6 @@
-import { createServerClient } from "@supabase/ssr/dist/main/createServerClient";
+import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-
-export const supabaseServer = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
 
 export const createClientCookies = async () => {
   const cookieStore = await cookies();
@@ -27,10 +22,15 @@ export const createClientCookies = async () => {
               cookieStore.set(name, value, options),
             );
           } catch {
-            // Ini bisa diabaikan jika dipanggil dari Server Component
+            // Error wajar jika di Server Components
           }
         },
       },
     },
   );
 };
+
+export const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);

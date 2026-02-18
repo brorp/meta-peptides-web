@@ -7,7 +7,7 @@ export interface ShippingData {
   lastName: string;
   phone: string;
   address: string;
-  city_or_town: string;
+  regional: string;
   zip: string;
   note?: string;
   voucherCode?: string;
@@ -38,7 +38,7 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       items: [],
       isCartOpen: false,
-      shipping: null, // Initial state
+      shipping: null,
 
       toggleCart: () => set((state) => ({ isCartOpen: !state.isCartOpen })),
 

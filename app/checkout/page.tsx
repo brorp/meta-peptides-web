@@ -22,6 +22,8 @@ import { persentegeTax } from "@/contants/tax";
 import { cn } from "@/lib/utils";
 import { InputGroup } from "@/components/ui/input-group";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
+import { useCheckout } from "@/hooks/api/useCheckout";
+import { toast } from "sonner";
 
 // --- VALIDATION SCHEMA WITH ZOD ---
 const checkoutSchema = z.object({
@@ -31,7 +33,7 @@ const checkoutSchema = z.object({
   lastName: z.string().optional(),
   phone: z.string().min(10, "Phone number must be at least 10 digits"),
   address: z.string().min(20, "Full address is required (Street, Unit, etc.)"),
-  city_or_town: z.string().min(2, "City or Town is required"),
+  regional: z.string().min(2, "City or Town is required"),
   zip: z.string().min(5, "ZIP/Postal code must be at least 5 digits"),
 
   // Step: Payment
@@ -60,6 +62,7 @@ export default function CheckoutPage() {
     getTotalPrice,
     setShipping,
     shipping: storedShipping,
+    clearCart,
   } = useCartStore();
   const user = useUserStore((state) => state.user);
 
@@ -81,13 +84,26 @@ export default function CheckoutPage() {
         storedShipping?.lastName || user?.user_metadata?.last_name || "",
       phone: storedShipping?.phone || "",
       address: storedShipping?.address || "",
-      city_or_town: storedShipping?.city_or_town || "",
+      regional: storedShipping?.regional || "",
       zip: storedShipping?.zip || "",
       note: storedShipping?.note || "",
       voucherCode: storedShipping?.voucherCode || "",
       receiptPreview: null,
     },
   });
+
+  const {
+    data: responseSubmit,
+    mutate: submitOrder,
+    isPending: isLoadingSubmit,
+  } = useCheckout({
+    onSuccess: (data) => {
+      clearCart();
+      setStep("Confirmation");
+    },
+  });
+
+  const isLoading = isSubmitting || isLoadingSubmit;
 
   React.useEffect(() => {
     if (storedShipping) {
@@ -99,14 +115,13 @@ export default function CheckoutPage() {
   }, [storedShipping, reset]);
 
   const watchAllFields = watch();
-  console.log(watchAllFields, "watchAllFields");
 
   const receiptPreview = watch("receiptPreview");
 
   // --- PRICING CALCULATION ---
   const subtotal = getTotalPrice();
   const serviceFeeOrigin = subtotal * persentegeTax;
-  const total = subtotal; // Free shipping & service fee based on your logic
+  const total = subtotal;
 
   // --- HANDLERS ---
   const handleNext = async () => {
@@ -117,7 +132,7 @@ export default function CheckoutPage() {
         "lastName",
         "phone",
         "address",
-        "city_or_town",
+        "regional",
         "zip",
       ]);
       if (isValid) {
@@ -148,10 +163,39 @@ export default function CheckoutPage() {
   };
 
   const onSubmit = async (data: CheckoutValues) => {
-    console.log("Submitting Order to BE...", { data, cartItems, total });
-    // Simulasi API call
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setStep("Confirmation");
+    // Pastikan file sudah dipilih jika di step Payment
+    if (!data.receiptFile && step === "Payment") {
+      return toast("Please upload your payment receipt first.");
+    }
+
+    const formData = new FormData();
+
+    formData.append("file", data.receiptFile);
+
+    const orderPayload = {
+      email: data.email,
+      first_name: data.firstName,
+      last_name: data.lastName,
+      phone: data.phone,
+      shipping_address: data.address,
+      shipping_regional: data.regional,
+      shipping_name: `${data.firstName} ${data.lastName || ""}`.trim(),
+      shipping_phone: data.phone,
+      zip: data.zip,
+      note: data.note,
+      voucher_code: data.voucherCode,
+      total_price: total,
+      subtotal: subtotal,
+      items: cartItems.map((item) => ({
+        product_id: item.id,
+        quantity: item.quantity,
+        price_at_purchase: item.price,
+      })),
+    };
+
+    formData.append("orderData", JSON.stringify(orderPayload));
+
+    submitOrder(formData);
   };
 
   const inputStyles = cn(
@@ -215,7 +259,12 @@ export default function CheckoutPage() {
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="grid lg:grid-cols-12 gap-12">
           {/* LEFT COLUMN: FORMS */}
-          <div className="lg:col-span-7 space-y-6">
+          <div
+            className={cn(
+              "lg:col-span-7",
+              step === "Confirmation" && "lg:col-span-12",
+            )}
+          >
             {/* 1. Shipping Form */}
             {step === "Shipping" && (
               <Card className="p-6 md:p-8 rounded-[2rem] border-none shadow-xl shadow-slate-200/50 space-y-8 bg-white">
@@ -288,12 +337,12 @@ export default function CheckoutPage() {
 
                   <InputGroup
                     label="City or Town"
-                    error={errors.city_or_town?.message}
+                    error={errors.regional?.message}
                   >
                     <AddressAutocomplete
-                      defaultValue={watch("city_or_town")}
+                      defaultValue={watch("regional")}
                       onSelect={(data) => {
-                        setValue("city_or_town", data.label, {
+                        setValue("regional", data.label, {
                           shouldValidate: true,
                         });
 
@@ -302,7 +351,7 @@ export default function CheckoutPage() {
                         });
                       }}
                       placeholder="Contoh: Balaraja atau Tangerang..."
-                      error={errors.city_or_town?.message}
+                      error={errors.regional?.message}
                     />
                   </InputGroup>
 
@@ -453,142 +502,172 @@ export default function CheckoutPage() {
 
             {/* 3. Confirmation */}
             {step === "Confirmation" && (
-              <Card className="p-12 rounded-[3rem] border-accent/20 bg-white shadow-2xl text-center space-y-6">
+              <Card className="p-12 rounded-[3rem] border-accent/20 bg-white shadow-2xl text-center space-y-6 animate-in fade-in zoom-in duration-500">
                 <div className="w-20 h-20 bg-accent/10 rounded-full flex items-center justify-center mx-auto mb-4">
                   <ShieldCheck className="w-10 h-10 text-accent" />
                 </div>
-                <h2 className="text-4xl font-bold uppercase italic tracking-tighter">
-                  Order <span className="text-accent">Confirmed.</span>
-                </h2>
-                <p className="text-muted-foreground text-sm font-medium">
-                  Lab Sequence Request has been logged. Our administrators will
-                  verify the transaction and update your status via email.
-                </p>
-                <div className="bg-muted/30 p-2 rounded-xl font-mono text-xs uppercase tracking-widest font-bold">
-                  Reference: #MP-
-                  {Math.random().toString(36).substring(7).toUpperCase()}
+
+                <div className="space-y-2">
+                  <h2 className="text-4xl font-bold uppercase italic tracking-tighter">
+                    Transaction <span className="text-accent">Successful.</span>
+                  </h2>
+                  <p className="text-slate-500 text-sm font-medium max-w-sm mx-auto">
+                    Your payment has been received. Your research sequence is
+                    being prepared and will be{" "}
+                    <span className="text-slate-900 font-bold">
+                      dispatched shortly.
+                    </span>
+                  </p>
                 </div>
-                <Link href="/shop" className="block">
-                  <Button className="w-full py-8 rounded-[2rem] bg-black text-white font-bold uppercase tracking-widest hover:bg-accent transition-all">
-                    Return to Shoping
-                  </Button>
-                </Link>
+
+                <div className="bg-slate-50 border border-slate-100 p-3 rounded-2xl">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-1">
+                    Order Reference
+                  </p>
+                  <div className="font-mono text-sm uppercase tracking-wider font-bold text-slate-700">
+                    #{responseSubmit?.data?.transaction_code || "MP-PROCESSING"}
+                  </div>
+                </div>
+
+                <div className="pt-4">
+                  <Link href="/shop" className="block">
+                    <Button className="w-full py-8 rounded-[2rem] bg-black text-white font-bold uppercase tracking-widest hover:bg-accent hover:shadow-lg hover:shadow-accent/20 transition-all duration-300">
+                      Return to Shopping
+                    </Button>
+                  </Link>
+                  <p className="mt-6 text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                    A copy of your receipt has been sent to your email.
+                  </p>
+                </div>
               </Card>
             )}
           </div>
 
           {/* RIGHT COLUMN: SUMMARY */}
-          <div className="lg:col-span-5">
-            <Card className="p-6 md:p-8 rounded-[2rem] border-none shadow-xl shadow-slate-200/50 sticky top-32 space-y-6 bg-white">
-              {/* Title */}
-              <div className="border-b border-slate-100 pb-4">
-                <h3 className="text-lg font-bold tracking-tight text-slate-800">
-                  Order <span className="text-accent italic">Summary</span>
-                </h3>
-              </div>
+          {step !== "Confirmation" && (
+            <div className="lg:col-span-5">
+              <Card className="p-6 md:p-8 rounded-[2rem] border-none shadow-xl shadow-slate-200/50 sticky top-32 space-y-6 bg-white">
+                {/* Title */}
+                <div className="border-b border-slate-100 pb-4">
+                  <h3 className="text-lg font-bold tracking-tight text-slate-800">
+                    Order <span className="text-accent italic">Summary</span>
+                  </h3>
+                </div>
 
-              {/* Cart Items List */}
-              <div className="space-y-4 max-h-[240px] overflow-y-auto pr-2 custom-scrollbar">
-                {cartItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex justify-between items-start group"
-                  >
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium text-slate-700 leading-tight">
-                        {item.name}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                          Qty: {item.quantity}
-                        </span>
+                {/* Cart Items List */}
+                <div className="space-y-4 max-h-[240px] overflow-y-auto pr-2 custom-scrollbar">
+                  {cartItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex justify-between items-start group"
+                    >
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-slate-700 leading-tight">
+                          {item.name}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                            Qty: {item.quantity}
+                          </span>
+                        </div>
                       </div>
+                      <p className="font-semibold text-sm text-slate-900">
+                        {formatCurrency(item.price * item.quantity)}
+                      </p>
                     </div>
-                    <p className="font-semibold text-sm text-slate-900">
-                      {formatCurrency(item.price * item.quantity)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Pricing Breakdown */}
-              <div className="space-y-3 pt-4 border-t border-slate-100">
-                <div className="flex justify-between text-sm">
-                  <span className="text-slate-500">Subtotal</span>
-                  <span className="font-medium text-slate-800">
-                    {formatCurrency(subtotal)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-slate-500">Shipping</span>
-                  <span className="text-[10px] font-bold text-accent bg-accent/5 px-2 py-1 rounded-lg italic">
-                    Free Dispatch
-                  </span>
+                  ))}
                 </div>
 
-                {/* Grand Total */}
-                <div className="flex justify-between items-end pt-5 border-t-2 border-dashed border-slate-100 mt-4">
-                  <span className="text-sm font-bold text-slate-800">
-                    Total Due
-                  </span>
-                  <div className="text-right">
-                    <span className="block text-2xl font-bold text-accent tracking-tighter">
-                      {formatCurrency(total)}
+                {/* Pricing Breakdown */}
+                <div className="space-y-3 pt-4 border-t border-slate-100">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Subtotal</span>
+                    <span className="font-medium text-slate-800">
+                      {formatCurrency(subtotal)}
                     </span>
                   </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-slate-500">Shipping</span>
+                    <span className="text-[10px] font-bold text-accent bg-accent/5 px-2 py-1 rounded-lg italic">
+                      Free Dispatch
+                    </span>
+                  </div>
+
+                  {/* Grand Total */}
+                  <div className="flex justify-between items-end pt-5 border-t-2 border-dashed border-slate-100 mt-4">
+                    <span className="text-sm font-bold text-slate-800">
+                      Total Due
+                    </span>
+                    <div className="text-right">
+                      <span className="block text-2xl font-bold text-accent tracking-tighter">
+                        {formatCurrency(total)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Action Buttons */}
-              <div className="pt-4 space-y-4">
-                {step !== "Confirmation" && (
-                  <>
-                    <Button
-                      onClick={
-                        step === "Payment" ? handleSubmit(onSubmit) : handleNext
-                      }
-                      disabled={isSubmitting}
-                      className="w-full h-14 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm transition-all shadow-lg shadow-slate-200 group flex items-center justify-center gap-2"
-                    >
-                      {isSubmitting ? (
-                        <span className="flex items-center gap-2">
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          Verifying...
-                        </span>
-                      ) : (
-                        <>
-                          {step === "Payment"
-                            ? "Submit Transaction"
-                            : "Continue to Delivery"}
-                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                        </>
-                      )}
-                    </Button>
-
-                    {step !== "Shipping" && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (step === "Payment") setStep("Shipping");
-                        }}
-                        className="w-full text-xs font-semibold text-slate-400 hover:text-slate-600 transition-colors py-2"
+                {/* Action Buttons */}
+                <div className="pt-4 space-y-4">
+                  {step !== "Confirmation" && (
+                    <>
+                      <Button
+                        onClick={
+                          step === "Payment"
+                            ? handleSubmit(onSubmit)
+                            : handleNext
+                        }
+                        disabled={isLoading}
+                        className="w-full h-14 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm transition-all shadow-lg shadow-slate-200 group flex items-center justify-center gap-2"
                       >
-                        Back to Previous Step
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
+                        {isLoading ? (
+                          <span className="flex items-center gap-2">
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            {step === "Payment"
+                              ? "Processing Transaction..."
+                              : "Verifying Details..."}
+                          </span>
+                        ) : (
+                          <>
+                            {step === "Payment"
+                              ? "Submit Transaction"
+                              : "Continue to Delivery"}
+                            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                          </>
+                        )}
+                      </Button>
 
-              {/* Trust Badge */}
-              <div className="flex items-center justify-center gap-2.5 pt-6 border-t border-slate-50 mt-4 opacity-60">
-                <ShieldCheck className="w-4 h-4 text-slate-400" />
-                <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">
-                  Secure SSL Encryption
-                </span>
-              </div>
-            </Card>
-          </div>
+                      {/* Tombol Back dimatikan juga saat loading agar user tidak interupsi proses */}
+                      {step !== "Shipping" && (
+                        <button
+                          type="button"
+                          disabled={isLoading}
+                          onClick={() => {
+                            if (step === "Payment") setStep("Shipping");
+                          }}
+                          className={cn(
+                            "w-full text-xs font-semibold transition-colors py-2",
+                            isLoading
+                              ? "text-slate-300 cursor-not-allowed"
+                              : "text-slate-400 hover:text-slate-600",
+                          )}
+                        >
+                          Back to Previous Step
+                        </button>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Trust Badge */}
+                <div className="flex items-center justify-center gap-2.5 pt-6 border-t border-slate-50 mt-4 opacity-60">
+                  <ShieldCheck className="w-4 h-4 text-slate-400" />
+                  <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">
+                    Secure SSL Encryption
+                  </span>
+                </div>
+              </Card>
+            </div>
+          )}
         </div>
       </div>
     </div>

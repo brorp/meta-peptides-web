@@ -16,7 +16,7 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useCartStore } from "@/store/useCartStore";
 import { useUserStore } from "@/store/useUserStore";
-import { supabaseClient } from "@/lib/supabase-client";
+import { createClientComponentClient } from "@/lib/supabase-client";
 
 const NAV_LINKS = [
   { name: "Home", href: "/" },
@@ -48,7 +48,7 @@ export function Navbar() {
   }, [pathname]);
 
   const handleLogout = async () => {
-    await supabaseClient.auth.signOut();
+    await createClientComponentClient().auth.signOut();
     clearUser();
     router.refresh();
     router.push("/");

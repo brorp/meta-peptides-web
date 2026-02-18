@@ -16,7 +16,6 @@ import Link from "next/link";
 import { formatCurrency } from "@/lib/format";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { supabaseClient } from "@/lib/supabase-client";
 
 export function GlobalCart() {
   const router = useRouter();
@@ -34,16 +33,6 @@ export function GlobalCart() {
 
   const handleCheckout = async (e: React.MouseEvent) => {
     e.preventDefault();
-
-    const {
-      data: { session },
-    } = await supabaseClient.auth.getSession();
-
-    if (!session) {
-      setIsCartOpen(false);
-      router.push("/auth?redirect=/checkout");
-      return;
-    }
 
     setIsCartOpen(false);
     router.push("/checkout");

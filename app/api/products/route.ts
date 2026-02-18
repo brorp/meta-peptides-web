@@ -1,9 +1,10 @@
 import { NextRequest } from "next/server";
 import { errorResponse, paginateResponse } from "@/lib/api-response";
-import { supabaseServer } from "@/lib/supabase-server";
+import { createClientCookies } from "@/lib/supabase-server";
 
 export async function GET(req: NextRequest) {
   try {
+    const supabaseServer = await createClientCookies();
     const { searchParams } = new URL(req.url);
 
     const page = parseInt(searchParams.get("page") || "1");
