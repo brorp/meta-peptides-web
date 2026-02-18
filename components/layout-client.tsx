@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { Navbar } from "@/components/navbar";
-import { FloatingCart } from "@/components/floating-cart";
+import { FloatingActions } from "@/components/floating-cart";
 import { Footer } from "./footer";
 import { GlobalCart } from "./global-cart";
 import { useUserStore } from "@/store/useUserStore";
@@ -32,7 +32,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
     <>
       <Navbar />
       <main>{children}</main>
-      <FloatingCart />
+      <FloatingActions />
       <Footer />
       <GlobalCart />
     </>
