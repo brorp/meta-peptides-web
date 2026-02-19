@@ -27,23 +27,20 @@ export function OrderSummary({
   onBack,
 }: OrderSummaryProps) {
   const { user } = useUserStore();
-  const isMember = !!user && Object.keys(user).length > 0 && !user.isGuest;
+  const isMember = !!user && Object.keys(user).length > 0 && !user.is_anonymous;
 
-  // 2. Only members get the discount
   const discountRate = isMember ? discount : 0;
   const discountAmount = subtotal * discountRate;
   const finalTotal = subtotal - discountAmount;
 
   return (
     <Card className="p-6 md:p-8 rounded-[2rem] border-none shadow-xl shadow-slate-200/50 sticky top-32 space-y-6 bg-white">
-      {/* Title */}
       <div className="border-b border-slate-100 pb-4">
         <h3 className="text-lg font-bold tracking-tight text-slate-800">
           Order <span className="text-accent italic">Summary</span>
         </h3>
       </div>
 
-      {/* Cart Items List */}
       <div className="space-y-4 max-h-[240px] overflow-y-auto pr-2 custom-scrollbar">
         {items.map((item) => (
           <div key={item.id} className="flex justify-between items-start group">
@@ -64,7 +61,6 @@ export function OrderSummary({
         ))}
       </div>
 
-      {/* Pricing Breakdown */}
       <div className="space-y-3 pt-4 border-t border-slate-100">
         <div className="flex justify-between text-sm">
           <span className="text-slate-500 font-medium">Subtotal</span>
@@ -73,7 +69,6 @@ export function OrderSummary({
           </span>
         </div>
 
-        {/* Info Diskon Login */}
         {isMember ? (
           <div className="flex justify-between items-center text-sm animate-in fade-in slide-in-from-right-2">
             <div className="flex items-center gap-1.5 text-green-600">
@@ -105,7 +100,6 @@ export function OrderSummary({
           </span>
         </div>
 
-        {/* Grand Total */}
         <div className="flex justify-between items-end pt-5 border-t-2 border-dashed border-slate-100 mt-4">
           <span className="text-sm font-black text-slate-900 uppercase tracking-wider">
             Total Due
@@ -123,7 +117,6 @@ export function OrderSummary({
         </div>
       </div>
 
-      {/* Action Buttons */}
       <div className="pt-4 space-y-4">
         {step !== "Confirmation" && (
           <>

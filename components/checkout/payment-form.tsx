@@ -14,20 +14,21 @@ interface PaymentFormProps {
   receiptPreview: string | null | undefined;
   setValue: any;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  isLoading: boolean;
 }
 
 export function PaymentForm({
   receiptPreview,
   setValue,
   onFileChange,
+  isLoading,
 }: PaymentFormProps) {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fungsi untuk download QRIS (Opsional jika ingin user bisa simpan)
   const handleDownloadQR = () => {
     const link = document.createElement("a");
-    link.href = "/qris-placeholder.png"; // Path ke file QRIS statis atau dynamic kamu
+    link.href = "/qris-placeholder.png";
     link.download = "QRIS-Metapeptides.png";
     link.click();
   };
@@ -116,6 +117,7 @@ export function PaymentForm({
             />
             <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
               <button
+                disabled={isLoading}
                 type="button"
                 onClick={() => {
                   setValue("receiptPreview", null);

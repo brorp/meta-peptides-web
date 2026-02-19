@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "MetaPeptides Support Center",
     description: "Expert answers to your research peptide inquiries.",
-    url: "http://localhost:3000/faq",
+    url: `${process.env.NEXT_PUBLIC_APP_URL}/faq`,
     siteName: "MetaPeptides",
     images: [
       {

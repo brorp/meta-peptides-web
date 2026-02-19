@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     title: "MetaPeptides - Precision Science for Research",
     description:
       "Order clinical-grade research peptides with verified purity and lightning-fast dispatch.",
-    url: "http://localhost:3000/",
+    url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
     siteName: "MetaPeptides",
     images: [
       {

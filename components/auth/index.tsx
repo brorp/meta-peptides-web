@@ -114,15 +114,31 @@ export default function AuthPageComponent() {
     reset();
   };
 
-  const handleGuestLogin = () => {
-    toast.info("Continuing as Guest", {
-      description:
-        "You can now browse products, proceed to checkout, and complete your payment.",
-    });
+  const handleGuestLogin = async () => {
+    try {
+      // Pemicu login anonim ke Supabase
+      const { data, error } =
+        await createClientComponentClient().auth.signInAnonymously();
 
-    document.cookie = "is-guest=true; path=/; max-age=3600";
-    setUser({ isGuest: true, role: "guest" });
-    router.push("/shop");
+      if (error) throw error;
+
+      toast.success("Continuing as Guest", {
+        description:
+          "You can now browse products, proceed to checkout, and complete your payment.",
+      });
+
+      if (data.user && data.user.id) {
+        setUser({
+          ...data.user,
+        });
+      }
+
+      router.push("/shop");
+    } catch (error: any) {
+      toast.error("Guest login failed", {
+        description: error.message,
+      });
+    }
   };
 
   return (

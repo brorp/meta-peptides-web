@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     title: "The Gold Standard in Research Peptides - About MetaPeptides",
     description:
       "Empowering global research with precision-engineered synthetic compounds and radical transparency.",
-    url: "http://localhost:3000/about",
+    url: `${process.env.NEXT_PUBLIC_APP_URL}/about`,
     siteName: "MetaPeptides",
     images: [
       {
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
   ],
 
   alternates: {
-    canonical: "http://localhost:3000/about",
+    canonical: `${process.env.NEXT_PUBLIC_APP_URL}/about`,
   },
 };
 

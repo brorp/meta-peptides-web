@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     title: "Support Desk - MetaPeptides Scientific Support",
     description:
       "Need technical assistance or laboratory data? Our team of specialists is ready to help with your research inquiries.",
-    url: "http://localhost:3000//contact",
+    url: `${process.env.NEXT_PUBLIC_APP_URL}/contact`,
     siteName: "MetaPeptides",
     images: [
       {
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   ],
 
   alternates: {
-    canonical: "http://localhost:3000/contact",
+    canonical: `${process.env.NEXT_PUBLIC_APP_URL}/contact`,
   },
 };
 

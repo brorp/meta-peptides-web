@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       title: `${post.title} - MetaPeptides Lab Protocol`,
       description: post.excerpt,
-      url: `http://localhost:3000/research/${post.slug}`,
+      url: `${process.env.NEXT_PUBLIC_APP_URL}/research/${post.slug}`,
       siteName: "MetaPeptides Indonesia",
       images: [
         {

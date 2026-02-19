@@ -8,7 +8,6 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  // BUAT INSTANCE SUPABASE KHUSUS MIDDLEWARE
   const supabase = createServerClient(
     process.env.SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -35,24 +34,19 @@ export async function middleware(request: NextRequest) {
     },
   );
 
-  // Sekarang user tidak akan null jika token ada di cookie
-  const isGuest = request.cookies.get("is-guest")?.value === "true";
-
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // 1. Proteksi Halaman Checkout
-  if (request.nextUrl.pathname.startsWith("/checkout") && !user && !isGuest) {
+  if (request.nextUrl.pathname.startsWith("/auth") && user) {
+    return NextResponse.redirect(new URL("/shop", request.url));
+  }
+
+  if (request.nextUrl.pathname.startsWith("/checkout") && !user) {
     return NextResponse.redirect(new URL("/auth", request.url));
   }
 
-  // 2. Proteksi API Checkout
-  if (
-    request.nextUrl.pathname.startsWith("/api/checkout") &&
-    !user &&
-    !isGuest
-  ) {
+  if (request.nextUrl.pathname.startsWith("/api/checkout") && !user) {
     return NextResponse.json(
       { success: false, message: "Authentication required" },
       { status: 401 },
@@ -63,5 +57,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/checkout/:path*", "/api/checkout/:path*"],
+  matcher: ["/auth/:path*", "/checkout/:path*", "/api/checkout/:path*"],
 };

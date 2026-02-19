@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useCartStore } from "@/store/useCartStore";
 import { useUserStore } from "@/store/useUserStore";
-import { persentegeTax } from "@/contants/tax";
 import { cn } from "@/lib/utils";
 import { useCheckout } from "@/hooks/api/useCheckout";
 import { toast } from "sonner";
@@ -16,7 +15,6 @@ import { OrderSummary } from "./order-summary";
 import { PaymentForm } from "./payment-form";
 import { ConfirmationCard } from "./confirmation-card";
 
-// --- VALIDATION SCHEMA WITH ZOD ---
 const checkoutSchema = z.object({
   // Step: Shipping
   email: z.string().email("Invalid email address"),
@@ -152,7 +150,7 @@ export default function CheckoutPageComponent() {
 
   const onSubmit = async (data: CheckoutValues) => {
     if (!data.receiptFile && step === "Payment") {
-      return toast("Please upload your payment receipt first.");
+      return toast.error("Please upload your payment receipt first.");
     }
 
     const formData = new FormData();
@@ -231,6 +229,7 @@ export default function CheckoutPageComponent() {
                 receiptPreview={watch("receiptPreview")}
                 setValue={setValue}
                 onFileChange={handleFileChange}
+                isLoading={isLoading}
               />
             )}
             {step === "Confirmation" && (

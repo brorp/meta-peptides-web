@@ -2,47 +2,44 @@ export const dynamic = "force-dynamic";
 
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { createClientCookies } from "@/lib/supabase-server";
+import { withAuth } from "@/lib/wrapper-auth-server";
+import { User } from "@supabase/supabase-js";
 
-export async function POST(request: Request) {
+export const POST = withAuth(async (request: Request, user: User | null) => {
   try {
     const supabaseServer = await createClientCookies();
-
-    const {
-      data: { user },
-    } = await supabaseServer.auth.getUser();
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
     const orderDataRaw = formData.get("orderData") as string;
 
     if (!file) return errorResponse("Payment receipt is required", 400);
+    if (!orderDataRaw) return errorResponse("Order data is missing", 400);
+
     const orderData = JSON.parse(orderDataRaw);
 
-    // --- STEP 1: UPLOAD IMAGE ---
+    // --- STEP 1: UPLOAD BUKTI ---
     const fileExt = file.name.split(".").pop();
     const fileName = `TRX-${Date.now()}-${Math.random().toString(36).substring(7)}`;
     const filePath = `${fileName}.${fileExt}`;
 
     const { error: uploadError } = await supabaseServer.storage
       .from("transactions")
-      .upload(filePath, file, { contentType: file.type });
+      .upload(filePath, file, { contentType: file.type, upsert: false });
 
-    if (uploadError) {
-      console.error("Supabase Upload Error:", uploadError);
-      return errorResponse("Failed to upload receipt", 500);
-    }
+    if (uploadError) return errorResponse("Failed to upload receipt", 500);
 
     const {
       data: { publicUrl },
     } = supabaseServer.storage.from("transactions").getPublicUrl(filePath);
 
-    // --- STEP 2: INSERT KE TABEL ORDERS ---
+    // --- STEP 2: INSERT ORDER ---
     const { data: order, error: orderError } = await supabaseServer
       .from("orders")
       .insert({
-        user_id: user ? user.id : null,
+        user_id: user?.id,
+        is_guest: user?.is_anonymous,
         total_price: orderData.total_price,
-        is_guest: !user ? true : false,
         subtotal: orderData.subtotal,
         shipping_address: orderData.shipping_address,
         shipping_regional: orderData.shipping_regional,
@@ -50,8 +47,8 @@ export async function POST(request: Request) {
         shipping_phone: orderData.shipping_phone,
         shipping_zip: orderData.shipping_zip,
         shipping_email: orderData.shipping_email,
-        note: orderData.note,
-        voucher_code: orderData.voucher_code,
+        note: orderData.note || null,
+        voucher_code: orderData.voucher_code || null,
         status: "pending_review",
       })
       .select()
@@ -59,10 +56,9 @@ export async function POST(request: Request) {
 
     if (orderError) {
       await supabaseServer.storage.from("transactions").remove([filePath]);
-      return errorResponse(orderError.message, 500);
+      return errorResponse(`Order Error: ${orderError.message}`, 500);
     }
 
-    // --- STEP 3: INSERT KE TABEL ORDER_ITEMS ---
     const orderItems = orderData.items.map((item: any) => ({
       order_id: order.id,
       product_id: item.product_id,
@@ -73,9 +69,9 @@ export async function POST(request: Request) {
     const { error: itemsError } = await supabaseServer
       .from("order_items")
       .insert(orderItems);
-    if (itemsError) return errorResponse(itemsError.message, 500);
+    if (itemsError)
+      return errorResponse(`Items Error: ${itemsError.message}`, 500);
 
-    // --- STEP 4: INSERT KE TABEL PAYMENTS ---
     const { error: paymentError } = await supabaseServer
       .from("payments")
       .insert({
@@ -86,13 +82,14 @@ export async function POST(request: Request) {
         status: "pending",
       });
 
-    if (paymentError) return errorResponse(paymentError.message, 500);
+    if (paymentError)
+      return errorResponse(`Payment Error: ${paymentError.message}`, 500);
 
     return successResponse(
-      { orderId: order.id, transaction_code: fileName },
-      "Order placed successfully",
+      { orderId: order.id, transaction_code: fileName, status: order.status },
+      "Order successfully placed.",
     );
   } catch (err: any) {
     return errorResponse(err.message || "Internal Server Error", 500);
   }
-}
+});

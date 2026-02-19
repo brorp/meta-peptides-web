@@ -23,7 +23,6 @@ async function getProductBySlug(slug: string) {
 
     return result.success ? result.data : null;
   } catch (error) {
-    console.error("Internal API Fetch Error:", error);
     return null;
   }
 }

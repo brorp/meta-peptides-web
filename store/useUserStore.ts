@@ -1,13 +1,21 @@
-// store/useUserStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { User } from "@supabase/supabase-js";
+interface Profile {
+  id: string;
+  full_name?: string;
+  avatar_url?: string;
+  phone?: string;
+  role?: string;
+}
 
 interface UserState {
-  user: any | null;
-  profile: any | null;
+  user: User | null;
+  profile: Profile | null;
   loading: boolean;
-  setUser: (user: any) => void;
-  setProfile: (profile: any) => void;
+  setUser: (user: User | null) => void;
+  setProfile: (profile: Profile | null) => void;
+  setLoading: (loading: boolean) => void;
   clearUser: () => void;
 }
 
@@ -19,8 +27,11 @@ export const useUserStore = create<UserState>()(
       loading: false,
       setUser: (user) => set({ user }),
       setProfile: (profile) => set({ profile }),
+      setLoading: (loading) => set({ loading }),
       clearUser: () => set({ user: null, profile: null }),
     }),
-    { name: "metapeptides-user-storage" },
+    {
+      name: "metapeptides-user-storage",
+    },
   ),
 );

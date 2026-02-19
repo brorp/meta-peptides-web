@@ -20,7 +20,9 @@ export const metadata: Metadata = {
   },
   description:
     "High-purity research peptides verified for laboratory excellence. Providing scientific compounds with ≥99% purity standards.",
-  metadataBase: new URL("http://localhost:3000"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  ),
 
   keywords: [
     "Research Peptides",
@@ -39,7 +41,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "http://localhost:3000",
+    url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
     siteName: "MetaPeptides",
     title: "MetaPeptides | Premium Research Peptides",
     description:

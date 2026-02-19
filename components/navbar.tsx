@@ -39,9 +39,10 @@ export function Navbar() {
   const { getCartCount, setIsCartOpen } = useCartStore();
   const cartCount = getCartCount();
 
-  const isLoggedIn = !!user && Object.keys(user).length > 0;
+  const isLoggedIn =
+    !!user && Object.keys(user).length > 0 && user.is_anonymous;
 
-  const isMember = !!user && Object.keys(user).length > 0 && !user.isGuest;
+  const isMember = !!user && Object.keys(user).length > 0 && !user.is_anonymous;
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
