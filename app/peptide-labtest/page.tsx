@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     title: "MetaPeptides - Third-Party Lab Verifications",
     description:
       "Verified purity and authenticity of research metapeptides. View our latest HPLC and Mass Spec results.",
-    url: "https://metapeptides.com/peptide-labtest", // Ganti ke domain asli jika sudah live
+    url: `${process.env.NEXT_PUBLIC_APP_URL}/peptide-labtest`,
     siteName: "MetaPeptides",
     images: [
       {

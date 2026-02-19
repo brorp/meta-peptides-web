@@ -9,7 +9,7 @@ export const metadata: Metadata = {
     title: "MetaPeptides - Research Protocol Guides",
     description:
       "Technical SOPs for peptide research metapeptides in Indonesia.",
-    url: "https://metapeptides.com/peptides-guides",
+    url: `${process.env.NEXT_PUBLIC_APP_URL}/peptides-guides`,
     siteName: "MetaPeptides",
     images: [
       { url: "/logo.png", width: 800, height: 800, alt: "Peptide Guides" },
