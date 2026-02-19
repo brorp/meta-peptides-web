@@ -1,5 +1,5 @@
+import { ApiResponse } from "@/interface/global";
 import axios from "axios";
-import { ApiResponse } from "./api-response";
 
 export const api = axios.create({
   baseURL: "/api",
