@@ -61,7 +61,7 @@ function Annotation({
               Feature {number}
             </p>
             <h4 className="font-bold text-slate-900 text-sm">{title}</h4>
-            <p className="text-[11px] text-slate-500 leading-relaxed">{desc}</p>
+            <p className="text-[11px] text-primary leading-relaxed">{desc}</p>
           </div>
 
           {/* Connector Line (SVG) */}
@@ -116,7 +116,7 @@ export default function HomePageComponent() {
                     </span>
                   </h1>
 
-                  <p className="text-base lg:text-xl text-slate-500 max-w-xl mx-auto lg:mx-0 leading-relaxed font-medium">
+                  <p className="text-base lg:text-xl text-primary max-w-xl mx-auto lg:mx-0 leading-relaxed font-medium">
                     Verified sourcing with{" "}
                     <span className="text-slate-900 font-bold underline decoration-accent/30 decoration-2 underline-offset-8">
                       99%+ purity
@@ -319,7 +319,7 @@ export default function HomePageComponent() {
             {features.map((item, i) => (
               <Card
                 key={i}
-                className="p-10 border-none bg-white shadow-xl shadow-slate-100/50 rounded-[3rem] group hover:bg-[#0F172A] transition-all duration-500 hover:-translate-y-2"
+                className="p-10 border-none bg-white shadow-xl shadow-slate-100/50 rounded-[3rem] group hover:bg-[#414042] transition-all duration-500 hover:-translate-y-2"
               >
                 <div className="w-14 h-14 bg-accent/10 text-accent rounded-2xl flex items-center justify-center mb-10 group-hover:bg-accent group-hover:text-white transition-colors">
                   {item.icon && <item.icon className="w-6 h-6" />}
@@ -338,7 +338,7 @@ export default function HomePageComponent() {
 
       {/* 4. ABOUT (Premium Dark) */}
       <section className="py-24 px-4">
-        <div className="max-w-7xl mx-auto bg-[#0F172A] rounded-[4rem] overflow-hidden relative shadow-2xl">
+        <div className="max-w-7xl mx-auto bg-[#414042] rounded-[4rem] overflow-hidden relative shadow-2xl">
           {/* Decorative DNA Icon */}
           <div className="absolute top-0 right-0 p-12 opacity-5">
             <Dna className="w-96 h-96 text-white rotate-45" />

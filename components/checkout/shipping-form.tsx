@@ -16,7 +16,7 @@ export function ShippingForm({
         <h3 className="text-xl font-black uppercase italic tracking-tighter border-b border-muted pb-4">
           Shipping <span className="text-accent">Details.</span>
         </h3>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-primary">
           Provide your laboratory delivery information.
         </p>
       </div>

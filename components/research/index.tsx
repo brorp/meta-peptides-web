@@ -62,7 +62,7 @@ export default function ResearchPage() {
   return (
     <div className="min-h-screen bg-background selection:bg-green-500/30">
       {/* --- HERO SECTION --- */}
-      <section className="relative pt-32 pb-16 overflow-hidden bg-[#0F172A]">
+      <section className="relative pt-32 pb-16 overflow-hidden bg-[#414042]">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-green-500/5 rounded-full blur-[120px]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <Badge className="mb-4 bg-green-500/10 text-green-400 border-green-500/20 uppercase tracking-[0.3em] font-black text-[10px]">
@@ -182,7 +182,7 @@ export default function ResearchPage() {
                   key={index}
                   className="min-w-[300px] md:min-w-[350px] snap-center flex"
                 >
-                  <div className="bg-[#0F172A] rounded-[2.5rem] py-5 px-1 border border-white/5 shadow-2xl relative group flex flex-col w-full">
+                  <div className="bg-[#414042] rounded-[2.5rem] py-5 px-1 border border-white/5 shadow-2xl relative group flex flex-col w-full">
                     {/* Header Card */}
                     <div className="mb-4 flex items-center justify-between px-4">
                       <div className="flex items-center gap-2">

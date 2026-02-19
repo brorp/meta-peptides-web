@@ -64,7 +64,7 @@ export function Navbar() {
   return (
     <>
       {isMember && (
-        <div className="fixed top-0 w-full z-[60] bg-[#0F172A] border-b border-white/5 h-10 flex items-center">
+        <div className="fixed top-0 w-full z-[60] bg-[#414042] border-b border-white/5 h-10 flex items-center">
           <Marquee gradient={false} speed={50} pauseOnHover={true}>
             {[...Array(6)].map((_, i) => (
               <div key={i} className="flex items-center gap-10 px-4">
@@ -102,7 +102,7 @@ export function Navbar() {
           <div className="flex justify-between items-center">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 group">
-              <div className="bg-accent rounded-xl flex items-center justify-center group-hover:rotate-6 transition-transform">
+              <div className="bg-[#414042] rounded-xl flex items-center justify-center group-hover:rotate-6 transition-transform">
                 <img src="/logo.png" alt="Logo" className="h-8 w-auto m-2" />
               </div>
               <span className="text-xl font-bold tracking-tight text-foreground">

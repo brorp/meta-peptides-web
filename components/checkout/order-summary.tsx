@@ -49,7 +49,7 @@ export function OrderSummary({
                 {item.name}
               </p>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                <span className="text-[10px] font-bold bg-slate-100 text-primary px-2 py-0.5 rounded-md uppercase tracking-wider">
                   Qty: {item.quantity}
                 </span>
               </div>
@@ -63,7 +63,7 @@ export function OrderSummary({
 
       <div className="space-y-3 pt-4 border-t border-slate-100">
         <div className="flex justify-between text-sm">
-          <span className="text-slate-500 font-medium">Subtotal</span>
+          <span className="text-primary font-medium">Subtotal</span>
           <span className="font-bold text-slate-800">
             {formatCurrency(subtotal)}
           </span>
@@ -94,7 +94,7 @@ export function OrderSummary({
         )}
 
         <div className="flex justify-between items-center text-sm">
-          <span className="text-slate-500 font-medium">Shipping</span>
+          <span className="text-primary font-medium">Shipping</span>
           <span className="text-[10px] font-bold text-accent bg-accent/5 px-2 py-1 rounded-lg italic">
             Free Dispatch
           </span>

@@ -40,7 +40,7 @@ export function PromoModal() {
       >
         <div className="relative bg-white rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden">
           {/* Header height reduced for mobile */}
-          <div className="h-24 sm:h-32 bg-[#0F172A] relative flex items-center justify-center overflow-hidden">
+          <div className="h-24 sm:h-32 bg-[#414042] relative flex items-center justify-center overflow-hidden">
             <div className="absolute inset-0 bg-accent/10 blur-3xl rounded-full" />
             <Sparkles className="w-8 h-8 sm:w-12 sm:h-12 text-accent animate-pulse" />
           </div>
@@ -59,7 +59,7 @@ export function PromoModal() {
                 Special <br />
                 <span className="text-accent italic">Welcome.</span>
               </h2>
-              <p className="text-slate-500 text-xs sm:text-sm font-medium px-2">
+              <p className="text-primary text-xs sm:text-sm font-medium px-2">
                 Get{" "}
                 <span className="text-slate-900 font-bold">
                   {discount * 100}% OFF
@@ -70,7 +70,7 @@ export function PromoModal() {
 
             <Button
               onClick={handleRedirect}
-              className="w-full h-12 sm:h-14 rounded-xl sm:rounded-2xl bg-[#0F172A] hover:bg-accent hover:text-black text-white font-black uppercase tracking-widest text-[10px] sm:text-[11px] transition-all duration-300 group"
+              className="w-full h-12 sm:h-14 rounded-xl sm:rounded-2xl bg-[#414042] hover:bg-accent hover:text-black text-white font-black uppercase tracking-widest text-[10px] sm:text-[11px] transition-all duration-300 group"
             >
               Sign Up & Claim Discount
               <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />

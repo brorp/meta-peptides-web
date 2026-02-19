@@ -201,7 +201,7 @@ export function GlobalCart() {
           ) : (
             <Button
               onClick={() => setIsCartOpen(false)}
-              className="w-full bg-slate-100 text-slate-500 h-14 rounded-2xl font-bold"
+              className="w-full bg-slate-100 text-primary h-14 rounded-2xl font-bold"
             >
               Close Cart
             </Button>

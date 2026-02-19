@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       html: `
         <div style="background-color: #f9fafb; padding: 40px; font-family: sans-serif;">
           <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 20px; border: 1px solid #10b981; overflow: hidden; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
-            <div style="background-color: #0f172a; padding: 25px; text-align: center;">
+            <div style="background-color: #414042; padding: 25px; text-align: center;">
               <h1 style="color: #10b981; margin: 0; font-size: 22px; letter-spacing: 4px; font-weight: 900;">METAPEPTIDES</h1>
             </div>
             <div style="padding: 30px;">
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
               <div style="margin-top: 20px; color: #374151; line-height: 1.6;">
                 <p><strong>Name :</strong> ${name}</p>
                 <p><strong>Email :</strong> ${email}</p>
-                <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-top: 20px; font-style: italic; border-left: 4px solid #10b981; color: #0f172a;">
+                <div style="background: #f8fafc; padding: 20px; border-radius: 12px; margin-top: 20px; font-style: italic; border-left: 4px solid #10b981; color: #414042;">
                   "${message}"
                 </div>
               </div>

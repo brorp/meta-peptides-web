@@ -78,7 +78,7 @@ export default function ShopPageComponent() {
   return (
     <div className="min-h-screen bg-[#FAFAFA] text-foreground">
       {/* Header Section */}
-      <section className="pt-24 pb-12 bg-[#0F172A] text-white relative overflow-hidden">
+      <section className="pt-24 pb-12 bg-[#414042] text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-[500px] h-[300px] bg-accent/10 blur-[120px] -mr-40 -mt-40" />
       </section>
 

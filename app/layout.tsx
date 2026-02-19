@@ -8,7 +8,7 @@ import { Toaster } from "sonner";
 const geistSans = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export const viewport: Viewport = {
-  themeColor: "#0F172A",
+  themeColor: "#414042",
   width: "device-width",
   initialScale: 1,
 };

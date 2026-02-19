@@ -52,7 +52,7 @@ export default function PeptidesGuidesComponent() {
   return (
     <div className="min-h-screen bg-background selection:bg-accent/30 text-slate-900">
       {/* --- HERO SECTION --- */}
-      <section className="relative pt-32 pb-20 overflow-hidden bg-[#0F172A]">
+      <section className="relative pt-32 pb-20 overflow-hidden bg-[#414042]">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <Badge className="mb-4 bg-accent/20 text-accent border-accent/30 uppercase tracking-widest">
@@ -442,7 +442,7 @@ export default function PeptidesGuidesComponent() {
               </Button>
             </Link>
 
-            <div className="bg-slate-50 text-slate-500 p-8 rounded-[2rem] text-[10px] max-w-3xl mx-auto font-medium uppercase tracking-widest leading-loose border border-slate-100">
+            <div className="bg-slate-50 text-primary p-8 rounded-[2rem] text-[10px] max-w-3xl mx-auto font-medium uppercase tracking-widest leading-loose border border-slate-100">
               <span className="text-slate-900 font-black block mb-2 underline underline-offset-4 decoration-accent decoration-2">
                 Disclaimer
               </span>

@@ -83,8 +83,8 @@ export function FilterSidebar({
               className={cn(
                 "text-left px-4 py-3 rounded-xl text-xs font-semibold w-full transition-all flex items-center justify-between group",
                 selectedCategory === cat
-                  ? "bg-[#0F172A] text-white shadow-md shadow-slate-200"
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-900",
+                  ? "bg-[#414042] text-white shadow-md shadow-slate-200"
+                  : "text-primary hover:bg-slate-50 hover:text-slate-900",
               )}
             >
               {cat}
@@ -122,7 +122,7 @@ export function FilterSidebar({
                 "text-left px-4 py-3 rounded-xl text-[10px] font-bold uppercase tracking-tight w-full transition-all",
                 sortBy === opt.value
                   ? "bg-accent/5 text-accent border border-accent/20"
-                  : "text-slate-500 border border-transparent hover:bg-slate-50",
+                  : "text-primary border border-transparent hover:bg-slate-50",
               )}
             >
               {opt.label}

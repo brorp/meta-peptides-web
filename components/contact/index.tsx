@@ -79,7 +79,7 @@ export default function ContactPageComponent() {
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-accent/20">
-      <section className="relative pt-32 pb-20 overflow-hidden bg-[#0F172A]">
+      <section className="relative pt-32 pb-20 overflow-hidden bg-[#414042]">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px] -mr-40 -mt-40" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center lg:text-left">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent text-[10px] font-black uppercase tracking-[0.2em] mb-6">

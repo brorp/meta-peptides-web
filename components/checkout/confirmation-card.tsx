@@ -38,7 +38,7 @@ export function ConfirmationCard({ data }: ConfirmationCardProps) {
             Thank you for your trust.
           </p>
         </h2>
-        <p className="text-slate-500 text-sm font-medium max-w-sm mx-auto leading-relaxed">
+        <p className="text-primary text-sm font-medium max-w-sm mx-auto leading-relaxed">
           Your payment is being verified. Your order will be
           <span className="text-slate-900 font-bold italic">
             {" "}
@@ -88,7 +88,7 @@ export function ConfirmationCard({ data }: ConfirmationCardProps) {
 
       <div className="pt-6 space-y-3">
         <Link href="/shop" className="block">
-          <Button className="w-full py-7 rounded-2xl bg-[#0F172A] text-white font-bold uppercase tracking-widest hover:bg-accent hover:text-black transition-all duration-300 shadow-xl shadow-slate-200 group">
+          <Button className="w-full py-7 rounded-2xl bg-[#414042] text-white font-bold uppercase tracking-widest hover:bg-accent hover:text-black transition-all duration-300 shadow-xl shadow-slate-200 group">
             Return to Shopping
             <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
           </Button>

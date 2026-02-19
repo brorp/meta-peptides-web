@@ -24,7 +24,7 @@ export default function PeptideLabTestComponent() {
   return (
     <div className="min-h-screen bg-background selection:bg-accent/30">
       {/* Hero Section */}
-      <section className="relative pt-32 pb-12 overflow-hidden bg-[#0F172A]">
+      <section className="relative pt-32 pb-12 overflow-hidden bg-[#414042]">
         <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px]" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <h1 className="text-5xl lg:text-7xl font-black text-white tracking-tighter leading-[0.85] uppercase italic">
@@ -54,7 +54,7 @@ export default function PeptideLabTestComponent() {
 
           {!isLoading && labTests.length === 0 && (
             <div className="text-center py-20">
-              <p className="text-slate-500 italic">
+              <p className="text-primary italic">
                 No laboratory reports found for "{keyword}"
               </p>
             </div>

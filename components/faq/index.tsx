@@ -17,7 +17,7 @@ export default function FAQPageComponent() {
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
       {/* Hero Section - Cleaner without Search */}
-      <section className="relative bg-[#0F172A] pb-16 pt-32 md:pb-24 overflow-hidden">
+      <section className="relative bg-[#414042] pb-16 pt-32 md:pb-24 overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-64 h-64 md:w-96 md:h-96 bg-accent rounded-full blur-[80px] md:blur-[120px] -translate-x-1/2 -translate-y-1/2" />
         </div>
@@ -75,7 +75,7 @@ export default function FAQPageComponent() {
               >
                 <div className="flex items-center gap-3 mb-6 md:mb-8">
                   <div className="h-6 md:h-8 w-1.5 bg-accent rounded-full" />
-                  <h2 className="text-xl md:text-2xl font-black tracking-tight text-[#0F172A]">
+                  <h2 className="text-xl md:text-2xl font-black tracking-tight text-[#414042]">
                     {category.category}
                   </h2>
                 </div>
@@ -128,7 +128,7 @@ export default function FAQPageComponent() {
                           )}
                         >
                           <div className="overflow-hidden">
-                            <div className="px-5 pb-5 pt-1 md:px-6 md:pb-6 md:pt-2 text-xs md:text-sm text-slate-500 leading-relaxed border-t border-slate-100 mt-2">
+                            <div className="px-5 pb-5 pt-1 md:px-6 md:pb-6 md:pt-2 text-xs md:text-sm text-primary leading-relaxed border-t border-slate-100 mt-2">
                               {item.a}
                             </div>
                           </div>

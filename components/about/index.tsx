@@ -42,7 +42,7 @@ export default function OurCompanyPageComponent() {
       <Navbar />
 
       {/* --- HERO SECTION --- */}
-      <section className="relative pt-32 pb-24 overflow-hidden bg-[#0F172A]">
+      <section className="relative pt-32 pb-24 overflow-hidden bg-[#414042]">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px] -mr-40 -mt-40" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-3xl space-y-6">
@@ -105,7 +105,7 @@ export default function OurCompanyPageComponent() {
             </div>
 
             <div className="lg:col-span-5">
-              <Card className="p-10 bg-[#0F172A] border-none rounded-[3rem] relative overflow-hidden shadow-2xl">
+              <Card className="p-10 bg-[#414042] border-none rounded-[3rem] relative overflow-hidden shadow-2xl">
                 <div className="absolute top-0 right-0 p-8 opacity-5">
                   <Globe className="w-40 h-40 text-white" />
                 </div>
