@@ -82,7 +82,7 @@ export default function ShopPageComponent() {
         <div className="absolute top-0 right-0 w-[500px] h-[300px] bg-accent/10 blur-[120px] -mr-40 -mt-40" />
       </section>
 
-      <div className="max-w-7xl mx-auto px-6 py-10">
+      <div className="max-w-7xl mx-auto px-2 py-10">
         <div className="grid lg:grid-cols-12 gap-8 lg:gap-12">
           {/* Desktop Sidebar */}
           <aside className="hidden lg:block lg:col-span-3 sticky top-32 h-fit">
@@ -96,7 +96,7 @@ export default function ShopPageComponent() {
                 <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-accent transition-colors" />
                 <input
                   type="text"
-                  placeholder="Search for sequences..."
+                  placeholder="Search for metapeptides..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full h-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-12 text-sm font-bold focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all placeholder:text-slate-300"
@@ -125,7 +125,7 @@ export default function ShopPageComponent() {
               </div>
             ) : data?.data?.length ? (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-x-6 md:gap-y-10">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-x-6 md:gap-y-10">
                   {data.data.map((product: any) => (
                     <ProductCard
                       key={product.id}
@@ -145,7 +145,7 @@ export default function ShopPageComponent() {
               </>
             ) : (
               <div className="py-32 text-center bg-white rounded-[3rem] border border-slate-100 border-dashed italic text-slate-400">
-                No matching research sequences found.
+                No matching research metapeptides found.
               </div>
             )}
           </main>

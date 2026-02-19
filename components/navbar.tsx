@@ -19,7 +19,7 @@ import { createClientComponentClient } from "@/lib/supabase-client";
 import Marquee from "react-fast-marquee";
 import { discount } from "@/contants/discount";
 
-const NAV_LINKS = [
+export const NAV_LINKS = [
   { name: "Home", href: "/" },
   { name: "Shop", href: "/shop" },
   { name: "About Us", href: "/about" },

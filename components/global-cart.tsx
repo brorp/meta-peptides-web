@@ -50,7 +50,7 @@ export function GlobalCart() {
                 Cart <span className="text-accent italic">Details.</span>
               </DrawerTitle>
               <DrawerDescription className="text-xs font-medium text-slate-400 uppercase tracking-widest">
-                {getCartCount()} Sequences in your lab
+                {getCartCount()} metapeptides in your lab
               </DrawerDescription>
             </div>
             <DrawerClose className="rounded-full p-2 bg-slate-50 text-slate-400 hover:bg-slate-100 transition-colors">

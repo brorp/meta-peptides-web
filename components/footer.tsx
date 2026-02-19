@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { NAV_LINKS } from "./navbar";
 
 export function Footer() {
   return (
@@ -23,46 +24,18 @@ export function Footer() {
           <div>
             <h4 className="font-bold mb-4">Quick Links</h4>
             <ul className="space-y-2 text-sm opacity-70">
-              <li>
-                <Link
-                  href="/"
-                  className="hover:opacity-100 hover:text-accent transition"
-                >
-                  Home
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/shop"
-                  className="hover:opacity-100 hover:text-accent transition"
-                >
-                  Shop
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/about"
-                  className="hover:opacity-100 hover:text-accent transition"
-                >
-                  About Us
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/research"
-                  className="hover:opacity-100 hover:text-accent transition"
-                >
-                  Research
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/faq"
-                  className="hover:opacity-100 hover:text-accent transition"
-                >
-                  FAQ
-                </Link>
-              </li>
+              {NAV_LINKS.map((link) => {
+                return (
+                  <li>
+                    <Link
+                      href={link.href}
+                      className="hover:opacity-100 hover:text-accent transition"
+                    >
+                      {link.name}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
@@ -72,11 +45,6 @@ export function Footer() {
               <li>
                 <Link href="/terms" className="hover:opacity-100 transition">
                   Terms & Conditions
-                </Link>
-              </li>
-              <li>
-                <Link href="/privacy" className="hover:opacity-100 transition">
-                  Privacy Policy
                 </Link>
               </li>
               <li>

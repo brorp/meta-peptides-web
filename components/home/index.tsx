@@ -209,7 +209,7 @@ export default function HomePageComponent() {
 
               {/* The Container */}
               <div className="absolute inset-0 bg-accent/20 rounded-[3rem] lg:rounded-[5rem] blur-[60px] lg:blur-[120px] group-hover:bg-accent/30 transition-all duration-1000" />
-              <div className="relative aspect-square lg:aspect-[5/5] bg-gradient-to-br from-white to-slate-100 rounded-[3rem] lg:rounded-[4rem] border border-white/50 shadow-2xl flex flex-col items-center justify-center p-6 lg:p-12 overflow-hidden">
+              <div className="relative aspect-square  lg:aspect-[5/5] bg-gradient-to-br from-white to-slate-100 rounded-[3rem] lg:rounded-[4rem] border border-white/50 shadow-2xl flex flex-col items-center justify-center p-6 lg:p-12 overflow-hidden">
                 <div className="absolute inset-0 opacity-5 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-accent via-transparent to-transparent" />
 
                 {/* Product Image */}
@@ -344,7 +344,7 @@ export default function HomePageComponent() {
             <Dna className="w-96 h-96 text-white rotate-45" />
           </div>
 
-          <div className="grid lg:grid-cols-2 items-center p-12 md:p-24 gap-20 relative z-10">
+          <div className="grid lg:grid-cols-2 items-center p-8 md:p-24 gap-20 relative z-10">
             <div className="space-y-8">
               <div className="flex items-center gap-3 text-accent font-black text-[10px] uppercase tracking-[0.4em]">
                 <span className="w-8 h-px bg-accent" />
@@ -360,9 +360,6 @@ export default function HomePageComponent() {
                 Indonesia's most demanding research through strictly audited
                 synthetic sequences.
               </p>
-              <Button className="bg-white text-black hover:bg-accent hover:text-white font-black rounded-2xl px-10 h-16 text-lg transition-all shadow-xl uppercase tracking-widest">
-                Laboratory Standards
-              </Button>
             </div>
 
             <div className="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-12 space-y-10">

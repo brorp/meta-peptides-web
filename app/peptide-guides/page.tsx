@@ -7,7 +7,8 @@ export const metadata: Metadata = {
     "Master the technical protocols for peptide reconstitution, storage, and laboratory handling. Professional guides for research integrity.",
   openGraph: {
     title: "MetaPeptides - Research Protocol Guides",
-    description: "Technical SOPs for peptide research sequences in Indonesia.",
+    description:
+      "Technical SOPs for peptide research metapeptides in Indonesia.",
     url: "https://metapeptides.com/peptides-guides",
     siteName: "MetaPeptides",
     images: [

@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "MetaPeptides - Third-Party Lab Verifications",
     description:
-      "Verified purity and authenticity of research sequences. View our latest HPLC and Mass Spec results.",
+      "Verified purity and authenticity of research metapeptides. View our latest HPLC and Mass Spec results.",
     url: "https://metapeptides.com/peptide-labtest", // Ganti ke domain asli jika sudah live
     siteName: "MetaPeptides",
     images: [

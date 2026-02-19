@@ -56,7 +56,8 @@ export default function PeptidesGuidesComponent() {
               <div className="flex items-center gap-3">
                 <Package className="text-accent" size={20} />
                 <h2 className="text-xl font-black uppercase tracking-tight italic">
-                  Research <span className="text-accent">Starter Kit.</span>
+                  What you get with your{" "}
+                  <span className="text-accent">Metapeptides order :</span>
                 </h2>
               </div>
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest hidden md:block">

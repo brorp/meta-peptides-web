@@ -109,9 +109,7 @@ export function ProductCard({
                     : "text-red-500",
               )}
             >
-              {product.stock > 0
-                ? `Stock Availability: ${product.stock}`
-                : "Discontinued"}
+              {product.stock > 0 ? `Stock: ${product.stock}` : "Discontinued"}
             </span>
           </div>
           <div className="h-1 w-full bg-muted rounded-full overflow-hidden mb-5">
@@ -134,7 +132,7 @@ export function ProductCard({
             }}
             disabled={product.stock === 0}
             className={cn(
-              "w-full rounded-2xl py-6 h-auto font-bold transition-all duration-300",
+              "w-full rounded-2xl py-4 h-auto font-bold transition-all duration-300",
               "bg-foreground text-background hover:bg-accent hover:text-white hover:scale-[1.02] active:scale-95",
               "shadow-xl shadow-foreground/5 hover:shadow-accent/20 disabled:opacity-30 disabled:grayscale",
             )}
