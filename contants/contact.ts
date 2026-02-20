@@ -1,1 +1,1 @@
-export const email = "sales@meta-peptides.com";
+export const email = "support@meta-peptides.com";

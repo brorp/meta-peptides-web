@@ -1,3 +1,5 @@
+import { email } from "./contact";
+
 export const faqCategories = [
   {
     category: "General Questions",
@@ -37,7 +39,7 @@ export const faqCategories = [
       },
       {
         q: "Do you offer custom synthesis?",
-        a: "We primarily focus on our standard product line. However, for bulk orders or specialized requirements, please contact our team at support@metapeptides.com to discuss options.",
+        a: `We primarily focus on our standard product line. However, for bulk orders or specialized requirements, please contact our team at ${email} to discuss options.`,
       },
     ],
   },
@@ -92,7 +94,7 @@ export const faqCategories = [
       },
       {
         q: "Do you provide Safety Data Sheets (SDS)?",
-        a: "Yes, SDS documentation is available for all products. You can download these from our website or request them from support@metapeptides.com.",
+        a: `Yes, SDS documentation is available for all products. You can download these from our website or request them from ${email}.`,
       },
       {
         q: "Are you compliant with regulations?",
@@ -109,15 +111,15 @@ export const faqCategories = [
     questions: [
       {
         q: "What is your return policy?",
-        a: "We offer a 30-day return policy for unopened products in original condition. Please contact support@metapeptides.com to initiate a return.",
+        a: `We offer a 30-day return policy for unopened products in original condition. Please contact ${email} to initiate a return.`,
       },
       {
         q: "How do I contact customer support?",
-        a: "You can reach our support team via email at support@metapeptides.com or through our contact form on the website. We typically respond within 24 hours.",
+        a: `You can reach our support team via email at ${email} or through our contact form on the website. We typically respond within 24 hours.`,
       },
       {
         q: "Do you offer technical support?",
-        a: "Yes, our scientific team is available to answer questions about product specifications, reconstitution, and usage. Email support@metapeptides.com with your inquiry.",
+        a: `Yes, our scientific team is available to answer questions about product specifications, reconstitution, and usage. Email ${email}  with your inquiry.`,
       },
       {
         q: "Can I get bulk pricing?",

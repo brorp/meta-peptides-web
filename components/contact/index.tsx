@@ -54,7 +54,7 @@ export default function ContactPageComponent() {
     {
       icon: <Mail className="w-5 h-5" />,
       title: "Direct Email",
-      value: "support@metapeptides.com",
+      value: email,
       desc: "Avg. response: 2-4 hours",
     },
     {

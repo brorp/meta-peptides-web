@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { NAV_LINKS } from "./navbar";
+import { email } from "@/contants/contact";
 
 export function Footer() {
   return (
@@ -58,7 +59,7 @@ export function Footer() {
           <div>
             <h4 className="font-bold mb-4">Get in Touch</h4>
             <p className="text-sm opacity-70 mb-2">Questions or support?</p>
-            <p className="text-sm font-medium">support@metapeptides.com</p>
+            <p className="text-sm font-medium">{email}</p>
           </div>
         </div>
 

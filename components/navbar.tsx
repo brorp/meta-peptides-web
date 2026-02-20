@@ -103,7 +103,11 @@ export function Navbar() {
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 group">
               <div className="bg-[#414042] rounded-xl flex items-center justify-center group-hover:rotate-6 transition-transform">
-                <img src="/logo.png" alt="Logo" className="h-8 w-auto m-2" />
+                <img
+                  src="/logo.png"
+                  alt="Logo"
+                  className="h-6 md:h-8 min-w-8 m-2"
+                />
               </div>
               <span className="text-xl font-bold tracking-tight text-foreground">
                 meta<span className="text-accent">peptides</span>
