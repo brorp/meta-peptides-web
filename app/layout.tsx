@@ -64,6 +64,10 @@ export const metadata: Metadata = {
     creator: "@metapeptides",
   },
 
+  verification: {
+    google: "HKWvqqH9NuGYEAS1NZgBEqAl-Xzdh305cxItDWvo0rY",
+  },
+
   robots: {
     index: true,
     follow: true,
