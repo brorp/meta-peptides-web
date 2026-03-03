@@ -25,6 +25,10 @@ const checkoutSchema = z.object({
   regional: z.string().min(2, "City or Town is required"),
   zip: z.string().min(5, "ZIP/Postal code must be at least 5 digits"),
 
+  agreeShippingPolicy: z.boolean().refine((val) => val === true, {
+    message: "You must agree to the shipping policy to proceed",
+  }),
+
   // Step: Payment
   receiptFile: z.any().optional(),
   receiptPreview: z.string().nullable().optional(),
@@ -38,9 +42,7 @@ type CheckoutValues = z.infer<typeof checkoutSchema>;
 
 export default function CheckoutPageComponent() {
   const tabs = ["Shipping", "Payment", "Confirmation"];
-
   type Step = (typeof tabs)[number];
-
   const [step, setStep] = useState<Step>("Shipping");
 
   const {
@@ -76,6 +78,7 @@ export default function CheckoutPageComponent() {
       note: storedShipping?.note || "",
       voucherCode: storedShipping?.voucherCode || "",
       receiptPreview: null,
+      agreeShippingPolicy: true,
     },
   });
 
@@ -90,24 +93,25 @@ export default function CheckoutPageComponent() {
       setStep("Confirmation");
       toast.success("Order Received", {
         description:
-          "We've received your order. Please allow 1-3 hours for our team to verify your payment.",
+          "We've received your order. Please allow 1-3 hours for payment verification.",
       });
     },
   });
 
   const isLoading = isSubmitting || isLoadingSubmit;
 
+  // Sync data dari store jika ada
   React.useEffect(() => {
     if (storedShipping) {
       reset({
         ...storedShipping,
         receiptPreview: null,
+        agreeShippingPolicy: false,
       });
     }
   }, [storedShipping, reset]);
 
   const watchAllFields = watch();
-
   const subtotal = getTotalPrice();
   const total = subtotal;
 
@@ -121,24 +125,31 @@ export default function CheckoutPageComponent() {
         "address",
         "regional",
         "zip",
+        "agreeShippingPolicy",
       ]);
+
       if (isValid) {
         setStep("Payment");
         setShipping({
           ...watchAllFields,
           lastName: watchAllFields.lastName ?? "",
         });
+      } else {
+        // Jika checkbox belum dicentang, berikan feedback visual
+        if (errors.agreeShippingPolicy) {
+          toast.error("Action Required", {
+            description:
+              "Please read and accept the Shipping Policy to continue.",
+          });
+        }
       }
-    } else if (step === "Payment") {
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024)
-        return alert("File terlalu besar (Max 5MB)");
-
+      if (file.size > 5 * 1024 * 1024) return alert("File too large (Max 5MB)");
       const reader = new FileReader();
       reader.onloadend = () => {
         setValue("receiptFile", file);
@@ -154,10 +165,10 @@ export default function CheckoutPageComponent() {
     }
 
     const formData = new FormData();
-
     formData.append("file", data.receiptFile);
 
     const orderPayload = {
+      // ... payload data tetap sama ...
       email: data.email,
       first_name: data.firstName,
       last_name: data.lastName,
@@ -180,7 +191,6 @@ export default function CheckoutPageComponent() {
     };
 
     formData.append("orderData", JSON.stringify(orderPayload));
-
     submitOrder(formData);
   };
 
@@ -193,14 +203,15 @@ export default function CheckoutPageComponent() {
   );
 
   return (
-    <div className="min-h-screen bg-[#fafafa] pb-20">
-      <section className="bg-black text-white py-12 pt-40">
-        <div className="max-w-7xl mx-auto px-6">
-          <h1 className="text-4xl font-bold uppercase italic tracking-tighter">
+    <div className="min-h-screen bg-[#fafafa] pb-20 selection:bg-accent/30">
+      <section className="bg-black text-white py-12 pt-40 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-accent/10 blur-[100px] rounded-full" />
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <h1 className="text-4xl font-black uppercase italic tracking-tighter">
             Secure <span className="text-accent">Checkout.</span>
           </h1>
-          <p className="text-xs font-bold opacity-60 uppercase tracking-[0.3em] mt-2">
-            Professional Research Sequence Only
+          <p className="text-[10px] font-black opacity-60 uppercase tracking-[0.4em] mt-2">
+            Momenku Brand - Meta Peptides 2026
           </p>
         </div>
       </section>
@@ -244,6 +255,7 @@ export default function CheckoutPageComponent() {
                 subtotal={subtotal}
                 step={step}
                 isLoading={isLoading}
+                // Jika user belum centang di step Shipping, tombol akan trigger validasi via handleNext
                 onNext={
                   step === "Payment" ? handleSubmit(onSubmit) : handleNext
                 }

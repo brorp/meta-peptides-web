@@ -2,6 +2,8 @@ import { InputGroup } from "@/components/ui/input-group";
 import { AddressAutocomplete } from "@/components/ui/address-autocomplete";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { CheckCircle2 } from "lucide-react"; // Tambahkan icon ini
+import Link from "next/link";
 
 export function ShippingForm({
   register,
@@ -89,7 +91,8 @@ export function ShippingForm({
           />
         </InputGroup>
       </div>
-      {/* Note & Voucher Section */}
+
+      {/* Note Section */}
       <InputGroup label="Order Note (Optional)">
         <input
           {...register("note")}
@@ -97,6 +100,42 @@ export function ShippingForm({
           placeholder="e.g. Leave at front desk"
         />
       </InputGroup>
+
+      {/* --- SHIPPING POLICY AGREEMENT --- */}
+      <div className="pt-6 border-t border-slate-100">
+        <label className="flex items-start gap-4 p-5 rounded-3xl bg-slate-50 border border-slate-200 cursor-pointer group hover:bg-slate-100 transition-colors">
+          <div className="relative mt-1">
+            <input
+              type="checkbox"
+              {...register("agreeShippingPolicy")}
+              className="peer sr-only"
+            />
+            <div className="w-6 h-6 border-2 border-slate-300 rounded-lg bg-white peer-checked:bg-[#414042] peer-checked:border-[#414042] transition-all flex items-center justify-center shadow-sm">
+              <CheckCircle2 className="w-4 h-4 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-slate-600 leading-relaxed tracking-tight group-hover:text-slate-900 transition-colors">
+              I have read, understood, and agree to the{" "}
+              <Link
+                href="/shipping"
+                target="_blank"
+                className="text-accent underline decoration-accent/30 underline-offset-4 font-black"
+              >
+                Shipping Policy
+              </Link>
+              , including the strict no-refund policy, Indonesia-only shipping,
+              dispatch hours (09.00–18.00), and transfer of shipping risk to the
+              customer.
+            </p>
+            {errors.agreeShippingPolicy && (
+              <p className="text-[10px] font-semibold text-red-500 mt-1">
+                You must agree to the shipping policy to proceed.
+              </p>
+            )}
+          </div>
+        </label>
+      </div>
     </Card>
   );
 }

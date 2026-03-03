@@ -44,7 +44,7 @@ export function Footer() {
             <h4 className="font-bold mb-4">Legal</h4>
             <ul className="space-y-2 text-sm opacity-70">
               <li>
-                <Link href="/terms" className="hover:opacity-100 transition">
+                <Link href="/tnc" className="hover:opacity-100 transition">
                   Terms & Conditions
                 </Link>
               </li>
