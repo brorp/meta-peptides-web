@@ -28,8 +28,8 @@ export function PaymentForm({
 
   const handleDownloadQR = () => {
     const link = document.createElement("a");
-    link.href = "/qris-placeholder.png";
-    link.download = "QRIS-Metapeptides.png";
+    link.href = "/QRIS.webp";
+    link.download = "/QRIS.webp";
     link.click();
   };
 
@@ -48,16 +48,11 @@ export function PaymentForm({
       {/* QRIS Display Section */}
       <div className="flex flex-col items-center justify-center space-y-4">
         <div className="relative p-4 bg-white border-2 border-slate-100 rounded-[2rem] shadow-inner">
-          {/* Logo Brand di Tengah QR (Opsional ala QRIS asli) */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-1 rounded-lg shadow-sm border border-slate-50">
-            <img src="/logo.webp" alt="Logo" className="w-6 h-auto" />
-          </div>
-
           {/* Ganti src dengan path QRIS kamu */}
           <img
-            src="/qris-placeholder.png"
+            src="/QRIS.webp"
             alt="QRIS Metapeptides"
-            className="w-64 h-64 object-contain rounded-xl"
+            className="w-64 h-64 object-cover rounded-xl"
           />
         </div>
 
