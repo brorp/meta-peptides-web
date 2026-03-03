@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     siteName: "MetaPeptides",
     images: [
       {
-        url: "/logo.png",
+        url: "/logo.webp",
         width: 1200,
         height: 630,
         alt: "MetaPeptides Laboratory Grade Compounds",
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "MetaPeptides | Global Research Support",
     description: "Verified Research Peptides for Scientific Advancement.",
-    images: ["/logo.png"],
+    images: ["/logo.webp"],
   },
 
   keywords: [

@@ -102,9 +102,9 @@ export function Navbar() {
           <div className="flex justify-between items-center">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2 group">
-              <div className="bg-[#414042] rounded-xl flex items-center justify-center group-hover:rotate-6 transition-transform">
+              <div className="rounded-xl flex items-center justify-center group-hover:rotate-6 transition-transform">
                 <img
-                  src="/logo.png"
+                  src="/logo.webp"
                   alt="Logo"
                   className="h-6 md:h-8 min-w-8 m-2"
                 />

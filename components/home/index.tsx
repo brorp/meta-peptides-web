@@ -188,21 +188,21 @@ export default function HomePageComponent() {
                   number="1"
                   title="Advanced Cap"
                   desc="Self-sealing surgical grade rubber ensures zero contamination."
-                  className="top-[20%] right-[35%]"
+                  className="top-[15%] right-[30%]"
                   dotPosition="right"
                 />
                 <Annotation
                   number="2"
                   title="Vacuum Sealed"
                   desc="Molecular integrity preserved through precision lyophilization."
-                  className="top-[45%] left-[35%]"
+                  className="top-[35%] left-[33%]"
                   dotPosition="left"
                 />
                 <Annotation
                   number="3"
                   title="Lab Transparency"
                   desc="Unique batch identifiers for instant COA verification."
-                  className="bottom-[25%] right-[40%]"
+                  className="bottom-[35%] right-[43%]"
                   dotPosition="bottom"
                 />
               </div>
@@ -217,9 +217,9 @@ export default function HomePageComponent() {
                   <div className="absolute w-[60%] h-[60%] bg-accent/20 blur-[80px] rounded-full animate-pulse" />
                   <div className="relative drop-shadow-[0_45px_45px_rgba(0,0,0,0.25)] animate-float z-10">
                     <Image
-                      src="/product/product1.png"
-                      width={1200}
-                      height={1200}
+                      src="/product/3.webp"
+                      width={400}
+                      height={400}
                       alt="MetaPeptides Premium Vial"
                       className={cn(
                         "object-contain transition-transform duration-700 ease-out",
@@ -229,6 +229,19 @@ export default function HomePageComponent() {
                       )}
                       priority
                     />
+                  </div>
+                </div>
+                <div className="w-full p-4 lg:p-6 backdrop-blur-xl bg-white/60 border border-white/40 rounded-2xl lg:rounded-[2.5rem] shadow-sm flex items-center justify-between">
+                  <div className="space-y-0.5 lg:space-y-1">
+                    <p className="text-[8px] lg:text-[10px] font-black text-accent uppercase tracking-widest">
+                      Series
+                    </p>
+                    <p className="text-sm lg:text-xl font-black text-slate-800 tracking-tighter">
+                      RETRATUTIDE 10mg
+                    </p>
+                  </div>
+                  <div className="p-2 lg:p-3 bg-accent text-white rounded-xl lg:rounded-2xl">
+                    <FlaskConical className="w-4 h-4 lg:w-6 lg:h-6" />
                   </div>
                 </div>
               </div>

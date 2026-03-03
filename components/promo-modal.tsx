@@ -1,30 +1,24 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react"; // Hapus useEffect yang tidak perlu di sini
 import { X, ArrowRight, Sparkles } from "lucide-react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { discount } from "@/contants/discount";
 
-export function PromoModal() {
-  const [isOpen, setIsOpen] = useState(false);
+// Update Interface untuk menerima props
+interface PromoModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function PromoModal({ open, onOpenChange }: PromoModalProps) {
   const router = useRouter();
 
-  useEffect(() => {
-    const hasSeenPromo = localStorage.getItem("meta_promo_first_visit");
-
-    if (!hasSeenPromo) {
-      const timer = setTimeout(() => {
-        setIsOpen(true);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, []);
-
   const handleClose = () => {
-    setIsOpen(false);
-    localStorage.setItem("meta_promo_first_visit", "true");
+    onOpenChange(false);
+    localStorage.setItem("metapeptides_promo_first_visit", "true");
   };
 
   const handleRedirect = () => {
@@ -33,13 +27,14 @@ export function PromoModal() {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         isIconClose={false}
-        className="w-[92vw] sm:max-w-[450px] p-0 overflow-hidden border-none bg-transparent shadow-none outline-none"
+        className="z-[100] w-[92vw] sm:max-w-[450px] p-0 overflow-hidden border-none bg-transparent shadow-none outline-none"
       >
+        <DialogTitle className="sr-only">Special Welcome Promo</DialogTitle>
         <div className="relative bg-white rounded-[1.5rem] sm:rounded-[2.5rem] overflow-hidden">
-          {/* Header height reduced for mobile */}
+          {/* Header Metallic Gray */}
           <div className="h-24 sm:h-32 bg-[#414042] relative flex items-center justify-center overflow-hidden">
             <div className="absolute inset-0 bg-accent/10 blur-3xl rounded-full" />
             <Sparkles className="w-8 h-8 sm:w-12 sm:h-12 text-accent animate-pulse" />
@@ -54,7 +49,6 @@ export function PromoModal() {
             </button>
 
             <div className="space-y-2 mb-6 sm:mb-8">
-              {/* Text sizes scaled down for mobile (text-3xl to text-4xl) */}
               <h2 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tighter leading-none uppercase">
                 Special <br />
                 <span className="text-accent italic">Welcome.</span>

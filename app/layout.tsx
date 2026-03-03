@@ -34,8 +34,8 @@ export const metadata: Metadata = {
 
   icons: {
     icon: "/favicon.ico",
-    shortcut: "/logo.png",
-    apple: "/logo.png",
+    shortcut: "/logo.webp",
+    apple: "/logo.webp",
   },
 
   openGraph: {
@@ -48,7 +48,7 @@ export const metadata: Metadata = {
       "Your trusted source for high-purity laboratory research compounds.",
     images: [
       {
-        url: "/logo.png",
+        url: "/logo.webp",
         width: 1200,
         height: 630,
         alt: "MetaPeptides Branding",
@@ -60,7 +60,7 @@ export const metadata: Metadata = {
     card: "summary",
     title: "MetaPeptides",
     description: "Verified Research Peptides for Scientific Advancement.",
-    images: ["/logo.png"],
+    images: ["/logo.webp"],
     creator: "@metapeptides",
   },
 
@@ -81,7 +81,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} font-sans antialiased`}>
+      <body
+        className={`${geistSans.variable} font-sans antialiased`}
+        suppressHydrationWarning
+      >
         <Providers>
           <LayoutClient>{children}</LayoutClient>
         </Providers>

@@ -26,8 +26,8 @@ body {
     --secondary-foreground: 200 10% 20%;
     --muted: 0 0% 96.1%;
     --muted-foreground: 0 0% 45.1%;
-    --accent: 125 65% 37%;
-    --accent-foreground: 200 10% 20%;
+    --accent: 210 10% 55%; /* Cool Gray/Silver */
+    --accent-foreground: 210 20% 15%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 89.8%;

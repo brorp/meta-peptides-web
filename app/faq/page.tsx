@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     siteName: "MetaPeptides",
     images: [
       {
-        url: "/logo.png",
+        url: "/logo.webp",
         width: 800,
         height: 800,
         alt: "MetaPeptides Logo",
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     card: "summary",
     title: "MetaPeptides FAQ",
     description: "Scientific support for research peptides.",
-    images: ["/logo.png"],
+    images: ["/logo.webp"],
   },
 };
 

@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     url: `${process.env.NEXT_PUBLIC_APP_URL}/peptides-guides`,
     siteName: "MetaPeptides",
     images: [
-      { url: "/logo.png", width: 800, height: 800, alt: "Peptide Guides" },
+      { url: "/logo.webp", width: 800, height: 800, alt: "Peptide Guides" },
     ],
     type: "website",
   },

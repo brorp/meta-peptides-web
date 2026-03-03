@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     siteName: "MetaPeptides",
     images: [
       {
-        url: "/logo.png",
+        url: "/logo.webp",
         width: 800,
         height: 800,
         alt: "MetaPeptides Lab Testing",
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "MetaPeptides | Lab Test Reports",
     description: "Transparency in research: View our peptide purity reports.",
-    images: ["/logo.png"],
+    images: ["/logo.webp"],
   },
 };
 

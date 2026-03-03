@@ -142,11 +142,11 @@ export default function AuthPageComponent() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground selection:bg-green-500/30 font-sans antialiased">
+    <div className="min-h-screen bg-background text-foreground selection:bg-accent/30 font-sans antialiased">
       <main className="relative flex items-center justify-center pt-32 pb-20 px-4 overflow-hidden">
         {/* --- Background Ornaments --- */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-green-500/10 rounded-full blur-[120px] animate-pulse" />
+          <div className="absolute top-[-10%] right-[-5%] w-[600px] h-[600px] bg-accent/10 rounded-full blur-[120px] animate-pulse" />
           <div
             className="absolute inset-0 opacity-[0.02]"
             style={{
@@ -166,15 +166,15 @@ export default function AuthPageComponent() {
           <div className="flex flex-col items-center mb-10 text-center">
             <motion.div
               whileHover={{ scale: 1.05, rotate: 5 }}
-              className="w-20 h-20 bg-foreground rounded-[2.2rem] flex items-center justify-center mb-6 shadow-2xl shadow-green-500/20 border border-green-500/30 relative"
+              className="w-20 h-20 bg-foreground rounded-[2.2rem] flex items-center justify-center mb-6 shadow-2xl shadow-accent/20 border border-accent/30 relative"
             >
-              <div className="absolute inset-0 rounded-[2.2rem] border-2 border-green-500/50 animate-ping opacity-20" />
-              <Fingerprint className="w-10 h-10 text-green-500" />
+              <div className="absolute inset-0 rounded-[2.2rem] border-2 border-accent/50 animate-ping opacity-20" />
+              <Fingerprint className="w-10 h-10 text-accent" />
             </motion.div>
 
             <h2 className="text-4xl lg:text-5xl font-black tracking-tighter uppercase italic leading-none">
               {isLogin ? "LOG IN." : "SIGN UP."}
-              <span className="text-green-600 dark:text-green-400 block text-[10px] not-italic tracking-[0.5em] mt-3 font-black">
+              <span className="text-accent block text-[10px] not-italic tracking-[0.5em] mt-3 font-black">
                 {isLogin
                   ? "INITIALIZING SECURE SESSION"
                   : "ENROLLING NEW STRAIN"}
@@ -183,8 +183,8 @@ export default function AuthPageComponent() {
           </div>
 
           {/* --- Main Card --- */}
-          <Card className="p-10 border border-green-500/20 bg-card/80 backdrop-blur-xl shadow-[0_40px_80px_-15px_rgba(34,197,94,0.1)] rounded-[3.5rem] relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-transparent via-green-500 to-transparent" />
+          <Card className="p-10 border border-accent/20 bg-card/80 backdrop-blur-xl shadow-[0_40px_80px_-15px_rgba(34,197,94,0.1)] rounded-[3.5rem] relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-transparent via-accent to-transparent" />
 
             <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
               {/* Email Field */}
@@ -194,13 +194,13 @@ export default function AuthPageComponent() {
                 </label>
                 <div className="relative group">
                   <Mail
-                    className={`absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${errors.email ? "text-red-500" : "text-muted-foreground group-focus-within:text-green-500"}`}
+                    className={`absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${errors.email ? "text-red-500" : "text-muted-foreground group-focus-within:text-accent"}`}
                   />
                   <input
                     {...registerField("email")}
                     type="email"
                     placeholder="researcher@metapeptides.com"
-                    className={`w-full pl-14 pr-6 py-4 bg-green-500/[0.03] border-2 rounded-2xl outline-none transition-all font-bold text-sm shadow-inner ${errors.email ? "border-red-500/50 focus:border-red-500" : "border-border/50 focus:border-green-500 focus:bg-background"}`}
+                    className={`w-full pl-14 pr-6 py-4 bg-accent/[0.03] border-2 rounded-2xl outline-none transition-all font-bold text-sm shadow-inner ${errors.email ? "border-red-500/50 focus:border-red-500" : "border-border/50 focus:border-accent focus:bg-background"}`}
                   />
                 </div>
                 {errors.email && (
@@ -219,7 +219,7 @@ export default function AuthPageComponent() {
                   {isLogin && (
                     <Link
                       href="#"
-                      className="text-[10px] font-black text-foreground hover:text-green-500 transition-colors uppercase tracking-widest"
+                      className="text-[10px] font-black text-foreground hover:text-accent transition-colors uppercase tracking-widest"
                     >
                       Forgot?
                     </Link>
@@ -227,18 +227,18 @@ export default function AuthPageComponent() {
                 </div>
                 <div className="relative group">
                   <Lock
-                    className={`absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${errors.password ? "text-red-500" : "text-muted-foreground group-focus-within:text-green-500"}`}
+                    className={`absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${errors.password ? "text-red-500" : "text-muted-foreground group-focus-within:text-accent"}`}
                   />
                   <input
                     {...registerField("password")}
                     type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className={`w-full pl-14 pr-14 py-4 bg-green-500/[0.03] border-2 rounded-2xl outline-none transition-all font-bold text-sm shadow-inner ${errors.password ? "border-red-500/50 focus:border-red-500" : "border-border/50 focus:border-green-500 focus:bg-background"}`}
+                    className={`w-full pl-14 pr-14 py-4 bg-accent/[0.03] border-2 rounded-2xl outline-none transition-all font-bold text-sm shadow-inner ${errors.password ? "border-red-500/50 focus:border-red-500" : "border-border/50 focus:border-accent focus:bg-background"}`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-green-500 transition-all"
+                    className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-accent transition-all"
                   >
                     {showPassword ? (
                       <EyeOff className="w-5 h-5" />
@@ -267,13 +267,13 @@ export default function AuthPageComponent() {
                     </label>
                     <div className="relative group">
                       <Fingerprint
-                        className={`absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${errors.confirmPassword ? "text-red-500" : "text-muted-foreground group-focus-within:text-green-500"}`}
+                        className={`absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${errors.confirmPassword ? "text-red-500" : "text-muted-foreground group-focus-within:text-accent"}`}
                       />
                       <input
                         {...registerField("confirmPassword")}
                         type={showPassword ? "text" : "password"}
                         placeholder="REPEAT KEY"
-                        className={`w-full pl-14 pr-6 py-4 bg-green-500/[0.03] border-2 rounded-2xl outline-none transition-all font-bold text-sm shadow-inner ${errors.confirmPassword ? "border-red-500/50 focus:border-red-500" : "border-border/50 focus:border-green-500 focus:bg-background"}`}
+                        className={`w-full pl-14 pr-6 py-4 bg-accent/[0.03] border-2 rounded-2xl outline-none transition-all font-bold text-sm shadow-inner ${errors.confirmPassword ? "border-red-500/50 focus:border-red-500" : "border-border/50 focus:border-accent focus:bg-background"}`}
                       />
                     </div>
                     {errors.confirmPassword && (
@@ -288,7 +288,7 @@ export default function AuthPageComponent() {
               {/* Submit Button */}
               <Button
                 disabled={isLoadingRegister || isLoadingLogin}
-                className="w-full h-16 bg-green-600 hover:bg-green-500 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-[0.4em] shadow-xl shadow-green-500/20 transition-all active:scale-[0.97] mt-6 flex items-center justify-center gap-3 group/btn"
+                className="w-full h-16 bg-accent hover:bg-accent text-white rounded-[1.5rem] font-black text-xs uppercase tracking-[0.4em] shadow-xl shadow-accent/20 transition-all active:scale-[0.97] mt-6 flex items-center justify-center gap-3 group/btn"
               >
                 {isLoadingRegister || isLoadingLogin ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -303,16 +303,16 @@ export default function AuthPageComponent() {
                 type="button"
                 variant="outline"
                 onClick={handleGoogleLogin}
-                className="w-full h-14 border-2 border-green-500/20 bg-transparent hover:bg-green-500/5 text-foreground rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3"
+                className="w-full h-14 border-2 border-accent/20 bg-transparent hover:bg-accent/5 text-foreground rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3"
               >
-                <Chrome className="w-4 h-4 text-green-500" />
+                <Chrome className="w-4 h-4 text-accent" />
                 Login With Google
               </Button>
               <Button
                 type="button"
                 variant="ghost"
                 onClick={handleGuestLogin}
-                className="w-full h-14 bg-green-500/5 hover:bg-green-500/10 text-green-600 dark:text-green-400 rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 border border-green-500/10"
+                className="w-full h-14 bg-accent/5 hover:bg-accent/10 text-accent dark:text-accent rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 border border-accent/10"
               >
                 <User className="w-4 h-4" />
                 Continue as Guest
@@ -320,13 +320,13 @@ export default function AuthPageComponent() {
             </form>
 
             {/* Switch Mode */}
-            <div className="mt-10 pt-8 border-t border-green-500/10 text-center">
+            <div className="mt-10 pt-8 border-t border-accent/10 text-center">
               <p className="text-[11px] font-black text-muted-foreground uppercase tracking-widest leading-relaxed">
                 {isLogin ? "New to the facility?" : "Already verified?"}{" "}
                 <button
                   type="button"
                   onClick={toggleMode}
-                  className="text-foreground font-black hover:text-green-500 transition-all ml-1 block mt-2 mx-auto border-b-2 border-green-500/20 hover:border-green-500"
+                  className="text-foreground font-black hover:text-accent transition-all ml-1 block mt-2 mx-auto border-b-2 border-accent/20 hover:border-accent"
                 >
                   {isLogin ? "SIGN UP HERE" : "LOG IN HERE"}
                 </button>
@@ -337,13 +337,13 @@ export default function AuthPageComponent() {
           {/* --- Technical Footer --- */}
           <div className="mt-12 text-center px-10">
             <div className="flex items-center justify-center gap-3 mb-4 opacity-50">
-              <div className="h-px w-8 bg-green-500/30" />
-              <FlaskConical className="w-4 h-4 text-green-500 animate-bounce" />
-              <div className="h-px w-8 bg-green-500/30" />
+              <div className="h-px w-8 bg-accent/30" />
+              <FlaskConical className="w-4 h-4 text-accent animate-bounce" />
+              <div className="h-px w-8 bg-accent/30" />
             </div>
             <p className="text-[9px] text-muted-foreground leading-relaxed uppercase tracking-[0.3em] font-black italic">
               Encrypted Node:{" "}
-              <span className="text-green-600 not-italic">GREEN-VAULT-256</span>
+              <span className="text-accent not-italic">GREEN-VAULT-256</span>
               <br />
               <span className="opacity-40">
                 Auth-Protocol: Bio-Metric Verified

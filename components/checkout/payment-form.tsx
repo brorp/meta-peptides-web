@@ -50,7 +50,7 @@ export function PaymentForm({
         <div className="relative p-4 bg-white border-2 border-slate-100 rounded-[2rem] shadow-inner">
           {/* Logo Brand di Tengah QR (Opsional ala QRIS asli) */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-1 rounded-lg shadow-sm border border-slate-50">
-            <img src="/logo.png" alt="Logo" className="w-6 h-auto" />
+            <img src="/logo.webp" alt="Logo" className="w-6 h-auto" />
           </div>
 
           {/* Ganti src dengan path QRIS kamu */}

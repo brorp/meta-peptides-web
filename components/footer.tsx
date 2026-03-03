@@ -11,7 +11,7 @@ export function Footer() {
         <div className="grid md:grid-cols-4 gap-8 mb-8">
           <div>
             <div className="flex items-center gap-2 mb-4">
-              <img src="/logo.png" alt="MetaPeptides" className="h-8 w-auto" />
+              <img src="/logo.webp" alt="MetaPeptides" className="h-8 w-auto" />
               <span className="font-bold text-xl tracking-tight">
                 metapeptides
               </span>
@@ -25,9 +25,9 @@ export function Footer() {
           <div>
             <h4 className="font-bold mb-4">Quick Links</h4>
             <ul className="space-y-2 text-sm opacity-70">
-              {NAV_LINKS.map((link) => {
+              {NAV_LINKS.map((link, i) => {
                 return (
-                  <li>
+                  <li key={i}>
                     <Link
                       href={link.href}
                       className="hover:opacity-100 hover:text-accent transition"
