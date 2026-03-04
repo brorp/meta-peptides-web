@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
-import { LayoutClient } from "@/components/layout-client";
 import Providers from "./providers";
 import { Toaster } from "sonner";
 
@@ -85,9 +84,7 @@ export default function RootLayout({
         className={`${geistSans.variable} font-sans antialiased`}
         suppressHydrationWarning
       >
-        <Providers>
-          <LayoutClient>{children}</LayoutClient>
-        </Providers>
+        <Providers>{children}</Providers>
         <Toaster richColors position="top-right" />
       </body>
     </html>

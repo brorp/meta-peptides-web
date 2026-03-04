@@ -1,0 +1,287 @@
+"use client";
+
+import { useState, useEffect, useRef, use } from "react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, Loader2, Save, Upload, X, ImageIcon } from "lucide-react";
+import { toast } from "sonner";
+import { api as axios } from "@/lib/axios";
+
+const PRODUCT_FIELDS = [
+    { key: "name", label: "Product Name", required: true },
+    { key: "label", label: "Label / Subtitle" },
+    { key: "slug", label: "Slug" },
+    { key: "price", label: "Price (IDR)", type: "number", required: true },
+    { key: "original_price", label: "Original Price (IDR)", type: "number" },
+    { key: "stock", label: "Stock Quantity", type: "number", required: true },
+    { key: "volume", label: "Volume / Size" },
+    { key: "purity", label: "Purity %" },
+    { key: "formula", label: "Chemical Formula" },
+    { key: "cas", label: "CAS Number" },
+    { key: "category", label: "Category" },
+];
+
+const TEXTAREA_FIELDS = [
+    { key: "short_desc", label: "Short Description" },
+    { key: "overview", label: "Overview" },
+    { key: "storage_instruction", label: "Storage Instruction" },
+    { key: "usage_instruction", label: "Usage Instruction" },
+    { key: "dosing", label: "Dosing" },
+];
+
+export default function EditProductPage({
+    params,
+}: {
+    params: Promise<{ id: string }>;
+}) {
+    const { id } = use(params);
+    const router = useRouter();
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [form, setForm] = useState<Record<string, any>>({});
+
+    useEffect(() => {
+        const fetchProduct = async () => {
+            try {
+                const { data } = await axios.get(`/admin/products/${id}`);
+                if (data.success) {
+                    setForm(data.data);
+                    if (data.data.image_url) {
+                        setImagePreview(data.data.image_url);
+                    }
+                }
+            } catch {
+                toast.error("Failed to fetch product");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchProduct();
+    }, [id]);
+
+    const updateField = (key: string, value: any) => {
+        setForm((prev) => ({ ...prev, [key]: value }));
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Client-side preview
+        const previewUrl = URL.createObjectURL(file);
+        setImagePreview(previewUrl);
+
+        setUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            if (form.image_url) {
+                formData.append("previousUrl", form.image_url);
+            }
+
+            const { data } = await axios.post("/admin/upload", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+
+            if (data.success) {
+                updateField("image_url", data.data.url);
+                setImagePreview(data.data.url);
+                toast.success("Image uploaded");
+            } else {
+                toast.error(data.message);
+                // Revert preview
+                setImagePreview(form.image_url || null);
+            }
+        } catch (err: any) {
+            toast.error(err?.response?.data?.message || "Failed to upload image");
+            setImagePreview(form.image_url || null);
+        } finally {
+            setUploading(false);
+            // Reset file input
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
+    const removeImage = () => {
+        setImagePreview(null);
+        updateField("image_url", "");
+        if (fileInputRef.current) fileInputRef.current.value = "";
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSaving(true);
+        try {
+            const { data } = await axios.put(`/admin/products/${id}`, form);
+            if (data.success) {
+                toast.success("Product updated");
+                router.push("/panel-xyz123/products");
+            } else {
+                toast.error(data.message);
+            }
+        } catch (err: any) {
+            toast.error(
+                err?.response?.data?.message || "Failed to update product",
+            );
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6 max-w-3xl">
+            <div className="flex items-center gap-3">
+                <button
+                    onClick={() => router.back()}
+                    className="p-2 rounded-lg hover:bg-muted text-muted-foreground transition-colors"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                </button>
+                <h1 className="text-2xl font-bold text-foreground">Edit Product</h1>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Image Upload Section */}
+                <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+                    <h2 className="text-sm font-semibold text-foreground">
+                        Product Image
+                    </h2>
+
+                    <div className="flex items-start gap-6">
+                        {/* Image Preview */}
+                        <div className="relative w-40 h-40 rounded-xl border-2 border-dashed border-border bg-muted/30 flex items-center justify-center overflow-hidden shrink-0">
+                            {uploading && (
+                                <div className="absolute inset-0 bg-background/70 flex items-center justify-center z-10 rounded-xl">
+                                    <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                                </div>
+                            )}
+                            {imagePreview ? (
+                                <>
+                                    <img
+                                        src={imagePreview}
+                                        alt="Product"
+                                        className="w-full h-full object-cover rounded-xl"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={removeImage}
+                                        className="absolute top-1.5 right-1.5 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90 transition-colors"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </>
+                            ) : (
+                                <ImageIcon className="w-10 h-10 text-muted-foreground/50" />
+                            )}
+                        </div>
+
+                        {/* Upload Controls */}
+                        <div className="flex flex-col gap-3 pt-2">
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp,image/gif"
+                                onChange={handleImageUpload}
+                                className="hidden"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploading}
+                                className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
+                            >
+                                <Upload className="w-4 h-4" />
+                                {imagePreview ? "Change Image" : "Upload Image"}
+                            </button>
+                            <p className="text-xs text-muted-foreground">
+                                JPEG, PNG, WebP, or GIF. Max 5MB.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+                    <h2 className="text-sm font-semibold text-foreground">
+                        Product Details
+                    </h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {PRODUCT_FIELDS.map((field) => (
+                            <div key={field.key}>
+                                <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                                    {field.label}
+                                    {field.required && (
+                                        <span className="text-destructive ml-0.5">*</span>
+                                    )}
+                                </label>
+                                <input
+                                    type={field.type || "text"}
+                                    value={form[field.key] ?? ""}
+                                    onChange={(e) => updateField(field.key, e.target.value)}
+                                    className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                                />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+                    <h2 className="text-sm font-semibold text-foreground">
+                        Descriptions & Instructions
+                    </h2>
+
+                    {TEXTAREA_FIELDS.map((field) => (
+                        <div key={field.key}>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                                {field.label}
+                            </label>
+                            <textarea
+                                value={form[field.key] ?? ""}
+                                onChange={(e) => updateField(field.key, e.target.value)}
+                                rows={3}
+                                className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all resize-none"
+                            />
+                        </div>
+                    ))}
+                </div>
+
+                <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={form.is_active !== false}
+                            onChange={(e) => updateField("is_active", e.target.checked)}
+                            className="rounded border-border text-accent focus:ring-accent"
+                        />
+                        <span className="text-sm text-foreground">
+                            Active (visible on storefront)
+                        </span>
+                    </label>
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={saving || uploading}
+                    className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-6 py-3 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
+                >
+                    {saving ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                        <Save className="w-4 h-4" />
+                    )}
+                    Save Changes
+                </button>
+            </form>
+        </div>
+    );
+}
