@@ -227,10 +227,14 @@ export function InvoiceDocument({ order }: { order: any }) {
                                 {item.quantity}
                             </Text>
                             <Text style={[styles.cellText, styles.colPrice]}>
-                                {formatCurrency(item.price_at_purchase)}
+                                {Number(item.price_at_purchase) === 0
+                                    ? "FREE"
+                                    : formatCurrency(item.price_at_purchase)}
                             </Text>
                             <Text style={[styles.cellText, styles.colTotal]}>
-                                {formatCurrency(item.price_at_purchase * item.quantity)}
+                                {Number(item.price_at_purchase) === 0
+                                    ? "FREE"
+                                    : formatCurrency(item.price_at_purchase * item.quantity)}
                             </Text>
                         </View>
                     ))}

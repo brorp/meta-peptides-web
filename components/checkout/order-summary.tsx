@@ -3,7 +3,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
-import { ArrowRight, ShieldCheck, Tag } from "lucide-react";
+import { ArrowRight, Gift, ShieldCheck, Tag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useUserStore } from "@/store/useUserStore";
@@ -28,6 +28,14 @@ export function OrderSummary({
 }: OrderSummaryProps) {
   const { user } = useUserStore();
   const isMember = !!user && Object.keys(user).length > 0 && !user.is_anonymous;
+  const complimentaryItem = {
+    id: "free-bacteriostatic-water",
+    name: "Bacteriostatic Water",
+    quantity: 1,
+    price: 0,
+    isComplimentary: true,
+  };
+  const displayItems = [...items, complimentaryItem];
 
   const discountRate = isMember ? discount : 0;
   const discountAmount = subtotal * discountRate;
@@ -42,20 +50,28 @@ export function OrderSummary({
       </div>
 
       <div className="space-y-4 max-h-[240px] overflow-y-auto pr-2 custom-scrollbar">
-        {items.map((item) => (
+        {displayItems.map((item) => (
           <div key={item.id} className="flex justify-between items-start group">
             <div className="space-y-1">
               <p className="text-sm font-medium text-slate-700 leading-tight">
                 {item.name}
               </p>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold bg-slate-100 text-primary px-2 py-0.5 rounded-md uppercase tracking-wider">
-                  Qty: {item.quantity}
+              {item.isComplimentary ? (
+                <span className="text-[10px] font-bold bg-green-50 text-green-700 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                  Complimentary Item
                 </span>
-              </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold bg-slate-100 text-primary px-2 py-0.5 rounded-md uppercase tracking-wider">
+                    Qty: {item.quantity}
+                  </span>
+                </div>
+              )}
             </div>
             <p className="font-semibold text-sm text-slate-900">
-              {formatCurrency(item.price * item.quantity)}
+              {item.isComplimentary
+                ? "FREE"
+                : formatCurrency(item.price * item.quantity)}
             </p>
           </div>
         ))}
@@ -92,6 +108,16 @@ export function OrderSummary({
             </p>
           </div>
         )}
+
+        <div className="flex justify-between items-center text-sm">
+          <div className="flex items-center gap-1.5 text-green-600">
+            <Gift className="w-3 h-3" />
+            <span className="font-medium">Complimentary Bonus</span>
+          </div>
+          <span className="text-[10px] font-black text-green-700 bg-green-50 px-2 py-1 rounded-lg">
+            1x Bacteriostatic Water
+          </span>
+        </div>
 
         <div className="flex justify-between items-center text-sm">
           <span className="text-primary font-medium">Shipping</span>

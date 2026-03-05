@@ -11,7 +11,15 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Plus, Minus, X, Trash2, ArrowRight } from "lucide-react";
+import {
+  ShoppingCart,
+  Plus,
+  Minus,
+  X,
+  Trash2,
+  ArrowRight,
+  Gift,
+} from "lucide-react";
 import Link from "next/link";
 import { formatCurrency } from "@/lib/format";
 import Image from "next/image";
@@ -173,6 +181,13 @@ export function GlobalCart() {
                     Secure Check
                   </span>
                 </div>
+              </div>
+
+              <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-3 py-2">
+                <Gift className="w-3.5 h-3.5 text-green-600" />
+                <p className="text-[10px] font-bold uppercase tracking-tight text-green-700">
+                  Free 1x Bacteriostatic Water will be added at checkout
+                </p>
               </div>
 
               <div className="flex flex-col gap-3">

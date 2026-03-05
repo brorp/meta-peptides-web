@@ -218,6 +218,12 @@ export default function CheckoutPageComponent() {
 
       <CheckoutSteps steps={tabs} currentStep={step} />
 
+      <div className="max-w-7xl mx-auto px-6 pt-6">
+        <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-green-700">
+          Every order includes free 1x bacteriostatic water
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="grid lg:grid-cols-12 gap-12">
           <div

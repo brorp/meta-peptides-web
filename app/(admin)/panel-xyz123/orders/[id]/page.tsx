@@ -236,11 +236,20 @@ export default function AdminOrderDetailPage({
                                             {item.products?.name || "Unknown Product"}
                                         </p>
                                         <p className="text-xs text-muted-foreground">
-                                            {formatCurrency(item.price_at_purchase)} × {item.quantity}
+                                            {Number(item.price_at_purchase) === 0
+                                                ? `FREE × ${item.quantity}`
+                                                : `${formatCurrency(item.price_at_purchase)} × ${item.quantity}`}
                                         </p>
                                     </div>
-                                    <p className="font-medium text-foreground text-sm">
-                                        {formatCurrency(item.price_at_purchase * item.quantity)}
+                                    <p
+                                        className={`font-medium text-sm ${Number(item.price_at_purchase) === 0
+                                                ? "text-green-600"
+                                                : "text-foreground"
+                                            }`}
+                                    >
+                                        {Number(item.price_at_purchase) === 0
+                                            ? "FREE"
+                                            : formatCurrency(item.price_at_purchase * item.quantity)}
                                     </p>
                                 </div>
                             ))}
