@@ -8,6 +8,7 @@ import {
     Users,
     Package,
     ShoppingCart,
+    Ticket,
     LogOut,
     Menu,
     X,
@@ -21,6 +22,7 @@ const NAV_ITEMS = [
     { label: "Users", href: "/panel-xyz123/users", icon: Users },
     { label: "Products", href: "/panel-xyz123/products", icon: Package },
     { label: "Orders", href: "/panel-xyz123/orders", icon: ShoppingCart },
+    { label: "Preorders", href: "/panel-xyz123/preorders", icon: Ticket },
 ];
 
 function AdminSidebar({
@@ -120,6 +122,7 @@ function AdminHeader({
         if (pathname.includes("/users")) return "Users";
         if (pathname.includes("/products")) return "Products";
         if (pathname.includes("/orders")) return "Orders";
+        if (pathname.includes("/preorders")) return "Preorders";
         return "Dashboard";
     };
 

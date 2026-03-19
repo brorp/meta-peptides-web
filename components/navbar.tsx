@@ -35,6 +35,7 @@ export function Navbar() {
 
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
   const { getCartCount, setIsCartOpen } = useCartStore();
   const cartCount = getCartCount();
@@ -45,6 +46,7 @@ export function Navbar() {
   const isMember = !!user && Object.keys(user).length > 0 && !user.is_anonymous;
 
   useEffect(() => {
+    setIsMounted(true);
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
@@ -139,7 +141,7 @@ export function Navbar() {
                 className="group relative p-2 hover:bg-accent/10 rounded-full transition-colors"
               >
                 <ShoppingCart className="w-5 h-5 text-foreground" />
-                {cartCount > 0 && (
+                {isMounted && cartCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-accent text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center ring-2 ring-white">
                     {cartCount}
                   </span>
