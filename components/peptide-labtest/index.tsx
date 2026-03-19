@@ -94,8 +94,9 @@ function LabTestCard({ test }: { test: LabTestInterface }) {
   const [activeImage, setActiveImage] = useState(test.report_images[0]);
 
   return (
-    <Card className="relative flex flex-col p-3 rounded-[2rem] border-none bg-slate-50/50 hover:bg-white hover:shadow-[0_20px_40px_-10px_rgba(0,0,0,0.05)] transition-all duration-500 group">
-      <div className="relative aspect-video rounded-[1.5rem] overflow-hidden bg-white border border-slate-100">
+    <Card className="relative flex flex-col p-3 rounded-[2rem] border-none bg-slate-50/50 hover:bg-white hover:shadow-[20px_40px_40px_-10px_rgba(0,0,0,0.05)] transition-all duration-500 group">
+      {/* Container with document aspect ratio */}
+      <a href={activeImage || "/placeholder-lab.jpg"} target="_blank" rel="noopener noreferrer" className="relative aspect-[1/1.4] rounded-[1.5rem] overflow-hidden bg-white border border-slate-200 block shadow-sm hover:shadow-md transition-shadow">
         <Image
           src={activeImage || "/placeholder-lab.jpg"}
           alt={test.product?.name || "Lab Test"}
@@ -126,25 +127,27 @@ function LabTestCard({ test }: { test: LabTestInterface }) {
             </div>
           </div>
         </div>
-      </div>
+      </a>
 
-      {/* Detail Thumbnails */}
-      <div className="grid grid-cols-3 gap-2 mt-3 px-1">
-        {test.report_images.slice(0, 3).map((img, idx) => (
-          <button
-            key={idx}
-            type="button"
-            onClick={() => setActiveImage(img)}
-            className={`relative aspect-square rounded-xl overflow-hidden border transition-all duration-300 ${
-              activeImage === img
-                ? "border-accent scale-90"
-                : "border-transparent opacity-40 hover:opacity-100"
-            }`}
-          >
-            <Image src={img} alt="detail" fill className="object-cover" />
-          </button>
-        ))}
-      </div>
+      {/* Detail Thumbnails - Only show if there's more than 1 image */}
+      {test.report_images && test.report_images.length > 1 && (
+        <div className="flex gap-2 mt-3 px-1 overflow-x-auto pb-1 scrollbar-hide">
+          {test.report_images.map((img, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => setActiveImage(img)}
+              className={`relative h-12 w-12 shrink-0 rounded-xl overflow-hidden border transition-all duration-300 ${
+                activeImage === img
+                  ? "border-accent ring-2 ring-accent/30 scale-95"
+                  : "border-transparent opacity-50 hover:opacity-100"
+              }`}
+            >
+              <Image src={img} alt="detail" fill className="object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
 
       <div className="mt-4 px-2 pb-2 space-y-4">
         <div className="flex justify-between items-start">
@@ -167,14 +170,14 @@ function LabTestCard({ test }: { test: LabTestInterface }) {
         </div>
 
         <a
-          href={test.report_url}
+          href={test.report_url || test.report_images?.[0] || "#"}
           target="_blank"
           rel="noopener noreferrer"
           className="block group/btn"
         >
-          <Button className="w-full h-10 rounded-xl bg-black text-white text-[9px] font-black uppercase tracking-[0.15em] hover:bg-accent transition-all duration-300">
+          <Button className="w-full h-10 rounded-xl bg-black text-white text-[9px] font-black uppercase tracking-[0.15em] hover:bg-accent hover:text-white transition-all duration-300">
             <Download className="w-3 h-3 mr-2 group-hover/btn:translate-y-0.5 transition-transform" />
-            Download COA
+            Download or View COA
           </Button>
         </a>
       </div>
