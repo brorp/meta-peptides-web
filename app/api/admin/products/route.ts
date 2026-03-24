@@ -81,7 +81,8 @@ export async function POST(req: NextRequest) {
                 storage_instruction: body.storage_instruction || null,
                 usage_instruction: body.usage_instruction || null,
                 dosing: body.dosing || null,
-                is_active: body.is_active !== false,
+                // temporarily removed until column is added
+                // is_active: body.is_active !== false,
             })
             .select()
             .single();

@@ -36,7 +36,7 @@ export async function PUT(
             "name", "label", "slug", "price", "original_price", "stock",
             "image_url", "category", "purity", "volume", "formula", "cas",
             "short_desc", "overview", "storage_instruction", "usage_instruction",
-            "dosing", "is_active",
+            "dosing", // "is_active", temporarily removed
         ];
 
         for (const field of fields) {
