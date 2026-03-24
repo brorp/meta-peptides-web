@@ -33,7 +33,7 @@ export default function OurCompanyPageComponent() {
       icon: <Lock className="w-6 h-6" />,
       title: "Value",
       description:
-        "Providing access to premium synthetic compounds at competitive local prices without compromising molecular integrity.",
+        "Providing access to premium compounds at competitive local prices without compromising molecular integrity.",
     },
   ];
 
@@ -147,7 +147,7 @@ export default function OurCompanyPageComponent() {
           <div className="max-w-3xl mx-auto space-y-8">
             <FlaskConical className="w-16 h-16 text-accent mx-auto animate-pulse" />
             <h2 className="text-5xl font-black tracking-tighter uppercase leading-none">
-              Empowering <br /> Indonesian Science.
+              Empowering <br /> BIOHACKING RESEARCH.
             </h2>
             <p className="text-muted-foreground text-lg font-medium italic">
               MetaPeptides offers comprehensive resources to support the latest

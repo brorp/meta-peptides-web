@@ -349,14 +349,14 @@ export default function HomePageComponent() {
                 Domestic Research Excellence
               </div>
               <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter leading-[0.85]">
-                INDONESIA'S <br />{" "}
+                GLOBAL <br />{" "}
                 <span className="text-accent italic">PREMIER SOURCE.</span>
               </h2>
               <p className="text-white/70 text-lg leading-relaxed font-medium italic">
-                MetaPeptides is the nation's definitive bridge between
+                MetaPeptides is the definitive bridge between
                 high-purity biochemistry and laboratory precision. We facilitate
-                Indonesia's most demanding research through strictly audited
-                synthetic sequences.
+                most demanding research through strictly audited
+                peptide sequences.
               </p>
             </div>
 
@@ -390,7 +390,7 @@ export default function HomePageComponent() {
           </h2>
           <p className="text-xl text-muted-foreground font-medium max-w-xl mx-auto italic">
             Join 5,000+ facilities trusting MetaPeptides for high-precision
-            synthetic compounds.
+            compounds.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-6">
             <Link href="/shop">

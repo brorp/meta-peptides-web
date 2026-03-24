@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ProductCard } from "@/components/product-card";
 import { Search, Loader2, Filter } from "lucide-react";
 import { useGetProducts } from "@/hooks/api/useGetProducts";
+import { api as axios } from "@/lib/axios";
 import { useDebounce } from "@/hooks/use-debounce";
 import { ProductCardSkeleton } from "@/components/skeleton/product-card-skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -12,17 +13,7 @@ import { Pagination } from "../pagination";
 import { FilterSidebar } from "./filter-sidebar";
 import { MobileFilterDrawer } from "./mobile-filter-drawer";
 
-const CATEGORIES = [
-  "All",
-  "Weight Loss",
-  "Growth Hormone",
-  "Recovery",
-  "Longevity",
-  "Sleep Management",
-  "Cognitive & Neurological",
-  "Skin Benefits",
-  "Other Categories",
-];
+
 const SORT_OPTIONS = [
   { label: "Popularity", value: "popularity" },
   { label: "Latest", value: "latest" },
@@ -39,6 +30,21 @@ export default function ShopPageComponent() {
   const [isCatOpen, setIsCatOpen] = useState(true);
   const [isSortOpen, setIsSortOpen] = useState(true);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [categoriesList, setCategoriesList] = useState<string[]>(["All"]);
+
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const { data } = await axios.get("/api/categories");
+        if (data?.success) {
+          setCategoriesList(["All", ...data.data]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch categories", err);
+      }
+    }
+    fetchCategories();
+  }, []);
 
   const debouncedSearch = useDebounce(searchQuery, 500);
   const isFiltering =
@@ -52,7 +58,7 @@ export default function ShopPageComponent() {
   });
 
   const filterProps = {
-    categories: CATEGORIES,
+    categories: categoriesList,
     sortOptions: SORT_OPTIONS,
     selectedCategory,
     sortBy,

@@ -55,7 +55,7 @@ export const products = [
     shortDesc:
       "Triple-agonist (GIP/GLP-1/Glucagon) peptide sequence for intensive metabolic studies.",
     overview:
-      "Retatrutide is a synthetic peptide that acts as an agonist for the glucose-dependent insulinotropic polypeptide, glucagon-like peptide-1, and glucagon receptors.",
+      "Retatrutide is a peptide that acts as an agonist for the glucose-dependent insulinotropic polypeptide, glucagon-like peptide-1, and glucagon receptors.",
     storage:
       "Lyophilized powder: 2 years at -20°C. Cold chain maintenance is strictly recommended.",
     usage:

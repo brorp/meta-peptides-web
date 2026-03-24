@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "The Gold Standard in Research Peptides - About MetaPeptides",
     description:
-      "Empowering global research with precision-engineered synthetic compounds and radical transparency.",
+      "Empowering global research with precision-engineered compounds and radical transparency.",
     url: `${process.env.NEXT_PUBLIC_APP_URL}/about`,
     siteName: "MetaPeptides",
     images: [

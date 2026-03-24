@@ -6,7 +6,7 @@ export const faqCategories = [
     questions: [
       {
         q: "What is MetaPeptides?",
-        a: "MetaPeptides is Indonesia's leading supplier of premium research-grade peptides. We specialize in providing high-purity synthetic compounds exclusively for the Indonesian scientific community.",
+        a: "MetaPeptides is Indonesia's leading supplier of premium research-grade peptides. We specialize in providing high-purity compounds exclusively for the Indonesian scientific community.",
       },
       {
         q: "Can I order from outside Indonesia?",

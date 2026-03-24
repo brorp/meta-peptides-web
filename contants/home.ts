@@ -21,7 +21,7 @@ export const features = [
 export const GOLD_STANDARD_FEATURES = [
   {
     n: "01",
-    t: "Indonesian Verified",
+    t: "Global Verified",
     d: "Products are double-checked locally to match strict national research standards.",
   },
   {
