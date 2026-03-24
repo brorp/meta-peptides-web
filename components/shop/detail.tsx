@@ -49,9 +49,18 @@ export default function ProductDetailComponent({
               <h1 className="text-xl lg:text-3xl font-black tracking-tighter uppercase leading-none">
                 {product?.name} <br />
               </h1>
-              <span className="text-xs lg:text-base font-semibold italic">
-                Category : {product?.category}.
-              </span>
+              {product?.category && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs lg:text-base font-semibold italic text-muted-foreground mr-1">
+                    Categories:
+                  </span>
+                  {product.category.split(',').map(c => c.trim()).filter(Boolean).map((cat, idx) => (
+                    <span key={idx} className="bg-accent/10 text-accent px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-wider">
+                      {cat}
+                    </span>
+                  ))}
+                </div>
+              )}
               <div className="flex items-start gap-4 p-4 bg-muted/50 rounded-2xl border-l-4 border-accent">
                 <p className="text-slate-600 text-sm leading-relaxed font-medium">
                   {product?.short_desc}
@@ -227,7 +236,7 @@ export default function ProductDetailComponent({
               <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                 <ShieldCheck className="w-4 h-4 text-accent" />
                 <span className="text-[8px] font-black uppercase text-muted-foreground tracking-tighter">
-                  Verified by MetaPeptides Indonesia Lab
+                  Verified by Global Certified Lab
                 </span>
               </div>
             </div>

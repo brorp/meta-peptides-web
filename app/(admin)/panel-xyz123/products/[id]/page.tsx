@@ -224,12 +224,46 @@ export default function EditProductPage({
                                         <span className="text-destructive ml-0.5">*</span>
                                     )}
                                 </label>
-                                <input
-                                    type={field.type || "text"}
-                                    value={form[field.key] ?? ""}
-                                    onChange={(e) => updateField(field.key, e.target.value)}
-                                    className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
-                                />
+                                {field.key === "category" ? (
+                                    <div className="space-y-2">
+                                        <div className="flex flex-wrap gap-2">
+                                            {(form.category || "").split(',').map((c: string) => c.trim()).filter(Boolean).map((cat: string, idx: number) => (
+                                                <span key={idx} className="inline-flex items-center gap-1 bg-accent/10 px-2 py-1 rounded-md text-xs font-medium text-accent">
+                                                    {cat}
+                                                    <button type="button" onClick={() => {
+                                                        const newCats = (form.category || "").split(',').map((c: string) => c.trim()).filter(Boolean).filter((c: string) => c !== cat);
+                                                        updateField('category', newCats.join(', '));
+                                                    }} className="text-accent hover:text-accent/80"><X className="w-3 h-3" /></button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Type and press Enter"
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' || e.key === ',') {
+                                                    e.preventDefault();
+                                                    const val = e.currentTarget.value.trim();
+                                                    if (val) {
+                                                        const current = (form.category || "").split(',').map((c: string) => c.trim()).filter(Boolean);
+                                                        if (!current.includes(val)) {
+                                                            updateField('category', [...current, val].join(', '));
+                                                        }
+                                                        e.currentTarget.value = "";
+                                                    }
+                                                }
+                                            }}
+                                            className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                                        />
+                                    </div>
+                                ) : (
+                                    <input
+                                        type={field.type || "text"}
+                                        value={form[field.key] ?? ""}
+                                        onChange={(e) => updateField(field.key, e.target.value)}
+                                        className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                                    />
+                                )}
                             </div>
                         ))}
                     </div>

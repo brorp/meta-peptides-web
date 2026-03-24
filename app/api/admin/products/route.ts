@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
         }
 
         if (category) {
-            query = query.eq("category", category);
+            query = query.ilike("category", `%${category}%`);
         }
 
         const { data, error, count } = await query

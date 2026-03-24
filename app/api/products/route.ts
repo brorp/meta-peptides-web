@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
 
     // --- FILTERING ---
     if (category) {
-      query = query.eq("category", category);
+      query = query.ilike("category", `%${category}%`);
     }
 
     if (keyword) {

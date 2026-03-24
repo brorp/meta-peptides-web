@@ -109,7 +109,7 @@ export function ProductCard({
                     : "text-red-500",
               )}
             >
-              {product.stock > 0 ? `Stock: ${product.stock}` : "Discontinued"}
+              {product.stock > 0 ? `Sold: ${product.stock}` : "Discontinued"}
             </span>
           </div>
           <div className="h-1 w-full bg-muted rounded-full overflow-hidden mb-5">
