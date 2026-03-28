@@ -1,9 +1,11 @@
 export const dynamic = "force-dynamic";
 
 import { errorResponse, successResponse } from "@/lib/api-response";
-import { createClientCookies } from "@/lib/supabase-server";
+import { createClientCookies, supabaseAdmin } from "@/lib/supabase-server";
 import { withAuth } from "@/lib/wrapper-auth-server";
 import { User } from "@supabase/supabase-js";
+import { sendOrderCreatedEmails } from "@/lib/email-service";
+import { discount as memberDiscountRate } from "@/contants/discount";
 
 const FREE_BAC_WATER_NAME = "Bacteriostatic Water";
 const FREE_BAC_WATER_SLUGS = ["bacteriostatic-water", "bac-water"];
@@ -215,7 +217,7 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
       decrementedStocks.push(mutation);
     }
 
-    // --- STEP 1: UPLOAD BUKTI ---
+    // --- STEP 1: UPLOAD PAYMENT PROOF ---
     const fileExt = file.name.split(".").pop();
     const fileName = `TRX-${Date.now()}-${Math.random().toString(36).substring(7)}`;
     const filePath = `${fileName}.${fileExt}`;
@@ -233,6 +235,7 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
       data: { publicUrl },
     } = supabaseServer.storage.from("transactions").getPublicUrl(filePath);
 
+    // --- STEP 2: CALCULATE PRICING ---
     const parsedSubtotal = Number(orderData.subtotal);
     const fallbackSubtotal = normalizedItems.reduce(
       (sum, item) => sum + item.price_at_purchase * item.quantity,
@@ -242,12 +245,67 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
       ? parsedSubtotal
       : fallbackSubtotal;
 
-    const parsedTotalPrice = Number(orderData.total_price);
-    const safeTotalPrice = Number.isFinite(parsedTotalPrice)
-      ? parsedTotalPrice
-      : safeSubtotal;
+    // Member discount
+    const isMember = !!user && !user.is_anonymous;
+    const memberDiscountAmount = isMember ? Math.round(safeSubtotal * memberDiscountRate) : 0;
+    let afterMemberDiscount = safeSubtotal - memberDiscountAmount;
 
-    // --- STEP 2: INSERT ORDER ---
+    // Voucher discount
+    let voucherId: string | null = null;
+    let voucherCode: string | null = orderData.voucher_code || null;
+    let voucherDiscountAmount = 0;
+
+    if (voucherCode && voucherCode.trim().length > 0) {
+      // Only logged-in (non-anonymous) users can use vouchers
+      if (!isMember) {
+        await supabaseServer.storage.from("transactions").remove([filePath]);
+        await rollbackDecrementedStocks(supabaseServer, decrementedStocks);
+        return errorResponse("You must be logged in to use a voucher", 401);
+      }
+
+      const { data: voucher, error: voucherError } = await supabaseAdmin
+        .from("vouchers")
+        .select("*")
+        .ilike("code", voucherCode.trim())
+        .maybeSingle();
+
+      if (voucherError || !voucher) {
+        await supabaseServer.storage.from("transactions").remove([filePath]);
+        await rollbackDecrementedStocks(supabaseServer, decrementedStocks);
+        return errorResponse("Invalid voucher code", 400);
+      }
+
+      if (!voucher.is_active) {
+        await supabaseServer.storage.from("transactions").remove([filePath]);
+        await rollbackDecrementedStocks(supabaseServer, decrementedStocks);
+        return errorResponse("This voucher is no longer active", 400);
+      }
+
+      const now = new Date();
+      if (now < new Date(voucher.valid_from) || now > new Date(voucher.valid_until)) {
+        await supabaseServer.storage.from("transactions").remove([filePath]);
+        await rollbackDecrementedStocks(supabaseServer, decrementedStocks);
+        return errorResponse("This voucher has expired or is not yet valid", 400);
+      }
+
+      if (voucher.total_claimed >= voucher.max_claim_qty) {
+        await supabaseServer.storage.from("transactions").remove([filePath]);
+        await rollbackDecrementedStocks(supabaseServer, decrementedStocks);
+        return errorResponse("This voucher has reached its maximum usage limit", 400);
+      }
+
+      // Calculate voucher discount
+      const rawDiscount = Number(voucher.discount_nominal);
+      const cappedDiscount = Math.min(rawDiscount, Number(voucher.max_discount_cap));
+      voucherDiscountAmount = Math.min(cappedDiscount, afterMemberDiscount);
+
+      voucherId = voucher.id;
+      voucherCode = voucher.code;
+    }
+
+    const safeTotalPrice = Math.max(0, afterMemberDiscount - voucherDiscountAmount);
+
+    // --- STEP 3: INSERT ORDER ---
     const { data: order, error: orderError } = await supabaseServer
       .from("orders")
       .insert({
@@ -262,7 +320,9 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
         shipping_zip: orderData.shipping_zip,
         shipping_email: orderData.shipping_email,
         note: orderData.note || null,
-        voucher_code: orderData.voucher_code || null,
+        voucher_code: voucherCode || null,
+        voucher_id: voucherId,
+        voucher_discount_amount: voucherDiscountAmount,
         status: "pending_review",
       })
       .select()
@@ -308,12 +368,87 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
       return errorResponse(`Payment Error: ${paymentError.message}`, 500);
     }
 
+    // --- STEP 4: INCREMENT VOUCHER CLAIM (only on successful order) ---
+    if (voucherId) {
+      const { error: claimError } = await supabaseAdmin.rpc("increment_field", {
+        table_name: "vouchers",
+        field_name: "total_claimed",
+        row_id: voucherId,
+        increment_by: 1,
+      }).catch(() => {
+        // Fallback: direct update if RPC doesn't exist
+        return { error: { message: "RPC not available" } };
+      });
+
+      // Fallback: manual increment
+      if (claimError) {
+        const { data: currentVoucher } = await supabaseAdmin
+          .from("vouchers")
+          .select("total_claimed")
+          .eq("id", voucherId)
+          .single();
+
+        if (currentVoucher) {
+          await supabaseAdmin
+            .from("vouchers")
+            .update({ total_claimed: (currentVoucher.total_claimed || 0) + 1 })
+            .eq("id", voucherId)
+            .eq("total_claimed", currentVoucher.total_claimed);
+        }
+      }
+    }
+
+    // --- STEP 5: RESOLVE PRODUCT NAMES FOR EMAIL ---
+    const { data: productNames } = await supabaseAdmin
+      .from("products")
+      .select("id, name")
+      .in(
+        "id",
+        allOrderItems.map((i) => i.product_id),
+      );
+
+    const productNameMap = new Map(
+      (productNames || []).map((p: any) => [p.id, p.name]),
+    );
+
+    const emailItems = allOrderItems.map((item) => ({
+      name: productNameMap.get(item.product_id) || "Product",
+      quantity: item.quantity,
+      price_at_purchase: item.price_at_purchase,
+    }));
+
+    // --- STEP 6: SEND EMAILS (non-blocking) ---
+    sendOrderCreatedEmails({
+      customerName: orderData.shipping_name || "Customer",
+      customerEmail: orderData.shipping_email,
+      orderId: order.id,
+      transactionCode: fileName,
+      items: emailItems,
+      subtotal: safeSubtotal,
+      memberDiscount: memberDiscountAmount,
+      voucherCode: voucherCode,
+      voucherDiscount: voucherDiscountAmount,
+      totalPrice: safeTotalPrice,
+      receiptUrl: publicUrl,
+      status: "pending_review",
+      shippingAddress: orderData.shipping_address,
+      shippingRegional: orderData.shipping_regional,
+      shippingZip: orderData.shipping_zip,
+      shippingPhone: orderData.shipping_phone,
+      createdAt: order.created_at,
+    }).catch((err) => {
+      console.error("[Checkout] Email sending failed:", err);
+    });
+
     return successResponse(
       {
         orderId: order.id,
         transaction_code: fileName,
         status: order.status,
         complimentary_item: FREE_BAC_WATER_NAME,
+        voucher_code: voucherCode,
+        voucher_discount: voucherDiscountAmount,
+        member_discount: memberDiscountAmount,
       },
       "Order successfully placed.",
     );

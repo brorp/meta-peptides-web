@@ -8,12 +8,14 @@ import { useCartStore } from "@/store/useCartStore";
 import { useUserStore } from "@/store/useUserStore";
 import { cn } from "@/lib/utils";
 import { useCheckout } from "@/hooks/api/useCheckout";
+import { useValidateVoucher } from "@/hooks/api/useValidateVoucher";
 import { toast } from "sonner";
 import { CheckoutSteps } from "./checkout-steps";
 import { ShippingForm } from "./shipping-form";
 import { OrderSummary } from "./order-summary";
 import { PaymentForm } from "./payment-form";
 import { ConfirmationCard } from "./confirmation-card";
+import { discount as memberDiscountRate } from "@/contants/discount";
 
 const checkoutSchema = z.object({
   // Step: Shipping
@@ -54,6 +56,12 @@ export default function CheckoutPageComponent() {
     clearShipping,
   } = useCartStore();
   const user = useUserStore((state) => state.user);
+  const isMember = !!user && Object.keys(user).length > 0 && !user.is_anonymous;
+
+  // Voucher state
+  const [appliedVoucherCode, setAppliedVoucherCode] = useState<string | null>(null);
+  const [voucherDiscount, setVoucherDiscount] = useState(0);
+  const [voucherError, setVoucherError] = useState<string | null>(null);
 
   const {
     register,
@@ -98,6 +106,11 @@ export default function CheckoutPageComponent() {
     },
   });
 
+  const {
+    mutate: validateVoucher,
+    isPending: isVoucherLoading,
+  } = useValidateVoucher();
+
   const isLoading = isSubmitting || isLoadingSubmit;
 
   // Sync data dari store jika ada
@@ -113,7 +126,54 @@ export default function CheckoutPageComponent() {
 
   const watchAllFields = watch();
   const subtotal = getTotalPrice();
-  const total = subtotal;
+
+  // Calculate final total with member + voucher discount
+  const memberDiscountAmount = isMember ? Math.round(subtotal * memberDiscountRate) : 0;
+  const afterMemberDiscount = subtotal - memberDiscountAmount;
+  const effectiveVoucherDiscount = Math.min(voucherDiscount, afterMemberDiscount);
+  const total = Math.max(0, afterMemberDiscount - effectiveVoucherDiscount);
+
+  const handleApplyVoucher = (code: string) => {
+    setVoucherError(null);
+
+    validateVoucher(
+      { code, subtotal: afterMemberDiscount },
+      {
+        onSuccess: (data) => {
+          if (data.success && data.data) {
+            setAppliedVoucherCode(data.data.code);
+            setVoucherDiscount(data.data.discount_amount);
+            setVoucherError(null);
+            setValue("voucherCode", data.data.code);
+            toast.success("Voucher Applied", {
+              description: `You saved ${new Intl.NumberFormat("id-ID", {
+                style: "currency",
+                currency: "IDR",
+                minimumFractionDigits: 0,
+              }).format(data.data.discount_amount)}!`,
+            });
+          } else {
+            setVoucherError(data.message || "Invalid voucher");
+          }
+        },
+        onError: (error: any) => {
+          const message =
+            error?.response?.data?.message ||
+            error?.message ||
+            "Failed to validate voucher";
+          setVoucherError(message);
+        },
+      },
+    );
+  };
+
+  const handleRemoveVoucher = () => {
+    setAppliedVoucherCode(null);
+    setVoucherDiscount(0);
+    setVoucherError(null);
+    setValue("voucherCode", "");
+    toast.info("Voucher removed");
+  };
 
   const handleNext = async () => {
     if (step === "Shipping") {
@@ -168,7 +228,6 @@ export default function CheckoutPageComponent() {
     formData.append("file", data.receiptFile);
 
     const orderPayload = {
-      // ... payload data tetap sama ...
       email: data.email,
       first_name: data.firstName,
       last_name: data.lastName,
@@ -180,9 +239,11 @@ export default function CheckoutPageComponent() {
       shipping_zip: data.zip,
       shipping_email: data.email,
       note: data.note,
-      voucher_code: data.voucherCode,
+      voucher_code: appliedVoucherCode || "",
+      voucher_discount_amount: effectiveVoucherDiscount,
       total_price: total,
       subtotal: subtotal,
+      member_discount_amount: memberDiscountAmount,
       items: cartItems.map((item) => ({
         product_id: item.id,
         quantity: item.quantity,
@@ -261,11 +322,16 @@ export default function CheckoutPageComponent() {
                 subtotal={subtotal}
                 step={step}
                 isLoading={isLoading}
-                // Jika user belum centang di step Shipping, tombol akan trigger validasi via handleNext
                 onNext={
                   step === "Payment" ? handleSubmit(onSubmit) : handleNext
                 }
                 onBack={() => setStep("Shipping")}
+                voucherCode={appliedVoucherCode}
+                voucherDiscount={effectiveVoucherDiscount}
+                voucherLoading={isVoucherLoading}
+                voucherError={voucherError}
+                onApplyVoucher={handleApplyVoucher}
+                onRemoveVoucher={handleRemoveVoucher}
               />
             </div>
           )}

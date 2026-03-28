@@ -1,54 +1,100 @@
 import { NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { successResponse, errorResponse } from "@/lib/api-response";
+import { sendOrderVerifiedEmail } from "@/lib/email-service";
 
 export async function GET(
-    req: NextRequest,
-    { params }: { params: Promise<{ id: string }> },
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
-    try {
-        const { id } = await params;
+  try {
+    const { id } = await params;
 
-        const { data, error } = await supabaseAdmin
-            .from("orders")
-            .select("*, order_items(*, products(name, image_url, slug)), payments(*)")
-            .eq("id", id)
-            .single();
+    const { data, error } = await supabaseAdmin
+      .from("orders")
+      .select("*, order_items(*, products(name, image_url, slug)), payments(*)")
+      .eq("id", id)
+      .single();
 
-        if (error || !data) return errorResponse("Order not found", 404);
+    if (error || !data) return errorResponse("Order not found", 404);
 
-        return successResponse(data, "Order retrieved");
-    } catch (err: any) {
-        return errorResponse(err.message, 500);
-    }
+    return successResponse(data, "Order retrieved");
+  } catch (err: any) {
+    return errorResponse(err.message, 500);
+  }
 }
 
 export async function PUT(
-    req: NextRequest,
-    { params }: { params: Promise<{ id: string }> },
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
 ) {
-    try {
-        const { id } = await params;
-        const body = await req.json();
+  try {
+    const { id } = await params;
+    const body = await req.json();
 
-        const updateData: any = {};
+    // Fetch current order to check previous status
+    const { data: currentOrder, error: fetchError } = await supabaseAdmin
+      .from("orders")
+      .select("*, order_items(*, products(name, image_url)), payments(*)")
+      .eq("id", id)
+      .single();
 
-        if (body.status) updateData.status = body.status;
-        if (body.tracking_number !== undefined)
-            updateData.tracking_number = body.tracking_number;
-        if (body.note !== undefined) updateData.note = body.note;
-
-        const { data, error } = await supabaseAdmin
-            .from("orders")
-            .update(updateData)
-            .eq("id", id)
-            .select("*, order_items(*, products(name, image_url)), payments(*)")
-            .single();
-
-        if (error) return errorResponse(error.message, 400);
-
-        return successResponse(data, "Order updated");
-    } catch (err: any) {
-        return errorResponse(err.message, 500);
+    if (fetchError || !currentOrder) {
+      return errorResponse("Order not found", 404);
     }
+
+    const previousStatus = currentOrder.status;
+    const updateData: any = {};
+
+    if (body.status) updateData.status = body.status;
+    if (body.tracking_number !== undefined)
+      updateData.tracking_number = body.tracking_number;
+    if (body.note !== undefined) updateData.note = body.note;
+
+    const { data, error } = await supabaseAdmin
+      .from("orders")
+      .update(updateData)
+      .eq("id", id)
+      .select("*, order_items(*, products(name, image_url)), payments(*)")
+      .single();
+
+    if (error) return errorResponse(error.message, 400);
+
+    // Trigger email when status changes TO "processing" from a different status
+    if (
+      body.status === "processing" &&
+      previousStatus !== "processing" &&
+      data.shipping_email
+    ) {
+      const emailItems = (data.order_items || []).map((item: any) => ({
+        name: item.products?.name || "Product",
+        quantity: item.quantity,
+        price_at_purchase: item.price_at_purchase,
+      }));
+
+      const transactionCode =
+        data.payments?.[0]?.transaction_code || "N/A";
+
+      sendOrderVerifiedEmail({
+        customerName: data.shipping_name || "Customer",
+        customerEmail: data.shipping_email,
+        orderId: data.id,
+        transactionCode,
+        items: emailItems,
+        subtotal: data.subtotal || data.total_price,
+        memberDiscount: 0,
+        voucherCode: data.voucher_code || null,
+        voucherDiscount: Number(data.voucher_discount_amount) || 0,
+        totalPrice: data.total_price,
+        status: "processing",
+        createdAt: data.created_at,
+      }).catch((err) => {
+        console.error("[Admin] Order-verified email failed:", err);
+      });
+    }
+
+    return successResponse(data, "Order updated");
+  } catch (err: any) {
+    return errorResponse(err.message, 500);
+  }
 }

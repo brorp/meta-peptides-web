@@ -3,11 +3,22 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
-import { ArrowRight, Gift, ShieldCheck, Tag } from "lucide-react";
+import {
+  ArrowRight,
+  Gift,
+  ShieldCheck,
+  Tag,
+  Ticket,
+  X,
+  Loader2,
+  AlertCircle,
+  LogIn,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useUserStore } from "@/store/useUserStore";
 import { discount } from "@/contants/discount";
+import { useState } from "react";
 
 interface OrderSummaryProps {
   items: any[];
@@ -16,6 +27,13 @@ interface OrderSummaryProps {
   isLoading: boolean;
   onNext: () => void;
   onBack: () => void;
+  // Voucher props
+  voucherCode?: string | null;
+  voucherDiscount?: number;
+  voucherLoading?: boolean;
+  voucherError?: string | null;
+  onApplyVoucher?: (code: string) => void;
+  onRemoveVoucher?: () => void;
 }
 
 export function OrderSummary({
@@ -25,6 +43,12 @@ export function OrderSummary({
   isLoading,
   onNext,
   onBack,
+  voucherCode,
+  voucherDiscount = 0,
+  voucherLoading = false,
+  voucherError,
+  onApplyVoucher,
+  onRemoveVoucher,
 }: OrderSummaryProps) {
   const { user } = useUserStore();
   const isMember = !!user && Object.keys(user).length > 0 && !user.is_anonymous;
@@ -39,7 +63,15 @@ export function OrderSummary({
 
   const discountRate = isMember ? discount : 0;
   const discountAmount = subtotal * discountRate;
-  const finalTotal = subtotal - discountAmount;
+  const finalTotal = Math.max(0, subtotal - discountAmount - voucherDiscount);
+
+  const [inputCode, setInputCode] = useState("");
+
+  const handleApply = () => {
+    if (inputCode.trim() && onApplyVoucher) {
+      onApplyVoucher(inputCode.trim());
+    }
+  };
 
   return (
     <Card className="p-6 md:p-8 rounded-[2rem] border-none shadow-xl shadow-slate-200/50 sticky top-32 space-y-6 bg-white">
@@ -109,6 +141,85 @@ export function OrderSummary({
           </div>
         )}
 
+        {/* ── Voucher Section ── */}
+        <div className="pt-2 border-t border-dashed border-slate-100">
+          {voucherCode && voucherDiscount > 0 ? (
+            /* Applied voucher display */
+            <div className="flex justify-between items-center text-sm animate-in fade-in slide-in-from-right-2">
+              <div className="flex items-center gap-1.5 text-green-600">
+                <Ticket className="w-3 h-3" />
+                <span className="font-medium">Voucher ({voucherCode})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black text-green-700 bg-green-50 px-2 py-1 rounded-lg">
+                  -{formatCurrency(voucherDiscount)}
+                </span>
+                {onRemoveVoucher && (
+                  <button
+                    type="button"
+                    onClick={onRemoveVoucher}
+                    className="p-1 rounded-full hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                    title="Remove voucher"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : isMember ? (
+            /* Voucher input for logged-in users */
+            <div className="space-y-2">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Voucher code"
+                  value={inputCode}
+                  onChange={(e) => {
+                    setInputCode(e.target.value.toUpperCase());
+                  }}
+                  disabled={voucherLoading}
+                  className="flex-1 px-3 py-2 rounded-xl border border-slate-200 bg-white text-xs font-medium uppercase tracking-wider placeholder:text-slate-300 placeholder:normal-case focus:border-accent focus:ring-2 focus:ring-accent/10 outline-none transition-all disabled:opacity-50"
+                />
+                <button
+                  type="button"
+                  onClick={handleApply}
+                  disabled={voucherLoading || !inputCode.trim()}
+                  className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold uppercase tracking-widest transition-all disabled:opacity-40 flex items-center gap-1.5 shrink-0"
+                >
+                  {voucherLoading ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Ticket className="w-3 h-3" />
+                  )}
+                  Apply
+                </button>
+              </div>
+              {voucherError && (
+                <div className="flex items-start gap-1.5 text-red-500 animate-in fade-in slide-in-from-top-1">
+                  <AlertCircle className="w-3 h-3 mt-0.5 shrink-0" />
+                  <p className="text-[10px] font-medium leading-tight">
+                    {voucherError}
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Guest user prompt */
+            <div className="p-3 bg-slate-50 rounded-xl border border-dashed border-slate-200 flex items-center gap-2">
+              <LogIn className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <p className="text-[10px] text-slate-400 font-medium leading-tight">
+                <Link
+                  href="/auth"
+                  className="text-accent font-bold hover:underline"
+                >
+                  Login
+                </Link>{" "}
+                to use a voucher code for additional discount.
+              </p>
+            </div>
+          )}
+        </div>
+
         <div className="flex justify-between items-center text-sm">
           <div className="flex items-center gap-1.5 text-green-600">
             <Gift className="w-3 h-3" />
@@ -131,7 +242,7 @@ export function OrderSummary({
             Total Due
           </span>
           <div className="text-right">
-            {isMember && (
+            {(isMember || voucherDiscount > 0) && (
               <span className="block text-xs text-slate-400 line-through decoration-red-400/50 mb-0.5">
                 {formatCurrency(subtotal)}
               </span>
