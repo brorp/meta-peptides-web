@@ -1,19 +1,27 @@
 import { NextRequest } from "next/server";
 import { errorResponse, successResponse } from "@/lib/api-response";
-import { createClientCookies } from "@/lib/supabase-server";
+import { supabaseAdmin } from "@/lib/supabase-server";
+import {
+  buildVisitorMetadata,
+  getProviderLabel,
+  getUserDisplayName,
+} from "@/lib/auth-notifications";
+import { sendRegisteredUserEmails } from "@/lib/email-service";
 
 export async function POST(req: NextRequest) {
   try {
-    const supabaseServer = await createClientCookies();
     const { email, password } = await req.json();
+    const normalizedEmail = String(email || "")
+      .trim()
+      .toLowerCase();
 
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       return errorResponse("Email and password are required.", 400);
     }
 
     const { data, error: authError } =
-      await supabaseServer.auth.admin.createUser({
-        email,
+      await supabaseAdmin.auth.admin.createUser({
+        email: normalizedEmail,
         password,
         email_confirm: true,
       });
@@ -22,18 +30,46 @@ export async function POST(req: NextRequest) {
 
     const user = data.user;
 
-    const { error: profileError } = await supabaseServer
+    const { error: profileError } = await supabaseAdmin
       .from("profiles")
-      .insert([
+      .upsert(
         {
           id: user.id,
-          email: email,
+          email: normalizedEmail,
         },
-      ]);
+        { onConflict: "id" },
+      );
 
     if (profileError) {
       console.error("Profile creation failed:", profileError.message);
+
+      const { error: rollbackError } = await supabaseAdmin.auth.admin.deleteUser(
+        user.id,
+      );
+
+      if (rollbackError) {
+        console.error("Auth rollback failed:", rollbackError.message);
+      }
+
+      return errorResponse(
+        "Registration failed while initializing the user profile. Please try again.",
+        500,
+      );
     }
+
+    const shopUrl =
+      process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "") ||
+      new URL(req.url).origin;
+
+    await sendRegisteredUserEmails({
+      customerName: getUserDisplayName(user),
+      customerEmail: normalizedEmail,
+      userId: user.id,
+      providerLabel: getProviderLabel(user, "email"),
+      createdAt: user.created_at,
+      shopUrl: `${shopUrl}/shop`,
+      metadata: buildVisitorMetadata(req),
+    });
 
     return successResponse(
       { userId: user.id },

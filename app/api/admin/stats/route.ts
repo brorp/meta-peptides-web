@@ -4,9 +4,17 @@ import { supabaseAdmin } from "@/lib/supabase-server";
 export async function GET() {
     try {
         // Total users
-        const { count: totalUsers } = await supabaseAdmin
-            .from("profiles")
-            .select("*", { count: "exact", head: true });
+        const { data: authUsersData, error: authUsersError } =
+            await supabaseAdmin.auth.admin.listUsers({
+                page: 1,
+                perPage: 1,
+            });
+
+        if (authUsersError) {
+            throw new Error(authUsersError.message);
+        }
+
+        const totalUsers = authUsersData?.total || 0;
 
         // Total products
         const { count: totalProducts } = await supabaseAdmin

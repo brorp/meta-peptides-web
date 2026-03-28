@@ -6,6 +6,11 @@ import {
   type OrderEmailData,
   passwordResetTemplate,
   type PasswordResetEmailData,
+  registeredUserWelcomeTemplate,
+  registeredUserAdminTemplate,
+  guestSessionAdminTemplate,
+  type RegisteredUserEmailData,
+  type GuestSessionEmailData,
 } from "./email-templates";
 
 /**
@@ -130,6 +135,87 @@ export async function sendPasswordResetEmail(
     return true;
   } catch (err) {
     console.error("[Email] Password reset email exception:", err);
+    return false;
+  }
+}
+
+export async function sendRegisteredUserEmails(
+  data: RegisteredUserEmailData,
+): Promise<{ customerSent: boolean; adminSent: boolean }> {
+  const result = { customerSent: false, adminSent: false };
+
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[Email] RESEND_API_KEY not configured. Skipping emails.");
+    return result;
+  }
+
+  try {
+    const template = registeredUserWelcomeTemplate(data);
+    const { error } = await resend.emails.send({
+      from: `Meta Peptides <${RESEND_FROM_EMAIL}>`,
+      to: data.customerEmail,
+      subject: template.subject,
+      html: template.html,
+    });
+
+    if (error) {
+      console.error("[Email] Registered user welcome email failed:", error);
+    } else {
+      result.customerSent = true;
+      console.log(`[Email] Welcome email sent to ${data.customerEmail}`);
+    }
+  } catch (err) {
+    console.error("[Email] Registered user welcome email exception:", err);
+  }
+
+  try {
+    const template = registeredUserAdminTemplate(data);
+    const { error } = await resend.emails.send({
+      from: `Meta Peptides Accounts <${RESEND_FROM_EMAIL}>`,
+      to: ADMIN_EMAIL,
+      subject: template.subject,
+      html: template.html,
+    });
+
+    if (error) {
+      console.error("[Email] Registered user admin email failed:", error);
+    } else {
+      result.adminSent = true;
+      console.log(`[Email] Registered user admin email sent to ${ADMIN_EMAIL}`);
+    }
+  } catch (err) {
+    console.error("[Email] Registered user admin email exception:", err);
+  }
+
+  return result;
+}
+
+export async function sendGuestSessionAlertEmail(
+  data: GuestSessionEmailData,
+): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[Email] RESEND_API_KEY not configured. Skipping email.");
+    return false;
+  }
+
+  try {
+    const template = guestSessionAdminTemplate(data);
+    const { error } = await resend.emails.send({
+      from: `Meta Peptides Guests <${RESEND_FROM_EMAIL}>`,
+      to: ADMIN_EMAIL,
+      subject: template.subject,
+      html: template.html,
+    });
+
+    if (error) {
+      console.error("[Email] Guest session alert email failed:", error);
+      return false;
+    }
+
+    console.log(`[Email] Guest session alert sent to ${ADMIN_EMAIL}`);
+    return true;
+  } catch (err) {
+    console.error("[Email] Guest session alert exception:", err);
     return false;
   }
 }

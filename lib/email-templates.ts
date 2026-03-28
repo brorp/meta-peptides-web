@@ -33,12 +33,51 @@ type PasswordResetEmailData = {
   resetUrl: string;
 };
 
+type VisitorMetadata = {
+  ipAddress?: string | null;
+  country?: string | null;
+  userAgent?: string | null;
+  referer?: string | null;
+  origin?: string | null;
+  language?: string | null;
+  timezone?: string | null;
+  platform?: string | null;
+  screenSize?: string | null;
+  viewport?: string | null;
+  entryPath?: string | null;
+};
+
+type RegisteredUserEmailData = {
+  customerName: string;
+  customerEmail: string;
+  userId: string;
+  providerLabel: string;
+  createdAt?: string | null;
+  shopUrl: string;
+  metadata?: VisitorMetadata;
+};
+
+type GuestSessionEmailData = {
+  guestId: string;
+  createdAt?: string | null;
+  metadata?: VisitorMetadata;
+};
+
 function formatCurrencyEmail(value: number): string {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
     minimumFractionDigits: 0,
   }).format(value);
+}
+
+function formatDateTimeEmail(value?: string | null): string {
+  if (!value) return "-";
+
+  return new Date(value).toLocaleString("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 }
 
 function baseLayout(content: string): string {
@@ -108,6 +147,73 @@ function primaryButton(label: string, href: string): string {
       ${label}
     </a>
   </div>`;
+}
+
+function detailsTable(
+  rows: Array<{
+    label: string;
+    value?: string | null;
+    accent?: boolean;
+  }>,
+): string {
+  const tableRows = rows
+    .filter((row) => row.value && String(row.value).trim().length > 0)
+    .map(
+      (row) => `
+      <tr>
+        <td style="padding:4px 0;"><span style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;">${row.label}</span></td>
+        <td style="padding:4px 0;text-align:right;"><span style="font-size:13px;${row.accent ? `color:${BRAND_COLOR};font-weight:700;` : "color:white;"}">${row.value}</span></td>
+      </tr>`,
+    )
+    .join("");
+
+  return `
+  <div style="background:${DARK_BG};border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+    <table style="width:100%;border-collapse:collapse;">
+      ${tableRows}
+    </table>
+  </div>`;
+}
+
+function metadataBlock(
+  title: string,
+  metadata?: VisitorMetadata,
+  extraRows: Array<{ label: string; value?: string | null }> = [],
+): string {
+  const rows = [
+    ...extraRows,
+    { label: "IP Address", value: metadata?.ipAddress || null },
+    { label: "Country", value: metadata?.country || null },
+    { label: "Language", value: metadata?.language || null },
+    { label: "Timezone", value: metadata?.timezone || null },
+    { label: "Platform", value: metadata?.platform || null },
+    { label: "Screen", value: metadata?.screenSize || null },
+    { label: "Viewport", value: metadata?.viewport || null },
+    { label: "Entry Path", value: metadata?.entryPath || null },
+    { label: "Origin", value: metadata?.origin || null },
+    { label: "Referer", value: metadata?.referer || null },
+    { label: "User Agent", value: metadata?.userAgent || null },
+  ].filter((row) => row.value && String(row.value).trim().length > 0);
+
+  if (!rows.length) return "";
+
+  const renderedRows = rows
+    .map(
+      (row) => `
+      <tr>
+        <td style="padding:8px 0;vertical-align:top;font-size:12px;color:#6b7280;width:120px;">${row.label}</td>
+        <td style="padding:8px 0;vertical-align:top;font-size:12px;color:#111827;word-break:break-word;">${row.value}</td>
+      </tr>`,
+    )
+    .join("");
+
+  return `
+    <div style="background:#f8fafc;border-radius:12px;padding:16px 20px;margin-top:20px;">
+      <h3 style="font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:2px;margin:0 0 12px;font-weight:700;">${title}</h3>
+      <table style="width:100%;border-collapse:collapse;">
+        ${renderedRows}
+      </table>
+    </div>`;
 }
 
 function totalsBlock(data: OrderEmailData): string {
@@ -410,4 +516,103 @@ export function passwordResetTemplate(data: PasswordResetEmailData): {
   };
 }
 
-export type { OrderEmailData, OrderItem, PasswordResetEmailData };
+export function registeredUserWelcomeTemplate(
+  data: RegisteredUserEmailData,
+): {
+  subject: string;
+  html: string;
+} {
+  const content = `
+    <h2 style="color:#111827;font-size:20px;margin:0 0 6px;font-weight:800;">Welcome to Meta Peptides</h2>
+    <p style="color:#6b7280;font-size:13px;margin:0 0 24px;line-height:1.6;">
+      Hi <strong>${data.customerName}</strong>, your account is now active and ready for secure research ordering.
+      You signed up using <strong>${data.providerLabel}</strong>.
+    </p>
+
+    ${detailsTable([
+      { label: "Account Email", value: data.customerEmail },
+      { label: "Access Method", value: data.providerLabel, accent: true },
+      { label: "Member ID", value: `${data.userId.slice(0, 8)}...` },
+      { label: "Created", value: formatDateTimeEmail(data.createdAt) },
+    ])}
+
+    <div style="margin:0 0 20px;padding:16px 20px;background:#ecfdf5;border-radius:12px;border-left:4px solid ${BRAND_COLOR};">
+      <p style="margin:0;font-size:13px;color:#065f46;line-height:1.7;">
+        <strong>You’re in.</strong> You can now browse the catalog, use your member pricing,
+        and complete checkout with your registered account.
+      </p>
+    </div>
+
+    ${primaryButton("Start Shopping", data.shopUrl)}
+
+    <p style="margin:24px 0 0;font-size:12px;color:#9ca3af;text-align:center;">
+      Need help? Contact us at <a href="mailto:metapeptides@gmail.com" style="color:${BRAND_COLOR};">metapeptides@gmail.com</a>
+    </p>`;
+
+  return {
+    subject: "Welcome to Meta Peptides",
+    html: baseLayout(content),
+  };
+}
+
+export function registeredUserAdminTemplate(
+  data: RegisteredUserEmailData,
+): {
+  subject: string;
+  html: string;
+} {
+  const content = `
+    <h2 style="color:#111827;font-size:20px;margin:0 0 6px;font-weight:800;">New Registered User</h2>
+    <p style="color:#6b7280;font-size:13px;margin:0 0 24px;line-height:1.6;">
+      A new customer account has been created on Meta Peptides.
+    </p>
+
+    ${detailsTable([
+      { label: "Email", value: data.customerEmail },
+      { label: "Name", value: data.customerName },
+      { label: "Access Method", value: data.providerLabel, accent: true },
+      { label: "User ID", value: data.userId },
+      { label: "Created", value: formatDateTimeEmail(data.createdAt) },
+    ])}
+
+    ${metadataBlock("Registration Metadata", data.metadata)}`;
+
+  return {
+    subject: `New User Registration: ${data.customerEmail}`,
+    html: baseLayout(content),
+  };
+}
+
+export function guestSessionAdminTemplate(data: GuestSessionEmailData): {
+  subject: string;
+  html: string;
+} {
+  const content = `
+    <h2 style="color:#111827;font-size:20px;margin:0 0 6px;font-weight:800;">Guest Session Started</h2>
+    <p style="color:#6b7280;font-size:13px;margin:0 0 24px;line-height:1.6;">
+      A visitor chose <strong>Continue as Guest</strong>. No customer email was collected,
+      but the metadata below may help identify the session.
+    </p>
+
+    ${detailsTable([
+      { label: "Session Type", value: "Guest / Anonymous", accent: true },
+      { label: "Guest ID", value: data.guestId },
+      { label: "Created", value: formatDateTimeEmail(data.createdAt) },
+    ])}
+
+    ${metadataBlock("Guest Metadata", data.metadata)}`;
+
+  return {
+    subject: `Guest Session Started: ${data.guestId.slice(0, 8)}...`,
+    html: baseLayout(content),
+  };
+}
+
+export type {
+  OrderEmailData,
+  OrderItem,
+  PasswordResetEmailData,
+  RegisteredUserEmailData,
+  GuestSessionEmailData,
+  VisitorMetadata,
+};

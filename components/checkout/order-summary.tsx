@@ -226,9 +226,12 @@ export function OrderSummary({
             <span className="font-medium">Complimentary Bonus</span>
           </div>
           <span className="text-[10px] font-black text-green-700 bg-green-50 px-2 py-1 rounded-lg">
-            1x Bacteriostatic Water
+            1x Bacteriostatic Water*
           </span>
         </div>
+        <p className="text-[10px] font-medium text-slate-400 -mt-1">
+          * Complimentary item is included while supplies last.
+        </p>
 
         <div className="flex justify-between items-center text-sm">
           <span className="text-primary font-medium">Shipping</span>

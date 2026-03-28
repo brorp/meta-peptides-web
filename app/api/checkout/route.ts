@@ -107,6 +107,59 @@ const cleanupFailedOrder = async (supabaseServer: any, orderId: string | null) =
   await supabaseServer.from("orders").delete().eq("id", orderId);
 };
 
+const tryReserveComplimentaryItem = async (
+  supabaseServer: any,
+): Promise<{
+  item: CheckoutItemPayload | null;
+  stockMutation: StockMutation | null;
+}> => {
+  const complimentaryProduct = await findFreeBacWaterProduct(supabaseServer);
+
+  if (!complimentaryProduct) {
+    console.warn(
+      `[Checkout] Complimentary item "${FREE_BAC_WATER_NAME}" was not found. Continuing without bonus item.`,
+    );
+    return { item: null, stockMutation: null };
+  }
+
+  const availableStock = Number(complimentaryProduct.stock || 0);
+  if (availableStock < 1) {
+    console.warn(
+      `[Checkout] Complimentary item "${complimentaryProduct.name}" is out of stock. Continuing without bonus item.`,
+    );
+    return { item: null, stockMutation: null };
+  }
+
+  const nextStock = availableStock - 1;
+  const { data: updatedRows, error: stockUpdateError } = await supabaseServer
+    .from("products")
+    .update({ stock: nextStock })
+    .eq("id", complimentaryProduct.id)
+    .eq("stock", availableStock)
+    .select("id");
+
+  if (stockUpdateError || !updatedRows?.length) {
+    console.warn(
+      `[Checkout] Complimentary item "${complimentaryProduct.name}" stock changed before reservation. Continuing without bonus item.`,
+    );
+    return { item: null, stockMutation: null };
+  }
+
+  return {
+    item: {
+      product_id: complimentaryProduct.id,
+      quantity: 1,
+      price_at_purchase: 0,
+    },
+    stockMutation: {
+      productId: complimentaryProduct.id,
+      productName: complimentaryProduct.name || FREE_BAC_WATER_NAME,
+      previousStock: availableStock,
+      nextStock,
+    },
+  };
+};
+
 export const POST = withAuth(async (request: Request, user: User | null) => {
   try {
     const supabaseServer = await createClientCookies();
@@ -130,25 +183,8 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
       return errorResponse("Order must include at least one valid item", 400);
     }
 
-    const freeBacWaterProduct = await findFreeBacWaterProduct(supabaseServer);
-    if (!freeBacWaterProduct) {
-      return errorResponse(
-        `Complimentary item "${FREE_BAC_WATER_NAME}" was not found in products.`,
-        500,
-      );
-    }
-
-    const allOrderItems: CheckoutItemPayload[] = [
-      ...normalizedItems,
-      {
-        product_id: freeBacWaterProduct.id,
-        quantity: 1,
-        price_at_purchase: 0,
-      },
-    ];
-
     const requiredStockByProduct = new Map<string, number>();
-    for (const item of allOrderItems) {
+    for (const item of normalizedItems) {
       requiredStockByProduct.set(
         item.product_id,
         (requiredStockByProduct.get(item.product_id) || 0) + item.quantity,
@@ -216,6 +252,19 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
 
       decrementedStocks.push(mutation);
     }
+
+    const {
+      item: complimentaryItem,
+      stockMutation: complimentaryStockMutation,
+    } = await tryReserveComplimentaryItem(supabaseServer);
+
+    if (complimentaryStockMutation) {
+      decrementedStocks.push(complimentaryStockMutation);
+    }
+
+    const allOrderItems: CheckoutItemPayload[] = complimentaryItem
+      ? [...normalizedItems, complimentaryItem]
+      : normalizedItems;
 
     // --- STEP 1: UPLOAD PAYMENT PROOF ---
     const fileExt = file.name.split(".").pop();
@@ -442,7 +491,8 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
         orderId: order.id,
         transaction_code: fileName,
         status: order.status,
-        complimentary_item: FREE_BAC_WATER_NAME,
+        complimentary_item: complimentaryItem ? FREE_BAC_WATER_NAME : null,
+        complimentary_item_included: !!complimentaryItem,
         voucher_code: voucherCode,
         voucher_discount: voucherDiscountAmount,
         member_discount: memberDiscountAmount,

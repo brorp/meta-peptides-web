@@ -8,14 +8,20 @@ export async function GET(
 ) {
     try {
         const { id } = await params;
+        const { data: authUserData, error: authUserError } =
+            await supabaseAdmin.auth.admin.getUserById(id);
+
+        if (authUserError || !authUserData?.user) {
+            return errorResponse("User not found", 404);
+        }
 
         const { data: user, error } = await supabaseAdmin
             .from("profiles")
             .select("*")
             .eq("id", id)
-            .single();
+            .maybeSingle();
 
-        if (error || !user) return errorResponse("User not found", 404);
+        if (error) return errorResponse(error.message, 400);
 
         // Get user orders
         const { data: orders } = await supabaseAdmin
@@ -25,7 +31,26 @@ export async function GET(
             .order("created_at", { ascending: false })
             .limit(10);
 
-        return successResponse({ ...user, orders: orders || [] }, "User retrieved");
+        const authUser = authUserData.user;
+
+        return successResponse(
+            {
+                ...(user || {}),
+                id: authUser.id,
+                email: authUser.email || user?.email || null,
+                full_name:
+                    user?.full_name ||
+                    authUser.user_metadata?.full_name ||
+                    authUser.user_metadata?.name ||
+                    null,
+                phone: user?.phone || authUser.phone || null,
+                role: user?.role || authUser.app_metadata?.role || "customer",
+                created_at: user?.created_at || authUser.created_at || null,
+                has_profile: !!user,
+                orders: orders || [],
+            },
+            "User retrieved",
+        );
     } catch (err: any) {
         return errorResponse(err.message, 500);
     }
@@ -38,6 +63,12 @@ export async function PUT(
     try {
         const { id } = await params;
         const body = await req.json();
+        const { data: authUserData, error: authUserError } =
+            await supabaseAdmin.auth.admin.getUserById(id);
+
+        if (authUserError || !authUserData?.user) {
+            return errorResponse("User not found", 404);
+        }
 
         // Only update fields that exist in the profiles table
         const updateData: Record<string, any> = {};
@@ -49,8 +80,14 @@ export async function PUT(
 
         const { data, error } = await supabaseAdmin
             .from("profiles")
-            .update(updateData)
-            .eq("id", id)
+            .upsert(
+                {
+                    id,
+                    email: authUserData.user.email || null,
+                    ...updateData,
+                },
+                { onConflict: "id" },
+            )
             .select()
             .single();
 

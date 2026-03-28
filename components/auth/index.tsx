@@ -29,6 +29,7 @@ import { useUserStore } from "@/store/useUserStore";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { createClientComponentClient } from "@/lib/supabase-client";
+import axios from "axios";
 
 type AuthMode = "login" | "register" | "forgot";
 
@@ -165,16 +166,36 @@ export default function AuthPageComponent() {
 
   const handleGuestLogin = async () => {
     try {
-      const { data, error } =
-        await createClientComponentClient().auth.signInAnonymously();
-      if (error) throw error;
+      const navigatorWithUserAgentData = navigator as Navigator & {
+        userAgentData?: { platform?: string };
+      };
+
+      const response = await axios.post("/api/auth/guest", {
+        language: navigator.language,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        platform:
+          navigatorWithUserAgentData.userAgentData?.platform ||
+          navigator.platform ||
+          "unknown",
+        screenSize: `${window.screen.width}x${window.screen.height}`,
+        viewport: `${window.innerWidth}x${window.innerHeight}`,
+        entryPath: window.location.pathname,
+        referer: document.referrer || null,
+      });
+
       toast.success("Continuing as Guest", {
         description: "You can now browse products and proceed to checkout.",
       });
-      if (data.user) setUser(data.user);
+      if (response.data?.data?.user) {
+        setUser(response.data.data.user);
+      }
       router.push("/shop");
+      router.refresh();
     } catch (error: any) {
-      toast.error("Guest login failed", { description: error.message });
+      toast.error("Guest login failed", {
+        description:
+          error?.response?.data?.message || error?.message || "Please try again.",
+      });
     }
   };
 
