@@ -16,13 +16,6 @@ type CheckoutItemPayload = {
   price_at_purchase: number;
 };
 
-type StockMutation = {
-  productId: string;
-  productName: string;
-  previousStock: number;
-  nextStock: number;
-};
-
 const normalizeCheckoutItems = (items: any): CheckoutItemPayload[] => {
   if (!Array.isArray(items)) return [];
 
@@ -45,7 +38,7 @@ const normalizeCheckoutItems = (items: any): CheckoutItemPayload[] => {
 const findFreeBacWaterProduct = async (supabaseServer: any) => {
   const { data: slugMatches, error: slugError } = await supabaseServer
     .from("products")
-    .select("id, name, slug, stock")
+    .select("id, name, slug")
     .in("slug", FREE_BAC_WATER_SLUGS);
 
   if (slugError) {
@@ -67,7 +60,7 @@ const findFreeBacWaterProduct = async (supabaseServer: any) => {
 
   const { data: fuzzyMatches, error: fuzzyError } = await supabaseServer
     .from("products")
-    .select("id, name, slug, stock")
+    .select("id, name, slug")
     .or(
       "name.ilike.%bacteriostatic%water%,name.ilike.%bac%water%,label.ilike.%bacteriostatic%water%",
     )
@@ -80,25 +73,6 @@ const findFreeBacWaterProduct = async (supabaseServer: any) => {
   return fuzzyMatches?.[0] || null;
 };
 
-const rollbackDecrementedStocks = async (
-  supabaseServer: any,
-  decrementedStocks: StockMutation[],
-) => {
-  for (const mutation of decrementedStocks) {
-    const { error } = await supabaseServer
-      .from("products")
-      .update({ stock: mutation.previousStock })
-      .eq("id", mutation.productId)
-      .eq("stock", mutation.nextStock);
-
-    if (error) {
-      console.error(
-        `Stock rollback failed for product ${mutation.productId}: ${error.message}`,
-      );
-    }
-  }
-};
-
 const cleanupFailedOrder = async (supabaseServer: any, orderId: string | null) => {
   if (!orderId) return;
 
@@ -107,11 +81,10 @@ const cleanupFailedOrder = async (supabaseServer: any, orderId: string | null) =
   await supabaseServer.from("orders").delete().eq("id", orderId);
 };
 
-const tryReserveComplimentaryItem = async (
+const resolveComplimentaryItem = async (
   supabaseServer: any,
 ): Promise<{
   item: CheckoutItemPayload | null;
-  stockMutation: StockMutation | null;
 }> => {
   const complimentaryProduct = await findFreeBacWaterProduct(supabaseServer);
 
@@ -119,30 +92,7 @@ const tryReserveComplimentaryItem = async (
     console.warn(
       `[Checkout] Complimentary item "${FREE_BAC_WATER_NAME}" was not found. Continuing without bonus item.`,
     );
-    return { item: null, stockMutation: null };
-  }
-
-  const availableStock = Number(complimentaryProduct.stock || 0);
-  if (availableStock < 1) {
-    console.warn(
-      `[Checkout] Complimentary item "${complimentaryProduct.name}" is out of stock. Continuing without bonus item.`,
-    );
-    return { item: null, stockMutation: null };
-  }
-
-  const nextStock = availableStock - 1;
-  const { data: updatedRows, error: stockUpdateError } = await supabaseServer
-    .from("products")
-    .update({ stock: nextStock })
-    .eq("id", complimentaryProduct.id)
-    .eq("stock", availableStock)
-    .select("id");
-
-  if (stockUpdateError || !updatedRows?.length) {
-    console.warn(
-      `[Checkout] Complimentary item "${complimentaryProduct.name}" stock changed before reservation. Continuing without bonus item.`,
-    );
-    return { item: null, stockMutation: null };
+    return { item: null };
   }
 
   return {
@@ -150,12 +100,6 @@ const tryReserveComplimentaryItem = async (
       product_id: complimentaryProduct.id,
       quantity: 1,
       price_at_purchase: 0,
-    },
-    stockMutation: {
-      productId: complimentaryProduct.id,
-      productName: complimentaryProduct.name || FREE_BAC_WATER_NAME,
-      previousStock: availableStock,
-      nextStock,
     },
   };
 };
@@ -192,75 +136,42 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
     }
 
     const productIds = Array.from(requiredStockByProduct.keys());
-    const { data: productStocks, error: productStocksError } = await supabaseServer
+    const { data: availableProducts, error: productsError } = await supabaseServer
       .from("products")
-      .select("id, name, stock")
+      .select("id, name, is_active")
       .in("id", productIds);
 
-    if (productStocksError) {
+    if (productsError) {
       return errorResponse(
-        `Failed to validate product stock: ${productStocksError.message}`,
+        `Failed to validate selected products: ${productsError.message}`,
         500,
       );
     }
 
-    if (!productStocks || productStocks.length !== productIds.length) {
+    if (!availableProducts || availableProducts.length !== productIds.length) {
       return errorResponse("Some products are no longer available", 400);
     }
 
-    const stockLookup = new Map(productStocks.map((product: any) => [product.id, product]));
-    const plannedStockMutations: StockMutation[] = [];
+    const productLookup = new Map(
+      availableProducts.map((product: any) => [product.id, product]),
+    );
 
-    for (const [productId, quantityNeeded] of requiredStockByProduct.entries()) {
-      const product = stockLookup.get(productId);
+    for (const productId of requiredStockByProduct.keys()) {
+      const product = productLookup.get(productId);
       if (!product) {
         return errorResponse("Some products are no longer available", 400);
       }
 
-      const availableStock = Number(product.stock || 0);
-      if (availableStock < quantityNeeded) {
+      if (product.is_active === false) {
         return errorResponse(
-          `Insufficient stock for ${product.name || "selected product"}`,
-          409,
+          `${product.name || "Selected product"} is no longer available`,
+          400,
         );
       }
-
-      plannedStockMutations.push({
-        productId,
-        productName: product.name || "Product",
-        previousStock: availableStock,
-        nextStock: availableStock - quantityNeeded,
-      });
     }
 
-    const decrementedStocks: StockMutation[] = [];
-    for (const mutation of plannedStockMutations) {
-      const { data: updatedRows, error: stockUpdateError } = await supabaseServer
-        .from("products")
-        .update({ stock: mutation.nextStock })
-        .eq("id", mutation.productId)
-        .eq("stock", mutation.previousStock)
-        .select("id");
-
-      if (stockUpdateError || !updatedRows?.length) {
-        await rollbackDecrementedStocks(supabaseServer, decrementedStocks);
-        return errorResponse(
-          `Stock changed while processing ${mutation.productName}. Please retry checkout.`,
-          409,
-        );
-      }
-
-      decrementedStocks.push(mutation);
-    }
-
-    const {
-      item: complimentaryItem,
-      stockMutation: complimentaryStockMutation,
-    } = await tryReserveComplimentaryItem(supabaseServer);
-
-    if (complimentaryStockMutation) {
-      decrementedStocks.push(complimentaryStockMutation);
-    }
+    const { item: complimentaryItem } =
+      await resolveComplimentaryItem(supabaseServer);
 
     const allOrderItems: CheckoutItemPayload[] = complimentaryItem
       ? [...normalizedItems, complimentaryItem]
@@ -276,7 +187,6 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
       .upload(filePath, file, { contentType: file.type, upsert: false });
 
     if (uploadError) {
-      await rollbackDecrementedStocks(supabaseServer, decrementedStocks);
       return errorResponse("Failed to upload receipt", 500);
     }
 
@@ -308,7 +218,6 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
       // Only logged-in (non-anonymous) users can use vouchers
       if (!isMember) {
         await supabaseServer.storage.from("transactions").remove([filePath]);
-        await rollbackDecrementedStocks(supabaseServer, decrementedStocks);
         return errorResponse("You must be logged in to use a voucher", 401);
       }
 
@@ -320,26 +229,22 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
 
       if (voucherError || !voucher) {
         await supabaseServer.storage.from("transactions").remove([filePath]);
-        await rollbackDecrementedStocks(supabaseServer, decrementedStocks);
         return errorResponse("Invalid voucher code", 400);
       }
 
       if (!voucher.is_active) {
         await supabaseServer.storage.from("transactions").remove([filePath]);
-        await rollbackDecrementedStocks(supabaseServer, decrementedStocks);
         return errorResponse("This voucher is no longer active", 400);
       }
 
       const now = new Date();
       if (now < new Date(voucher.valid_from) || now > new Date(voucher.valid_until)) {
         await supabaseServer.storage.from("transactions").remove([filePath]);
-        await rollbackDecrementedStocks(supabaseServer, decrementedStocks);
         return errorResponse("This voucher has expired or is not yet valid", 400);
       }
 
       if (voucher.total_claimed >= voucher.max_claim_qty) {
         await supabaseServer.storage.from("transactions").remove([filePath]);
-        await rollbackDecrementedStocks(supabaseServer, decrementedStocks);
         return errorResponse("This voucher has reached its maximum usage limit", 400);
       }
 
@@ -379,7 +284,6 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
 
     if (orderError) {
       await supabaseServer.storage.from("transactions").remove([filePath]);
-      await rollbackDecrementedStocks(supabaseServer, decrementedStocks);
       return errorResponse(`Order Error: ${orderError.message}`, 500);
     }
 
@@ -396,7 +300,6 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
     if (itemsError) {
       await cleanupFailedOrder(supabaseServer, order.id);
       await supabaseServer.storage.from("transactions").remove([filePath]);
-      await rollbackDecrementedStocks(supabaseServer, decrementedStocks);
       return errorResponse(`Items Error: ${itemsError.message}`, 500);
     }
 
@@ -413,7 +316,6 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
     if (paymentError) {
       await cleanupFailedOrder(supabaseServer, order.id);
       await supabaseServer.storage.from("transactions").remove([filePath]);
-      await rollbackDecrementedStocks(supabaseServer, decrementedStocks);
       return errorResponse(`Payment Error: ${paymentError.message}`, 500);
     }
 

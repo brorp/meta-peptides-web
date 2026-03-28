@@ -54,19 +54,9 @@ export function ProductCard({
           )}
         </div>
 
-        {product.stock <= 5 && product.stock > 0 && (
-          <div className="absolute top-3 right-3 z-10 bg-orange-500/90 backdrop-blur-sm text-white text-[9px] font-black px-2 py-1 rounded-md shadow-lg animate-pulse">
-            CRITICAL STOCK
-          </div>
-        )}
-
-        {product.stock === 0 && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] z-20 flex items-center justify-center">
-            <div className="border-2 border-foreground/10 px-4 py-2 rounded-xl rotate-[-10deg] font-black text-foreground/40 text-xl uppercase tracking-tighter">
-              Out of Order
-            </div>
-          </div>
-        )}
+        <div className="absolute top-3 right-3 z-10 bg-emerald-500/90 backdrop-blur-sm text-white text-[9px] font-black px-2 py-1 rounded-md shadow-lg">
+          READY TO ORDER
+        </div>
       </div>
 
       {/* Content Section */}
@@ -99,26 +89,14 @@ export function ProductCard({
         {/* Stock Bar Indicator */}
         <div className="mt-auto">
           <div className="flex justify-between items-center mb-1.5">
-            <span
-              className={cn(
-                "text-[10px] font-bold uppercase tracking-widest",
-                product.stock > 5
-                  ? "text-emerald-500"
-                  : product.stock > 0
-                    ? "text-orange-500"
-                    : "text-red-500",
-              )}
-            >
-              {product.stock > 0 ? `Sold: ${product.stock}` : "Discontinued"}
+            <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">
+              Available
             </span>
           </div>
           <div className="h-1 w-full bg-muted rounded-full overflow-hidden mb-5">
             <div
-              className={cn(
-                "h-full transition-all duration-1000",
-                product.stock > 5 ? "bg-emerald-500" : "bg-orange-500",
-              )}
-              style={{ width: `${Math.min((product.stock / 20) * 100, 100)}%` }}
+              className="h-full transition-all duration-1000 bg-emerald-500"
+              style={{ width: "100%" }}
             />
           </div>
 
@@ -130,7 +108,6 @@ export function ProductCard({
                 description: `${product.name} is now in your shopping bag.`,
               });
             }}
-            disabled={product.stock === 0}
             className={cn(
               "w-full rounded-2xl py-4 h-auto font-bold transition-all duration-300",
               "bg-foreground text-background hover:bg-accent hover:text-white hover:scale-[1.02] active:scale-95",

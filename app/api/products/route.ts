@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
       const { data, error } = await supabaseServer
         .from("products")
         .select("slug, updated_at")
+        .eq("is_active", true)
         .order("created_at", { ascending: false });
 
       if (error) return errorResponse(error.message, 400);
@@ -36,7 +37,10 @@ export async function GET(req: NextRequest) {
     const from = (currentPage - 1) * limit;
     const to = from + limit - 1;
 
-    let query = supabaseServer.from("products").select("*", { count: "exact" });
+    let query = supabaseServer
+      .from("products")
+      .select("*", { count: "exact" })
+      .eq("is_active", true);
 
     // --- FILTERING ---
     if (category) {
