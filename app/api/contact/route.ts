@@ -1,25 +1,27 @@
-import nodemailer from "nodemailer";
 import { successResponse, errorResponse } from "@/lib/api-response";
+import { resend, RESEND_FROM_EMAIL, ADMIN_EMAIL } from "@/lib/resend";
 
 export async function POST(req: Request) {
   try {
-    const { name, email, message } = await req.json();
+    const body = await req.json();
+    const name = String(body.name || "").trim();
+    const email = String(body.email || "").trim();
+    const message = String(body.message || "").trim();
 
     if (!name || !email || !message) {
       return errorResponse("Missing required laboratory credentials", 400);
     }
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+    if (!process.env.RESEND_API_KEY) {
+      return errorResponse(
+        "Contact email service is not configured right now.",
+        500,
+      );
+    }
 
-    const mailOptions = {
-      from: `"${name}" <${process.env.EMAIL_USER}>`,
-      to: process.env.EMAIL_USER,
+    const { error } = await resend.emails.send({
+      from: `Meta Peptides Contact <${RESEND_FROM_EMAIL}>`,
+      to: ADMIN_EMAIL,
       replyTo: email,
       subject: `🧪 [INQUIRY] - ${name}`,
       html: `
@@ -44,16 +46,23 @@ export async function POST(req: Request) {
           </div>
         </div>
       `,
-    };
+    });
 
-    await transporter.sendMail(mailOptions);
+    if (error) {
+      console.error("[Email] Contact inquiry email failed:", error);
+      return errorResponse(
+        "Transmission Interrupted. Please check your lab connection.",
+        500,
+        error.message,
+      );
+    }
 
     return successResponse(
       null,
       "Transmission sent successfully to the Green-Vault.",
     );
   } catch (error: any) {
-    console.error("Nodemailer Error:", error);
+    console.error("[Email] Contact inquiry email exception:", error);
 
     return errorResponse(
       "Transmission Interrupted. Please check your lab connection.",
