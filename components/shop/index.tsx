@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import type { ApiResponse } from "@/interface/global";
 import { ProductCard } from "@/components/product-card";
 import { Search, Loader2, Filter } from "lucide-react";
 import { useGetProducts } from "@/hooks/api/useGetProducts";
-import { api as axios } from "@/lib/axios";
+import { api as apiClient } from "@/lib/axios";
 import { useDebounce } from "@/hooks/use-debounce";
 import { ProductCardSkeleton } from "@/components/skeleton/product-card-skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -35,8 +36,8 @@ export default function ShopPageComponent() {
   useEffect(() => {
     async function fetchCategories() {
       try {
-        const { data } = await axios.get("/api/categories");
-        if (data?.success) {
+        const { data } = await apiClient.get<ApiResponse<string[]>>("/categories");
+        if (data?.success && Array.isArray(data.data)) {
           setCategoriesList(["All", ...data.data]);
         }
       } catch (err) {

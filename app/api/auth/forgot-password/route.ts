@@ -11,6 +11,42 @@ const forgotPasswordSchema = z.object({
 const GENERIC_SUCCESS_MESSAGE =
   "If an account exists for that email, we have sent a secure password reset link.";
 
+async function findAuthUserByEmail(email: string) {
+  const perPage = 200;
+  let page = 1;
+
+  while (true) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({
+      page,
+      perPage,
+    });
+
+    if (error) {
+      return { user: null, error };
+    }
+
+    const users = data?.users || [];
+    const matchedUser =
+      users.find(
+        (user) => user.email?.trim().toLowerCase() === email,
+      ) || null;
+
+    if (matchedUser) {
+      return { user: matchedUser, error: null };
+    }
+
+    const total = data?.total || 0;
+    const hasMore =
+      users.length === perPage && (total === 0 || page * perPage < total);
+
+    if (!hasMore) {
+      return { user: null, error: null };
+    }
+
+    page += 1;
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -32,21 +68,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from("profiles")
-      .select("id")
-      .ilike("email", email)
-      .maybeSingle();
+    const { user, error: authLookupError } = await findAuthUserByEmail(email);
 
-    if (profileError) {
-      console.error("[Auth] Forgot password profile lookup failed:", profileError);
+    if (authLookupError) {
+      console.error("[Auth] Forgot password auth lookup failed:", authLookupError);
       return errorResponse(
         "Unable to prepare a password reset email right now. Please try again.",
         500,
       );
     }
 
-    if (!profile) {
+    if (!user) {
       return successResponse({ email }, GENERIC_SUCCESS_MESSAGE);
     }
 
