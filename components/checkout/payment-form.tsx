@@ -41,7 +41,7 @@ export function PaymentForm({
           QRIS <span className="text-accent">Payment.</span>
         </h3>
         <div className="px-3 py-1 bg-accent/10 text-accent rounded-full text-[9px] font-bold uppercase tracking-widest flex items-center gap-1">
-          <QrCode className="w-3 h-3" /> All E-Wallets Supported
+          <QrCode className="w-3 h-3" /> All QRIS Supported
         </div>
       </div>
 
@@ -58,10 +58,10 @@ export function PaymentForm({
 
         <div className="text-center space-y-1">
           <p className="text-sm font-black text-slate-800 uppercase tracking-tight">
-            PT. METAPEPTIDES INDONESIA
+            META WELLNESS
           </p>
           <p className="text-[10px] text-slate-400 font-medium uppercase tracking-[0.2em]">
-            NMID: ID1234567890
+            Please send the QR code to your respective bank or e-wallet.
           </p>
         </div>
 
@@ -155,7 +155,7 @@ export function PaymentForm({
         <p className="text-[10px] text-slate-600 leading-relaxed font-medium">
           <span className="font-bold text-accent">Note:</span> Please make sure
           the transfer amount matches the total due exactly to speed up the
-          automated verification process.
+          verification process.
         </p>
       </div>
     </Card>

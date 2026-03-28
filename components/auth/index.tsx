@@ -24,22 +24,46 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useRegisterUser } from "@/hooks/api/useRegisterUser";
 import { useLoginUser } from "@/hooks/api/useLoginUser";
 import { useGoogleLogin } from "@/hooks/api/useGoogleLogin";
+import { useForgotPassword } from "@/hooks/api/useForgotPassword";
 import { useUserStore } from "@/store/useUserStore";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { createClientComponentClient } from "@/lib/supabase-client";
 
-// Update Schema untuk menyertakan checkbox
-const getAuthSchema = (isLogin: boolean) => {
-  const base = z.object({
-    email: z.string().email("Invalid research email address"),
-    password: z.string().min(8, "Password must be at least 8 characters"),
-  });
+type AuthMode = "login" | "register" | "forgot";
 
-  if (isLogin) return base;
+type AuthFormData = {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  acceptTerms: boolean;
+};
 
-  return base
-    .extend({
+const getAuthSchema = (mode: AuthMode) => {
+  const email = z.string().email("Invalid research email address");
+
+  if (mode === "forgot") {
+    return z.object({
+      email,
+      password: z.string().optional(),
+      confirmPassword: z.string().optional(),
+      acceptTerms: z.boolean().optional(),
+    });
+  }
+
+  if (mode === "login") {
+    return z.object({
+      email,
+      password: z.string().min(8, "Password must be at least 8 characters"),
+      confirmPassword: z.string().optional(),
+      acceptTerms: z.boolean().optional(),
+    });
+  }
+
+  return z
+    .object({
+      email,
+      password: z.string().min(8, "Password must be at least 8 characters"),
       confirmPassword: z.string().min(1, "Please confirm your access key"),
       acceptTerms: z.literal(true, {
         errorMap: () => ({ message: "You must accept the terms to proceed" }),
@@ -51,14 +75,16 @@ const getAuthSchema = (isLogin: boolean) => {
     });
 };
 
-type AuthFormData = z.infer<ReturnType<typeof getAuthSchema>>;
-
 export default function AuthPageComponent() {
   const router = useRouter();
-  const [isLogin, setIsLogin] = useState(true);
+  const [mode, setMode] = useState<AuthMode>("login");
   const [showPassword, setShowPassword] = useState(false);
+  const [sentResetEmail, setSentResetEmail] = useState<string | null>(null);
   const setUser = useUserStore((state) => state.setUser);
   const clearUser = useUserStore((state) => state.clearUser);
+  const isLogin = mode === "login";
+  const isRegister = mode === "register";
+  const isForgot = mode === "forgot";
 
   const { mutate: login, isPending: isLoadingLogin } = useLoginUser({
     onSuccess: () => {
@@ -79,9 +105,16 @@ export default function AuthPageComponent() {
 
   const { mutate: register, isPending: isLoadingRegister } = useRegisterUser({
     onSuccess: () => {
-      setIsLogin(true);
+      switchMode("login");
     },
   });
+
+  const { mutate: requestPasswordReset, isPending: isLoadingForgotPassword } =
+    useForgotPassword({
+      onSuccess: (data, variables) => {
+        setSentResetEmail(data.data?.email || variables.email);
+      },
+    });
 
   const { handleGoogleLogin } = useGoogleLogin();
 
@@ -91,9 +124,8 @@ export default function AuthPageComponent() {
     formState: { errors },
     reset,
     watch,
-    setValue,
-  } = useForm({
-    resolver: zodResolver(getAuthSchema(isLogin)),
+  } = useForm<AuthFormData>({
+    resolver: zodResolver(getAuthSchema(mode)),
     defaultValues: {
       email: "",
       password: "",
@@ -106,6 +138,11 @@ export default function AuthPageComponent() {
   const isTermsAccepted = watch("acceptTerms");
 
   const onSubmit = (data: AuthFormData) => {
+    if (isForgot) {
+      requestPasswordReset({ email: data.email });
+      return;
+    }
+
     if (isLogin) {
       login({ email: data.email, password: data.password });
     } else {
@@ -113,9 +150,17 @@ export default function AuthPageComponent() {
     }
   };
 
-  const toggleMode = () => {
-    setIsLogin(!isLogin);
-    reset();
+  const switchMode = (nextMode: AuthMode) => {
+    const currentEmail = watch("email");
+    setMode(nextMode);
+    setShowPassword(false);
+    setSentResetEmail(null);
+    reset({
+      email: currentEmail || "",
+      password: "",
+      confirmPassword: "",
+      acceptTerms: false,
+    });
   };
 
   const handleGuestLogin = async () => {
@@ -132,6 +177,9 @@ export default function AuthPageComponent() {
       toast.error("Guest login failed", { description: error.message });
     }
   };
+
+  const isLoading =
+    isLoadingRegister || isLoadingLogin || isLoadingForgotPassword;
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-accent/30 font-sans antialiased">
@@ -159,10 +207,16 @@ export default function AuthPageComponent() {
               <Fingerprint className="w-10 h-10 text-accent" />
             </div>
             <h2 className="text-4xl lg:text-5xl font-black tracking-tighter uppercase italic leading-none">
-              {isLogin ? "LOG IN." : "SIGN UP."}
+              {isLogin
+                ? "LOG IN."
+                : isForgot
+                  ? "RESET PASSWORD."
+                  : "SIGN UP."}
               <span className="text-accent block text-[10px] not-italic tracking-[0.5em] mt-3 font-black uppercase">
                 {isLogin
                   ? "INITIALIZING SECURE SESSION"
+                  : isForgot
+                    ? "ISSUING SECURE RECOVERY LINK"
                   : "ENROLLING NEW STRAIN"}
               </span>
             </h2>
@@ -173,6 +227,16 @@ export default function AuthPageComponent() {
 
             <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
               {/* Email & Password Fields (Sama seperti sebelumnya) */}
+              {isForgot && (
+                <div className="bg-accent/5 p-5 rounded-3xl border border-accent/10">
+                  <p className="text-[11px] font-bold text-muted-foreground leading-relaxed tracking-tight">
+                    Enter the email connected to your registered account. We
+                    will send a secure password reset link with clear
+                    instructions.
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground ml-4">
                   Research Email
@@ -190,38 +254,49 @@ export default function AuthPageComponent() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex justify-between items-center px-4">
-                  <label className="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">
-                    Password
-                  </label>
-                </div>
-                <div className="relative group">
-                  <Lock
-                    className={`absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 ${errors.password ? "text-red-500" : "text-muted-foreground group-focus-within:text-accent"}`}
-                  />
-                  <input
-                    {...registerField("password")}
-                    type={showPassword ? "text" : "password"}
-                    placeholder="••••••••"
-                    className={`w-full pl-14 pr-14 py-4 bg-accent/[0.03] border-2 rounded-2xl outline-none font-bold text-sm ${errors.password ? "border-red-500/50" : "border-border/50 focus:border-accent"}`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-accent"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
+              {!isForgot && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center px-4">
+                    <label className="text-[10px] font-black uppercase tracking-[0.25em] text-muted-foreground">
+                      Password
+                    </label>
+                    {isLogin && (
+                      <button
+                        type="button"
+                        onClick={() => switchMode("forgot")}
+                        className="text-[10px] font-black uppercase tracking-[0.2em] text-accent hover:text-foreground transition-colors"
+                      >
+                        Forgot Password?
+                      </button>
                     )}
-                  </button>
+                  </div>
+                  <div className="relative group">
+                    <Lock
+                      className={`absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 ${errors.password ? "text-red-500" : "text-muted-foreground group-focus-within:text-accent"}`}
+                    />
+                    <input
+                      {...registerField("password")}
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      className={`w-full pl-14 pr-14 py-4 bg-accent/[0.03] border-2 rounded-2xl outline-none font-bold text-sm ${errors.password ? "border-red-500/50" : "border-border/50 focus:border-accent"}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-accent"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-5 h-5" />
+                      ) : (
+                        <Eye className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <AnimatePresence>
-                {!isLogin && (
+                {isRegister && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
@@ -282,51 +357,79 @@ export default function AuthPageComponent() {
                 )}
               </AnimatePresence>
 
+              {isForgot && sentResetEmail && (
+                <div className="bg-emerald-50 border border-emerald-200 rounded-3xl p-5 space-y-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-700">
+                    Reset Link Sent
+                  </p>
+                  <p className="text-[11px] font-bold text-emerald-900 leading-relaxed tracking-tight">
+                    We sent a secure password reset link to{" "}
+                    <span className="underline decoration-emerald-300">
+                      {sentResetEmail}
+                    </span>
+                    . Open the newest email, click the reset button, and choose
+                    your new password on the secure page.
+                  </p>
+                </div>
+              )}
+
               {/* Submit Button - Disabled logic updated */}
               <Button
                 disabled={
-                  isLoadingRegister ||
-                  isLoadingLogin ||
-                  (!isLogin && !isTermsAccepted)
+                  isLoading || (isRegister && !isTermsAccepted)
                 }
                 className="w-full h-16 bg-accent hover:bg-accent text-white rounded-[1.5rem] font-black text-xs uppercase tracking-[0.4em] shadow-xl shadow-accent/20 transition-all active:scale-[0.97] mt-6 flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed group/btn"
               >
-                {isLoadingRegister || isLoadingLogin ? (
+                {isLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <>
-                    {isLogin ? "LOGIN" : "REGISTER"}
+                    {isForgot
+                      ? sentResetEmail
+                        ? "SEND AGAIN"
+                        : "SEND RESET LINK"
+                      : isLogin
+                        ? "LOGIN"
+                        : "REGISTER"}
                     <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
                   </>
                 )}
               </Button>
 
-              <div className="grid grid-cols-1 gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleGoogleLogin}
-                  className="w-full h-14 border-2 border-accent/20 rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3"
-                >
-                  <Chrome className="w-4 h-4 text-accent" /> Login With Google
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={handleGuestLogin}
-                  className="w-full h-14 bg-accent/5 text-accent rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 border border-accent/10"
-                >
-                  <User className="w-4 h-4" /> Continue as Guest
-                </Button>
-              </div>
+              {!isForgot && (
+                <div className="grid grid-cols-1 gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleGoogleLogin}
+                    className="w-full h-14 border-2 border-accent/20 rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3"
+                  >
+                    <Chrome className="w-4 h-4 text-accent" /> Login With Google
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={handleGuestLogin}
+                    className="w-full h-14 bg-accent/5 text-accent rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 border border-accent/10"
+                  >
+                    <User className="w-4 h-4" /> Continue as Guest
+                  </Button>
+                </div>
+              )}
             </form>
 
             <div className="mt-10 pt-8 border-t border-accent/10 text-center">
               <p className="text-[11px] font-black text-muted-foreground uppercase tracking-widest leading-relaxed">
-                {isLogin ? "New to the facility?" : "Already verified?"}{" "}
+                {isLogin
+                  ? "New to the facility?"
+                  : isForgot
+                    ? "Remembered your password?"
+                    : "Already verified?"}{" "}
                 <button
                   type="button"
-                  onClick={toggleMode}
+                  onClick={() =>
+                    switchMode(isLogin ? "register" : "login")
+                  }
                   className="text-foreground font-black hover:text-accent ml-1 block mt-2 mx-auto border-b-2 border-accent/20"
                 >
                   {isLogin ? "SIGN UP HERE" : "LOG IN HERE"}

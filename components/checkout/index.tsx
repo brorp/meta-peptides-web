@@ -119,7 +119,7 @@ export default function CheckoutPageComponent() {
       reset({
         ...storedShipping,
         receiptPreview: null,
-        agreeShippingPolicy: false,
+        agreeShippingPolicy: true,
       });
     }
   }, [storedShipping, reset]);
@@ -191,8 +191,15 @@ export default function CheckoutPageComponent() {
       if (isValid) {
         setStep("Payment");
         setShipping({
-          ...watchAllFields,
+          email: watchAllFields.email,
+          firstName: watchAllFields.firstName,
           lastName: watchAllFields.lastName ?? "",
+          phone: watchAllFields.phone,
+          address: watchAllFields.address,
+          regional: watchAllFields.regional,
+          zip: watchAllFields.zip,
+          note: watchAllFields.note,
+          voucherCode: appliedVoucherCode || watchAllFields.voucherCode || "",
         });
       } else {
         // Jika checkbox belum dicentang, berikan feedback visual

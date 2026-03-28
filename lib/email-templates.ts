@@ -28,6 +28,11 @@ type OrderEmailData = {
   createdAt?: string;
 };
 
+type PasswordResetEmailData = {
+  customerEmail: string;
+  resetUrl: string;
+};
+
 function formatCurrencyEmail(value: number): string {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -91,6 +96,18 @@ function itemsTable(items: OrderItem[]): string {
     </thead>
     <tbody>${rows}</tbody>
   </table>`;
+}
+
+function primaryButton(label: string, href: string): string {
+  return `
+  <div style="margin:24px 0;text-align:center;">
+    <a
+      href="${href}"
+      style="display:inline-block;background:${BRAND_COLOR};color:white;text-decoration:none;font-size:12px;font-weight:800;letter-spacing:2px;text-transform:uppercase;padding:14px 24px;border-radius:999px;"
+    >
+      ${label}
+    </a>
+  </div>`;
 }
 
 function totalsBlock(data: OrderEmailData): string {
@@ -336,4 +353,61 @@ export function orderVerifiedCustomerTemplate(data: OrderEmailData): {
   };
 }
 
-export type { OrderEmailData, OrderItem };
+export function passwordResetTemplate(data: PasswordResetEmailData): {
+  subject: string;
+  html: string;
+} {
+  const content = `
+    <h2 style="color:#111827;font-size:20px;margin:0 0 6px;font-weight:800;">Reset your password</h2>
+    <p style="color:#6b7280;font-size:13px;margin:0 0 20px;line-height:1.6;">
+      We received a request to reset the password for your Meta Peptides account.
+      Use the secure button below to choose a new password.
+    </p>
+
+    <div style="background:${DARK_BG};border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+      <table style="width:100%;border-collapse:collapse;">
+        <tr>
+          <td style="padding:4px 0;"><span style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;">Account Email</span></td>
+          <td style="padding:4px 0;text-align:right;"><span style="font-size:13px;color:white;font-weight:600;">${data.customerEmail}</span></td>
+        </tr>
+        <tr>
+          <td style="padding:4px 0;"><span style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;">Action</span></td>
+          <td style="padding:4px 0;text-align:right;"><span style="font-size:13px;color:${BRAND_COLOR};font-weight:700;">Password Reset</span></td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="margin:0 0 20px;padding:16px 20px;background:#f8fafc;border-radius:12px;border-left:4px solid ${BRAND_COLOR};">
+      <p style="margin:0;font-size:13px;color:#374151;line-height:1.7;">
+        <strong>What to do next:</strong> click <strong>Reset Password</strong>, wait for the secure page to open,
+        then enter your new password there. If you did not request this change, you can safely ignore this email.
+      </p>
+    </div>
+
+    ${primaryButton("Reset Password", data.resetUrl)}
+
+    <div style="margin-top:20px;padding:16px 20px;background:#fffbeb;border-radius:12px;border-left:4px solid #f59e0b;">
+      <p style="margin:0;font-size:13px;color:#92400e;line-height:1.7;">
+        For your security, always use the most recent reset email. If the button does not open,
+        copy and paste the secure link below into your browser.
+      </p>
+    </div>
+
+    <div style="margin-top:20px;padding:16px 20px;background:#f8fafc;border-radius:12px;">
+      <p style="margin:0 0 8px;font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;font-weight:700;">Secure Link</p>
+      <p style="margin:0;font-size:12px;line-height:1.7;word-break:break-all;">
+        <a href="${data.resetUrl}" style="color:${BRAND_COLOR};text-decoration:underline;">${data.resetUrl}</a>
+      </p>
+    </div>
+
+    <p style="margin:28px 0 0;font-size:12px;color:#9ca3af;text-align:center;">
+      Need help? Contact us at <a href="mailto:metapeptides@gmail.com" style="color:${BRAND_COLOR};">metapeptides@gmail.com</a>
+    </p>`;
+
+  return {
+    subject: "Reset your Meta Peptides password",
+    html: baseLayout(content),
+  };
+}
+
+export type { OrderEmailData, OrderItem, PasswordResetEmailData };

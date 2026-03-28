@@ -4,6 +4,8 @@ import {
   orderCreatedAdminTemplate,
   orderVerifiedCustomerTemplate,
   type OrderEmailData,
+  passwordResetTemplate,
+  type PasswordResetEmailData,
 } from "./email-templates";
 
 /**
@@ -98,6 +100,36 @@ export async function sendOrderVerifiedEmail(
     return true;
   } catch (err) {
     console.error("[Email] Order-verified email exception:", err);
+    return false;
+  }
+}
+
+export async function sendPasswordResetEmail(
+  data: PasswordResetEmailData,
+): Promise<boolean> {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("[Email] RESEND_API_KEY not configured. Skipping email.");
+    return false;
+  }
+
+  try {
+    const template = passwordResetTemplate(data);
+    const { error } = await resend.emails.send({
+      from: `Meta Peptides Security <${RESEND_FROM_EMAIL}>`,
+      to: data.customerEmail,
+      subject: template.subject,
+      html: template.html,
+    });
+
+    if (error) {
+      console.error("[Email] Password reset email failed:", error);
+      return false;
+    }
+
+    console.log(`[Email] Password reset email sent to ${data.customerEmail}`);
+    return true;
+  } catch (err) {
+    console.error("[Email] Password reset email exception:", err);
     return false;
   }
 }

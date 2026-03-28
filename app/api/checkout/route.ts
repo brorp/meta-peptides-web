@@ -375,9 +375,6 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
         field_name: "total_claimed",
         row_id: voucherId,
         increment_by: 1,
-      }).catch(() => {
-        // Fallback: direct update if RPC doesn't exist
-        return { error: { message: "RPC not available" } };
       });
 
       // Fallback: manual increment
