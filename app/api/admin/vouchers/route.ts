@@ -56,13 +56,24 @@ export async function POST(req: NextRequest) {
       is_active,
     } = body;
 
+    const discountPercentage = Number(discount_nominal);
+    const maxDiscountCap = Number(max_discount_cap);
+    const maxClaimQty = Number(max_claim_qty);
+
     if (!code || code.trim().length === 0) {
       return errorResponse("Voucher code is required", 400);
     }
-    if (!discount_nominal || Number(discount_nominal) <= 0) {
-      return errorResponse("Discount nominal must be greater than 0", 400);
+    if (
+      !Number.isFinite(discountPercentage) ||
+      discountPercentage <= 0 ||
+      discountPercentage > 100
+    ) {
+      return errorResponse(
+        "Discount percentage must be between 1 and 100",
+        400,
+      );
     }
-    if (!max_discount_cap || Number(max_discount_cap) <= 0) {
+    if (!Number.isFinite(maxDiscountCap) || maxDiscountCap <= 0) {
       return errorResponse("Max discount cap must be greater than 0", 400);
     }
     if (!valid_from || !valid_until) {
@@ -71,7 +82,7 @@ export async function POST(req: NextRequest) {
     if (new Date(valid_until) <= new Date(valid_from)) {
       return errorResponse("Valid until must be after valid from", 400);
     }
-    if (!max_claim_qty || Number(max_claim_qty) <= 0) {
+    if (!Number.isFinite(maxClaimQty) || maxClaimQty <= 0) {
       return errorResponse("Max claim quantity must be greater than 0", 400);
     }
 
@@ -90,11 +101,11 @@ export async function POST(req: NextRequest) {
       .from("vouchers")
       .insert({
         code: code.trim().toUpperCase(),
-        discount_nominal: Number(discount_nominal),
-        max_discount_cap: Number(max_discount_cap),
+        discount_nominal: discountPercentage,
+        max_discount_cap: maxDiscountCap,
         valid_from,
         valid_until,
-        max_claim_qty: Number(max_claim_qty),
+        max_claim_qty: maxClaimQty,
         is_active: is_active !== false,
       })
       .select()

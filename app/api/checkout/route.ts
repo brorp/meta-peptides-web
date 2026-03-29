@@ -293,9 +293,26 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
         return errorResponse("This voucher has reached its maximum usage limit", 400);
       }
 
-      // Calculate voucher discount
-      const rawDiscount = Number(voucher.discount_nominal);
-      const cappedDiscount = Math.min(rawDiscount, Number(voucher.max_discount_cap));
+      // Treat discount_nominal as a percentage, then cap the final amount.
+      const discountPercentage = Number(voucher.discount_nominal);
+      const maxDiscountCap = Number(voucher.max_discount_cap);
+
+      if (
+        !Number.isFinite(discountPercentage) ||
+        discountPercentage <= 0 ||
+        discountPercentage > 100
+      ) {
+        await supabaseServer.storage.from("transactions").remove([filePath]);
+        return errorResponse("This voucher is misconfigured", 400);
+      }
+
+      const rawDiscount = Math.round(
+        afterMemberDiscount * (discountPercentage / 100),
+      );
+      const cappedDiscount =
+        Number.isFinite(maxDiscountCap) && maxDiscountCap > 0
+          ? Math.min(rawDiscount, maxDiscountCap)
+          : rawDiscount;
       voucherDiscountAmount = Math.min(cappedDiscount, afterMemberDiscount);
 
       voucherId = voucher.id;

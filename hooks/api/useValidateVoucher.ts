@@ -6,6 +6,7 @@ export type VoucherValidationResponse = {
   voucher_id: string;
   code: string;
   discount_nominal: number;
+  discount_percentage: number;
   max_discount_cap: number;
   discount_amount: number;
   valid_until: string;

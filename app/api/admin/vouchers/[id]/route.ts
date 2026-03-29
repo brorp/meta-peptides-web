@@ -34,6 +34,10 @@ export async function PUT(
     const updateData: Record<string, any> = {};
 
     if (body.code !== undefined) {
+      if (typeof body.code !== "string" || body.code.trim().length === 0) {
+        return errorResponse("Voucher code is required", 400);
+      }
+
       // Check uniqueness if code changed
       const { data: existing } = await supabaseAdmin
         .from("vouchers")
@@ -47,16 +51,54 @@ export async function PUT(
       }
       updateData.code = body.code.trim().toUpperCase();
     }
-    if (body.discount_nominal !== undefined)
-      updateData.discount_nominal = Number(body.discount_nominal);
-    if (body.max_discount_cap !== undefined)
-      updateData.max_discount_cap = Number(body.max_discount_cap);
+    if (body.discount_nominal !== undefined) {
+      const discountPercentage = Number(body.discount_nominal);
+
+      if (
+        !Number.isFinite(discountPercentage) ||
+        discountPercentage <= 0 ||
+        discountPercentage > 100
+      ) {
+        return errorResponse(
+          "Discount percentage must be between 1 and 100",
+          400,
+        );
+      }
+
+      updateData.discount_nominal = discountPercentage;
+    }
+    if (body.max_discount_cap !== undefined) {
+      const maxDiscountCap = Number(body.max_discount_cap);
+
+      if (!Number.isFinite(maxDiscountCap) || maxDiscountCap <= 0) {
+        return errorResponse("Max discount cap must be greater than 0", 400);
+      }
+
+      updateData.max_discount_cap = maxDiscountCap;
+    }
     if (body.valid_from !== undefined) updateData.valid_from = body.valid_from;
     if (body.valid_until !== undefined)
       updateData.valid_until = body.valid_until;
-    if (body.max_claim_qty !== undefined)
-      updateData.max_claim_qty = Number(body.max_claim_qty);
+    if (body.max_claim_qty !== undefined) {
+      const maxClaimQty = Number(body.max_claim_qty);
+
+      if (!Number.isFinite(maxClaimQty) || maxClaimQty <= 0) {
+        return errorResponse("Max claim quantity must be greater than 0", 400);
+      }
+
+      updateData.max_claim_qty = maxClaimQty;
+    }
     if (body.is_active !== undefined) updateData.is_active = body.is_active;
+
+    const nextValidFrom = updateData.valid_from ?? body.valid_from;
+    const nextValidUntil = updateData.valid_until ?? body.valid_until;
+    if (
+      nextValidFrom !== undefined &&
+      nextValidUntil !== undefined &&
+      new Date(nextValidUntil) <= new Date(nextValidFrom)
+    ) {
+      return errorResponse("Valid until must be after valid from", 400);
+    }
 
     updateData.updated_at = new Date().toISOString();
 

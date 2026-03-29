@@ -32,10 +32,11 @@ export async function PUT(
     const { id } = await params;
     const body = await req.json();
 
-    // Fetch current order to check previous status
     const { data: currentOrder, error: fetchError } = await supabaseAdmin
       .from("orders")
-      .select("*, order_items(*, products(name, image_url)), payments(*)")
+      .select(
+        "id, status, shipping_email, shipping_name, subtotal, total_price, voucher_code, voucher_discount_amount, created_at",
+      )
       .eq("id", id)
       .single();
 
@@ -47,18 +48,38 @@ export async function PUT(
     const updateData: any = {};
 
     if (body.status) updateData.status = body.status;
-    if (body.tracking_number !== undefined)
+    if (
+      body.tracking_number !== undefined &&
+      String(body.tracking_number).trim().length > 0
+    ) {
       updateData.tracking_number = body.tracking_number;
+    }
     if (body.note !== undefined) updateData.note = body.note;
 
-    const { data, error } = await supabaseAdmin
+    if (!Object.keys(updateData).length) {
+      return errorResponse("No order changes were provided", 400);
+    }
+
+    const { data: updatedOrder, error: updateError } = await supabaseAdmin
       .from("orders")
       .update(updateData)
       .eq("id", id)
-      .select("*, order_items(*, products(name, image_url)), payments(*)")
+      .select("id")
       .single();
 
-    if (error) return errorResponse(error.message, 400);
+    if (updateError || !updatedOrder) {
+      return errorResponse(updateError?.message || "Failed to update order", 400);
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("orders")
+      .select("*, order_items(*, products(name, image_url, slug)), payments(*)")
+      .eq("id", id)
+      .single();
+
+    if (error || !data) {
+      return errorResponse("Order updated, but failed to load the latest data", 500);
+    }
 
     // Trigger email when status changes TO "processing" from a different status
     if (

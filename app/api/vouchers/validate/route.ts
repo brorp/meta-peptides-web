@@ -69,20 +69,34 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
       );
     }
 
-    // Calculate discount
-    const rawDiscount = Number(voucher.discount_nominal);
-    const cappedDiscount = Math.min(
-      rawDiscount,
-      Number(voucher.max_discount_cap),
+    // Treat discount_nominal as a percentage, then cap the final amount.
+    const discountPercentage = Number(voucher.discount_nominal);
+    const maxDiscountCap = Number(voucher.max_discount_cap);
+
+    if (
+      !Number.isFinite(discountPercentage) ||
+      discountPercentage <= 0 ||
+      discountPercentage > 100
+    ) {
+      return errorResponse("This voucher is misconfigured", 400);
+    }
+
+    const rawDiscount = Math.round(
+      numericSubtotal * (discountPercentage / 100),
     );
+    const cappedDiscount =
+      Number.isFinite(maxDiscountCap) && maxDiscountCap > 0
+        ? Math.min(rawDiscount, maxDiscountCap)
+        : rawDiscount;
     const finalDiscount = Math.min(cappedDiscount, numericSubtotal);
 
     return successResponse(
       {
         voucher_id: voucher.id,
         code: voucher.code,
-        discount_nominal: Number(voucher.discount_nominal),
-        max_discount_cap: Number(voucher.max_discount_cap),
+        discount_nominal: discountPercentage,
+        discount_percentage: discountPercentage,
+        max_discount_cap: maxDiscountCap,
         discount_amount: finalDiscount,
         valid_until: voucher.valid_until,
       },

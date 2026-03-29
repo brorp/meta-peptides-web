@@ -69,6 +69,8 @@ const formatCurrency = (value: number) =>
     minimumFractionDigits: 0,
   }).format(Number(value || 0));
 
+const formatPercentage = (value: number) => `${Number(value || 0)}%`;
+
 const formatDate = (value?: string | null) =>
   value
     ? new Date(value).toLocaleString("en-US", {
@@ -191,7 +193,7 @@ export default function AdminVouchersPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Vouchers</h1>
           <p className="text-sm text-muted-foreground">
-            Create and manage checkout discount codes.
+            Create and manage percentage-based checkout discount codes.
           </p>
         </div>
         <button
@@ -232,18 +234,23 @@ export default function AdminVouchersPage() {
 
           <label className="space-y-2">
             <span className="text-xs font-medium text-muted-foreground">
-              Discount Nominal
+              Discount Percentage
             </span>
             <input
               type="number"
               min="1"
+              max="100"
               value={form.discount_nominal}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, discount_nominal: e.target.value }))
               }
               className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+              placeholder="10"
               required
             />
+            <p className="text-xs text-muted-foreground">
+              Applied as a percentage, then limited by the max discount cap.
+            </p>
           </label>
 
           <label className="space-y-2">
@@ -403,7 +410,7 @@ export default function AdminVouchersPage() {
                       </div>
                     </td>
                     <td className="px-5 py-3 text-foreground font-medium">
-                      {formatCurrency(voucher.discount_nominal)}
+                      {formatPercentage(voucher.discount_nominal)}
                     </td>
                     <td className="px-5 py-3 text-muted-foreground">
                       {voucher.total_claimed || 0} / {voucher.max_claim_qty}

@@ -93,18 +93,28 @@ export default function AdminOrderDetailPage({
     const handleSave = async () => {
         setSaving(true);
         try {
-            const { data } = await axios.put(`/admin/orders/${id}`, {
+            const payload: Record<string, any> = {
                 status,
-                tracking_number: trackingNumber,
-            });
+            };
+
+            if (trackingNumber.trim().length > 0) {
+                payload.tracking_number = trackingNumber.trim();
+            }
+
+            const { data } = await axios.put(`/admin/orders/${id}`, payload);
             if (data.success) {
                 toast.success("Order updated");
                 setOrder(data.data);
             } else {
                 toast.error(data.message);
             }
-        } catch {
-            toast.error("Failed to update order");
+        } catch (error: any) {
+            toast.error("Failed to update order", {
+                description:
+                    error?.message ||
+                    error?.error ||
+                    "Please try again.",
+            });
         } finally {
             setSaving(false);
         }
