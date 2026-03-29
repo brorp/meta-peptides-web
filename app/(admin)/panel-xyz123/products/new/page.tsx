@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Save, Upload, X, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -34,12 +34,32 @@ export default function NewProductPage() {
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [productOptions, setProductOptions] = useState<any[]>([]);
     const [form, setForm] = useState<Record<string, any>>({
         name: "",
         price: "",
         stock: "0",
+        complimentary_quantity: "1",
         is_active: true,
     });
+
+    useEffect(() => {
+        const fetchProductOptions = async () => {
+            try {
+                const { data } = await axios.get("/admin/products", {
+                    params: { page: 1, limit: 500 },
+                });
+
+                if (data.success) {
+                    setProductOptions(data.data || []);
+                }
+            } catch {
+                toast.error("Failed to load product options");
+            }
+        };
+
+        fetchProductOptions();
+    }, []);
 
     const updateField = (key: string, value: any) => {
         setForm((prev) => ({ ...prev, [key]: value }));
@@ -244,6 +264,55 @@ export default function NewProductPage() {
                             </div>
                         ))}
                     </div>
+                </div>
+
+                <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
+                    <h2 className="text-sm font-semibold text-foreground">
+                        Complimentary Item
+                    </h2>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                                Free Item Product
+                            </label>
+                            <select
+                                value={form.complimentary_product_id || ""}
+                                onChange={(e) =>
+                                    updateField("complimentary_product_id", e.target.value)
+                                }
+                                className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                            >
+                                <option value="">No complimentary item</option>
+                                {productOptions.map((product) => (
+                                    <option key={product.id} value={product.id}>
+                                        {product.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                                Free Item Quantity
+                            </label>
+                            <input
+                                type="number"
+                                min="1"
+                                value={form.complimentary_quantity || "1"}
+                                onChange={(e) =>
+                                    updateField("complimentary_quantity", e.target.value)
+                                }
+                                disabled={!form.complimentary_product_id}
+                                className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all disabled:opacity-50"
+                            />
+                        </div>
+                    </div>
+
+                    <p className="text-xs text-muted-foreground">
+                        The selected free item will be added automatically at checkout
+                        for this product.
+                    </p>
                 </div>
 
                 <div className="bg-card border border-border rounded-2xl p-6 space-y-4">

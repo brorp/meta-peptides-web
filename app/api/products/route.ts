@@ -74,8 +74,53 @@ export async function GET(req: NextRequest) {
 
     if (error) return errorResponse(error.message, 400);
 
+    const products = data || [];
+    const complimentaryProductIds = Array.from(
+      new Set(
+        products
+          .map((product: any) => product.complimentary_product_id)
+          .filter(Boolean),
+      ),
+    );
+
+    let complimentaryProductMap = new Map<string, { name: string; slug: string }>();
+    if (complimentaryProductIds.length > 0) {
+      const { data: complimentaryProducts, error: complimentaryError } =
+        await supabaseServer
+          .from("products")
+          .select("id, name, slug")
+          .in("id", complimentaryProductIds);
+
+      if (complimentaryError) {
+        return errorResponse(complimentaryError.message, 400);
+      }
+
+      complimentaryProductMap = new Map(
+        (complimentaryProducts || []).map((product: any) => [
+          product.id,
+          {
+            name: product.name || "Complimentary Item",
+            slug: product.slug || "",
+          },
+        ]),
+      );
+    }
+
+    const enrichedProducts = products.map((product: any) => {
+      const complimentaryProduct = product.complimentary_product_id
+        ? complimentaryProductMap.get(product.complimentary_product_id)
+        : null;
+
+      return {
+        ...product,
+        complimentary_product_name: complimentaryProduct?.name || null,
+        complimentary_product_slug: complimentaryProduct?.slug || null,
+        complimentary_quantity: Number(product.complimentary_quantity || 1),
+      };
+    });
+
     return paginateResponse(
-      data,
+      enrichedProducts,
       currentPage,
       limit,
       count || 0,

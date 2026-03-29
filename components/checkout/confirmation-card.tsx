@@ -18,6 +18,9 @@ interface ConfirmationCardProps {
 
 export function ConfirmationCard({ data }: ConfirmationCardProps) {
   const transactionCode = data?.data?.transaction_code || "MP-PROCESSING";
+  const complimentaryItems = Array.isArray(data?.data?.complimentary_items)
+    ? data.data.complimentary_items
+    : [];
 
   const handleScreenshot = () => {
     window.print();
@@ -63,6 +66,24 @@ export function ConfirmationCard({ data }: ConfirmationCardProps) {
           Awaiting Admin Verification
         </span>
       </div>
+
+      {complimentaryItems.length > 0 && (
+        <div className="rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-left space-y-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-green-700">
+            Complimentary Items Included
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {complimentaryItems.map((item: any) => (
+              <span
+                key={item.product_id}
+                className="inline-flex items-center rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-green-700 border border-green-200"
+              >
+                {item.quantity}x {item.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-4 text-left border-t border-slate-100 pt-8 mt-4">
         <div className="space-y-1">

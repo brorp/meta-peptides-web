@@ -17,7 +17,25 @@ export async function GET(
 
         if (error || !data) return errorResponse("Product not found", 404);
 
-        return successResponse(data, "Product retrieved");
+        let complimentaryProductName: string | null = null;
+        if (data.complimentary_product_id) {
+            const { data: complimentaryProduct } = await supabaseAdmin
+                .from("products")
+                .select("name")
+                .eq("id", data.complimentary_product_id)
+                .maybeSingle();
+
+            complimentaryProductName = complimentaryProduct?.name || null;
+        }
+
+        return successResponse(
+            {
+                ...data,
+                complimentary_product_name: complimentaryProductName,
+                complimentary_quantity: Number(data.complimentary_quantity || 1),
+            },
+            "Product retrieved",
+        );
     } catch (err: any) {
         return errorResponse(err.message, 500);
     }
@@ -36,7 +54,8 @@ export async function PUT(
             "name", "label", "slug", "price", "original_price", "stock",
             "image_url", "category", "purity", "volume", "formula", "cas",
             "short_desc", "overview", "storage_instruction", "usage_instruction",
-            "dosing", // "is_active", temporarily removed
+            "dosing", "complimentary_product_id", "complimentary_quantity",
+            // "is_active", temporarily removed
         ];
 
         for (const field of fields) {
@@ -50,6 +69,17 @@ export async function PUT(
             updateData.original_price = parseFloat(updateData.original_price);
         if (updateData.stock !== undefined)
             updateData.stock = parseInt(updateData.stock);
+        if (updateData.complimentary_product_id === "")
+            updateData.complimentary_product_id = null;
+        if (updateData.complimentary_quantity !== undefined) {
+            updateData.complimentary_quantity = Math.max(
+                1,
+                parseInt(updateData.complimentary_quantity) || 1,
+            );
+        }
+        if (!updateData.complimentary_product_id) {
+            updateData.complimentary_quantity = 1;
+        }
 
         const { data, error } = await supabaseAdmin
             .from("products")

@@ -35,8 +35,43 @@ export async function GET(req: NextRequest) {
 
         if (error) return errorResponse(error.message, 400);
 
+        const products = data || [];
+        const complimentaryProductIds = Array.from(
+            new Set(
+                products
+                    .map((product: any) => product.complimentary_product_id)
+                    .filter(Boolean),
+            ),
+        );
+
+        let complimentaryProductMap = new Map<string, string>();
+        if (complimentaryProductIds.length > 0) {
+            const { data: complimentaryProducts, error: complimentaryError } =
+                await supabaseAdmin
+                    .from("products")
+                    .select("id, name")
+                    .in("id", complimentaryProductIds);
+
+            if (complimentaryError) return errorResponse(complimentaryError.message, 400);
+
+            complimentaryProductMap = new Map(
+                (complimentaryProducts || []).map((product: any) => [
+                    product.id,
+                    product.name || "Complimentary Item",
+                ]),
+            );
+        }
+
+        const enrichedProducts = products.map((product: any) => ({
+            ...product,
+            complimentary_product_name: product.complimentary_product_id
+                ? complimentaryProductMap.get(product.complimentary_product_id) || null
+                : null,
+            complimentary_quantity: Number(product.complimentary_quantity || 1),
+        }));
+
         return paginateResponse(
-            data,
+            enrichedProducts,
             page,
             limit,
             count || 0,
@@ -81,6 +116,10 @@ export async function POST(req: NextRequest) {
                 storage_instruction: body.storage_instruction || null,
                 usage_instruction: body.usage_instruction || null,
                 dosing: body.dosing || null,
+                complimentary_product_id: body.complimentary_product_id || null,
+                complimentary_quantity: body.complimentary_product_id
+                    ? Math.max(1, parseInt(body.complimentary_quantity) || 1)
+                    : 1,
                 // temporarily removed until column is added
                 // is_active: body.is_active !== false,
             })

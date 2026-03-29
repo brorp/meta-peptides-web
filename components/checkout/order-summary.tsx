@@ -52,14 +52,44 @@ export function OrderSummary({
 }: OrderSummaryProps) {
   const { user } = useUserStore();
   const isMember = !!user && Object.keys(user).length > 0 && !user.is_anonymous;
-  const complimentaryItem = {
-    id: "free-bacteriostatic-water",
-    name: "Bacteriostatic Water",
-    quantity: 1,
-    price: 0,
-    isComplimentary: true,
-  };
-  const displayItems = [...items, complimentaryItem];
+  const complimentaryItemsMap = new Map<
+    string,
+    {
+      id: string;
+      name: string;
+      quantity: number;
+      price: number;
+      isComplimentary: true;
+    }
+  >();
+
+  items.forEach((item) => {
+    const complimentaryProductId = item.complimentary_product_id;
+    if (!complimentaryProductId) return;
+
+    const complimentaryQuantity =
+      Math.max(1, Number(item.complimentary_quantity || 1)) *
+      Math.max(1, Number(item.quantity || 1));
+
+    const existingComplimentaryItem =
+      complimentaryItemsMap.get(complimentaryProductId);
+
+    if (existingComplimentaryItem) {
+      existingComplimentaryItem.quantity += complimentaryQuantity;
+      return;
+    }
+
+    complimentaryItemsMap.set(complimentaryProductId, {
+      id: `complimentary-${complimentaryProductId}`,
+      name: item.complimentary_product_name || "Complimentary Item",
+      quantity: complimentaryQuantity,
+      price: 0,
+      isComplimentary: true,
+    });
+  });
+
+  const complimentaryItems = Array.from(complimentaryItemsMap.values());
+  const displayItems = [...items, ...complimentaryItems];
 
   const discountRate = isMember ? discount : 0;
   const discountAmount = subtotal * discountRate;
@@ -89,9 +119,14 @@ export function OrderSummary({
                 {item.name}
               </p>
               {item.isComplimentary ? (
-                <span className="text-[10px] font-bold bg-green-50 text-green-700 px-2 py-0.5 rounded-md uppercase tracking-wider">
-                  Complimentary Item
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold bg-green-50 text-green-700 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                    Complimentary Item
+                  </span>
+                  <span className="text-[10px] font-bold bg-slate-100 text-primary px-2 py-0.5 rounded-md uppercase tracking-wider">
+                    Qty: {item.quantity}
+                  </span>
+                </div>
               ) : (
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold bg-slate-100 text-primary px-2 py-0.5 rounded-md uppercase tracking-wider">
@@ -220,18 +255,30 @@ export function OrderSummary({
           )}
         </div>
 
-        <div className="flex justify-between items-center text-sm">
-          <div className="flex items-center gap-1.5 text-green-600">
-            <Gift className="w-3 h-3" />
-            <span className="font-medium">Complimentary Bonus</span>
-          </div>
-          <span className="text-[10px] font-black text-green-700 bg-green-50 px-2 py-1 rounded-lg">
-            1x Bacteriostatic Water*
-          </span>
-        </div>
-        <p className="text-[10px] font-medium text-slate-400 -mt-1">
-          * Complimentary item is included while supplies last.
-        </p>
+        {complimentaryItems.length > 0 && (
+          <>
+            <div className="flex justify-between items-center text-sm">
+              <div className="flex items-center gap-1.5 text-green-600">
+                <Gift className="w-3 h-3" />
+                <span className="font-medium">Complimentary Bonus</span>
+              </div>
+              <span className="text-[10px] font-black text-green-700 bg-green-50 px-2 py-1 rounded-lg">
+                {complimentaryItems.length} item
+                {complimentaryItems.length > 1 ? "s" : ""} included
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2 -mt-1">
+              {complimentaryItems.map((item) => (
+                <span
+                  key={item.id}
+                  className="text-[10px] font-bold bg-green-50 text-green-700 px-2 py-1 rounded-md uppercase tracking-wider"
+                >
+                  {item.quantity}x {item.name}
+                </span>
+              ))}
+            </div>
+          </>
+        )}
 
         <div className="flex justify-between items-center text-sm">
           <span className="text-primary font-medium">Shipping</span>

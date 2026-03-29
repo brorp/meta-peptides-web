@@ -186,7 +186,7 @@ export function GlobalCart() {
               <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 px-3 py-2">
                 <Gift className="w-3.5 h-3.5 text-green-600" />
                 <p className="text-[10px] font-bold uppercase tracking-tight text-green-700">
-                  Free 1x Bacteriostatic Water will be added at checkout
+                  Selected products may include complimentary bonus items
                 </p>
               </div>
 

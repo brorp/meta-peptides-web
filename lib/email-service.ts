@@ -13,6 +13,11 @@ import {
   type GuestSessionEmailData,
 } from "./email-templates";
 
+const normalizeRecipientEmail = (email?: string | null) =>
+  String(email || "")
+    .trim()
+    .toLowerCase();
+
 /**
  * Sends both customer confirmation and admin notification emails
  * when a new order is created. Non-blocking — errors are logged
@@ -22,32 +27,39 @@ export async function sendOrderCreatedEmails(
   data: OrderEmailData,
 ): Promise<{ customerSent: boolean; adminSent: boolean }> {
   const result = { customerSent: false, adminSent: false };
+  const customerEmail = normalizeRecipientEmail(data.customerEmail);
 
   if (!process.env.RESEND_API_KEY) {
     console.warn("[Email] RESEND_API_KEY not configured. Skipping emails.");
     return result;
   }
 
-  // Email 1 — Customer
-  try {
-    const customerEmail = orderCreatedCustomerTemplate(data);
-    const { error } = await resend.emails.send({
-      from: `Meta Peptides <${RESEND_FROM_EMAIL}>`,
-      to: data.customerEmail,
-      subject: customerEmail.subject,
-      html: customerEmail.html,
-    });
+  if (!customerEmail) {
+    console.warn("[Email] Customer email missing. Skipping customer order email.");
+  }
 
-    if (error) {
-      console.error("[Email] Customer order-created email failed:", error);
-    } else {
-      result.customerSent = true;
-      console.log(
-        `[Email] Customer order-created email sent to ${data.customerEmail}`,
-      );
+  // Email 1 — Customer
+  if (customerEmail) {
+    try {
+      const template = orderCreatedCustomerTemplate(data);
+      const { error } = await resend.emails.send({
+        from: `Meta Peptides <${RESEND_FROM_EMAIL}>`,
+        to: customerEmail,
+        subject: template.subject,
+        html: template.html,
+      });
+
+      if (error) {
+        console.error("[Email] Customer order-created email failed:", error);
+      } else {
+        result.customerSent = true;
+        console.log(
+          `[Email] Customer order-created email sent to ${customerEmail}`,
+        );
+      }
+    } catch (err) {
+      console.error("[Email] Customer order-created email exception:", err);
     }
-  } catch (err) {
-    console.error("[Email] Customer order-created email exception:", err);
   }
 
   // Email 2 — Admin
@@ -80,8 +92,15 @@ export async function sendOrderCreatedEmails(
 export async function sendOrderVerifiedEmail(
   data: OrderEmailData,
 ): Promise<boolean> {
+  const customerEmail = normalizeRecipientEmail(data.customerEmail);
+
   if (!process.env.RESEND_API_KEY) {
     console.warn("[Email] RESEND_API_KEY not configured. Skipping email.");
+    return false;
+  }
+
+  if (!customerEmail) {
+    console.warn("[Email] Customer email missing. Skipping verification email.");
     return false;
   }
 
@@ -89,7 +108,7 @@ export async function sendOrderVerifiedEmail(
     const template = orderVerifiedCustomerTemplate(data);
     const { error } = await resend.emails.send({
       from: `Meta Peptides <${RESEND_FROM_EMAIL}>`,
-      to: data.customerEmail,
+      to: customerEmail,
       subject: template.subject,
       html: template.html,
     });
@@ -100,7 +119,7 @@ export async function sendOrderVerifiedEmail(
     }
 
     console.log(
-      `[Email] Order-verified email sent to ${data.customerEmail}`,
+      `[Email] Order-verified email sent to ${customerEmail}`,
     );
     return true;
   } catch (err) {
@@ -112,8 +131,15 @@ export async function sendOrderVerifiedEmail(
 export async function sendPasswordResetEmail(
   data: PasswordResetEmailData,
 ): Promise<boolean> {
+  const customerEmail = normalizeRecipientEmail(data.customerEmail);
+
   if (!process.env.RESEND_API_KEY) {
     console.warn("[Email] RESEND_API_KEY not configured. Skipping email.");
+    return false;
+  }
+
+  if (!customerEmail) {
+    console.warn("[Email] Customer email missing. Skipping password reset email.");
     return false;
   }
 
@@ -121,7 +147,7 @@ export async function sendPasswordResetEmail(
     const template = passwordResetTemplate(data);
     const { error } = await resend.emails.send({
       from: `Meta Peptides Security <${RESEND_FROM_EMAIL}>`,
-      to: data.customerEmail,
+      to: customerEmail,
       subject: template.subject,
       html: template.html,
     });
@@ -131,7 +157,7 @@ export async function sendPasswordResetEmail(
       return false;
     }
 
-    console.log(`[Email] Password reset email sent to ${data.customerEmail}`);
+    console.log(`[Email] Password reset email sent to ${customerEmail}`);
     return true;
   } catch (err) {
     console.error("[Email] Password reset email exception:", err);
@@ -143,29 +169,34 @@ export async function sendRegisteredUserEmails(
   data: RegisteredUserEmailData,
 ): Promise<{ customerSent: boolean; adminSent: boolean }> {
   const result = { customerSent: false, adminSent: false };
+  const customerEmail = normalizeRecipientEmail(data.customerEmail);
 
   if (!process.env.RESEND_API_KEY) {
     console.warn("[Email] RESEND_API_KEY not configured. Skipping emails.");
     return result;
   }
 
-  try {
-    const template = registeredUserWelcomeTemplate(data);
-    const { error } = await resend.emails.send({
-      from: `Meta Peptides <${RESEND_FROM_EMAIL}>`,
-      to: data.customerEmail,
-      subject: template.subject,
-      html: template.html,
-    });
+  if (customerEmail) {
+    try {
+      const template = registeredUserWelcomeTemplate(data);
+      const { error } = await resend.emails.send({
+        from: `Meta Peptides <${RESEND_FROM_EMAIL}>`,
+        to: customerEmail,
+        subject: template.subject,
+        html: template.html,
+      });
 
-    if (error) {
-      console.error("[Email] Registered user welcome email failed:", error);
-    } else {
-      result.customerSent = true;
-      console.log(`[Email] Welcome email sent to ${data.customerEmail}`);
+      if (error) {
+        console.error("[Email] Registered user welcome email failed:", error);
+      } else {
+        result.customerSent = true;
+        console.log(`[Email] Welcome email sent to ${customerEmail}`);
+      }
+    } catch (err) {
+      console.error("[Email] Registered user welcome email exception:", err);
     }
-  } catch (err) {
-    console.error("[Email] Registered user welcome email exception:", err);
+  } else {
+    console.warn("[Email] Customer email missing. Skipping welcome email.");
   }
 
   try {

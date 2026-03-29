@@ -1,3 +1,8 @@
+import {
+  META_PEPTIDES_LOGO_ALT,
+  META_PEPTIDES_LOGO_URL,
+} from "./brand";
+
 const BRAND_COLOR = "#10b981";
 const DARK_BG = "#414042";
 const LIGHT_BG = "#f9fafb";
@@ -88,9 +93,29 @@ function baseLayout(content: string): string {
 <body style="margin:0;padding:0;background-color:${LIGHT_BG};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
   <div style="max-width:600px;margin:0 auto;background:white;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);margin-top:20px;margin-bottom:20px;">
     <!-- Header -->
-    <div style="background-color:${DARK_BG};padding:28px 32px;text-align:center;">
-      <h1 style="color:${BRAND_COLOR};margin:0;font-size:24px;letter-spacing:6px;font-weight:900;text-transform:uppercase;">METAPEPTIDES</h1>
-      <p style="color:#9ca3af;margin:6px 0 0;font-size:10px;letter-spacing:3px;text-transform:uppercase;">Research-Grade Peptide Solutions</p>
+    <div style="padding:28px 32px 20px;text-align:center;border-bottom:1px solid #e2e8f0;">
+      <table
+        align="center"
+        width="100%"
+        border="0"
+        cellpadding="0"
+        cellspacing="0"
+        role="presentation"
+      >
+        <tbody style="width:100%">
+          <tr style="width:100%">
+            <td align="center" data-id="__react-email-column">
+              <img
+                alt="${META_PEPTIDES_LOGO_ALT}"
+                height="74"
+                src="${META_PEPTIDES_LOGO_URL}"
+                style="display:block;outline:none;border:none;text-decoration:none"
+                width="136"
+              />
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
     <!-- Body -->
     <div style="padding:32px;">

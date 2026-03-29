@@ -235,11 +235,18 @@ export default function AdminOrderDetailPage({
                                         <p className="font-medium text-foreground text-sm truncate">
                                             {item.products?.name || "Unknown Product"}
                                         </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {Number(item.price_at_purchase) === 0
-                                                ? `FREE × ${item.quantity}`
-                                                : `${formatCurrency(item.price_at_purchase)} × ${item.quantity}`}
-                                        </p>
+                                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                            <p className="text-xs text-muted-foreground">
+                                                {Number(item.price_at_purchase) === 0
+                                                    ? `FREE × ${item.quantity}`
+                                                    : `${formatCurrency(item.price_at_purchase)} × ${item.quantity}`}
+                                            </p>
+                                            {Number(item.price_at_purchase) === 0 && (
+                                                <span className="inline-flex items-center rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green-700">
+                                                    Complimentary Item
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                     <p
                                         className={`font-medium text-sm ${Number(item.price_at_purchase) === 0

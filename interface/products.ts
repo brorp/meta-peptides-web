@@ -17,6 +17,10 @@ export type ProductInterface = {
   cas: string;
   short_desc: string;
   dosing: string;
+  complimentary_product_id?: string | null;
+  complimentary_product_name?: string | null;
+  complimentary_product_slug?: string | null;
+  complimentary_quantity?: number | null;
 };
 
 export type GetProductsResponseInterface = {

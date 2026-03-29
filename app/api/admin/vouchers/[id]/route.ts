@@ -74,3 +74,20 @@ export async function PUT(
     return errorResponse(err.message, 500);
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await params;
+
+    const { error } = await supabaseAdmin.from("vouchers").delete().eq("id", id);
+
+    if (error) return errorResponse(error.message, 400);
+
+    return successResponse({ id }, "Voucher deleted");
+  } catch (err: any) {
+    return errorResponse(err.message, 500);
+  }
+}

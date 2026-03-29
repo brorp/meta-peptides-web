@@ -112,6 +112,7 @@ export default function AdminProductsPage() {
                                 <th className="text-left px-5 py-3 font-medium">Product</th>
                                 <th className="text-left px-5 py-3 font-medium">Category</th>
                                 <th className="text-left px-5 py-3 font-medium">Price</th>
+                                <th className="text-left px-5 py-3 font-medium">Free Item</th>
                                 <th className="text-left px-5 py-3 font-medium">Stock</th>
                                 <th className="text-left px-5 py-3 font-medium">Status</th>
                                 <th className="text-right px-5 py-3 font-medium">Actions</th>
@@ -120,14 +121,14 @@ export default function AdminProductsPage() {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={6} className="px-5 py-12 text-center">
+                                    <td colSpan={7} className="px-5 py-12 text-center">
                                         <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
                                     </td>
                                 </tr>
                             ) : products.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={6}
+                                        colSpan={7}
                                         className="px-5 py-12 text-center text-muted-foreground"
                                     >
                                         <PackageX className="w-8 h-8 mx-auto mb-2 opacity-30" />
@@ -168,6 +169,20 @@ export default function AdminProductsPage() {
                                         </td>
                                         <td className="px-5 py-3 text-foreground font-medium">
                                             {formatCurrency(product.price)}
+                                        </td>
+                                        <td className="px-5 py-3 text-muted-foreground">
+                                            {product.complimentary_product_name ? (
+                                                <div>
+                                                    <p className="font-medium text-foreground">
+                                                        {product.complimentary_product_name}
+                                                    </p>
+                                                    <p className="text-xs">
+                                                        Qty {product.complimentary_quantity || 1}
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                "-"
+                                            )}
                                         </td>
                                         <td className="px-5 py-3">
                                             <span

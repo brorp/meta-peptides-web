@@ -1,11 +1,13 @@
 import React from "react";
 import {
     Document,
+    Image,
     Page,
     Text,
     View,
     StyleSheet,
 } from "@react-pdf/renderer";
+import { META_PEPTIDES_LOGO_URL } from "@/lib/brand";
 
 const styles = StyleSheet.create({
     page: {
@@ -20,6 +22,13 @@ const styles = StyleSheet.create({
         borderBottomWidth: 2,
         borderBottomColor: "#414042",
         paddingBottom: 15,
+        alignItems: "center" as const,
+    },
+    logo: {
+        width: 136,
+        height: 74,
+        objectFit: "contain" as const,
+        marginBottom: 10,
     },
     title: {
         fontSize: 16,
@@ -159,15 +168,26 @@ function formatDate(dateStr: string) {
     });
 }
 
+function getOrderItems(order: any) {
+    return (order.order_items || []).map((item: any) => ({
+        ...item,
+        isComplimentary: Number(item.price_at_purchase) === 0,
+    }));
+}
+
 export function PackingSlipDocument({ order }: { order: any }) {
+    const orderItems = getOrderItems(order);
+    const complimentaryItems = orderItems.filter((item: any) => item.isComplimentary);
+
     return (
         <Document>
             <Page size="A4" style={styles.page}>
                 {/* Header */}
                 <View style={styles.header}>
+                    <Image src={META_PEPTIDES_LOGO_URL} style={styles.logo} />
                     <Text style={styles.title}>Packing Slip</Text>
                     <Text style={styles.subtitle}>
-                        Resi Pengiriman — MetaPeptides
+                        Resi Pengiriman — MetaWellness
                     </Text>
                 </View>
 
@@ -215,7 +235,7 @@ export function PackingSlipDocument({ order }: { order: any }) {
                     <View style={styles.metaItem}>
                         <Text style={styles.metaLabel}>Items</Text>
                         <Text style={styles.metaValue}>
-                            {order.order_items?.length || 0}
+                            {orderItems.length || 0}
                         </Text>
                     </View>
                 </View>
@@ -254,21 +274,32 @@ export function PackingSlipDocument({ order }: { order: any }) {
                             Qty
                         </Text>
                     </View>
-                    {(order.order_items || []).map((item: any, i: number) => (
+                    {orderItems.map((item: any, i: number) => (
                         <View key={i} style={styles.itemRow}>
                             <Text style={styles.itemName}>
                                 {item.products?.name || "Product"}
+                                {item.isComplimentary ? " (Complimentary)" : ""}
                             </Text>
                             <Text style={styles.itemQty}>{item.quantity}</Text>
                         </View>
                     ))}
                 </View>
 
+                {complimentaryItems.length > 0 && (
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Packing Note</Text>
+                        <Text style={styles.addressSmall}>
+                            Complimentary items are part of this shipment and should be
+                            packed together with the paid products.
+                        </Text>
+                    </View>
+                )}
+
                 {/* Tracking Number */}
                 <View style={styles.trackingBox}>
                     <Text style={styles.trackingLabel}>Tracking Number / No. Resi</Text>
                     <Text style={styles.trackingNumber}>
-                        {order.tracking_number || "— TBD —"}
+                        
                     </Text>
                 </View>
 

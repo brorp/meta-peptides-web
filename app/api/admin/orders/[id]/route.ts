@@ -75,7 +75,7 @@ export async function PUT(
       const transactionCode =
         data.payments?.[0]?.transaction_code || "N/A";
 
-      sendOrderVerifiedEmail({
+      const emailSent = await sendOrderVerifiedEmail({
         customerName: data.shipping_name || "Customer",
         customerEmail: data.shipping_email,
         orderId: data.id,
@@ -88,9 +88,13 @@ export async function PUT(
         totalPrice: data.total_price,
         status: "processing",
         createdAt: data.created_at,
-      }).catch((err) => {
-        console.error("[Admin] Order-verified email failed:", err);
       });
+
+      if (!emailSent) {
+        console.warn(
+          `[Admin] Order-verified email was not sent for order ${data.id}.`,
+        );
+      }
     }
 
     return successResponse(data, "Order updated");

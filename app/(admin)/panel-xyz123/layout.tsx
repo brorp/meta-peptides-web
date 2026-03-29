@@ -9,6 +9,7 @@ import {
     Package,
     ShoppingCart,
     Ticket,
+    BadgePercent,
     FileText,
     LogOut,
     Menu,
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
     { label: "Users", href: "/panel-xyz123/users", icon: Users },
     { label: "Products", href: "/panel-xyz123/products", icon: Package },
     { label: "Orders", href: "/panel-xyz123/orders", icon: ShoppingCart },
+    { label: "Vouchers", href: "/panel-xyz123/vouchers", icon: BadgePercent },
     { label: "Preorders", href: "/panel-xyz123/preorders", icon: Ticket },
     { label: "COAs", href: "/panel-xyz123/coas", icon: FileText },
 ];
@@ -124,6 +126,7 @@ function AdminHeader({
         if (pathname.includes("/users")) return "Users";
         if (pathname.includes("/products")) return "Products";
         if (pathname.includes("/orders")) return "Orders";
+        if (pathname.includes("/vouchers")) return "Vouchers";
         if (pathname.includes("/preorders")) return "Preorders";
         if (pathname.includes("/coas")) return "COAs";
         return "Dashboard";

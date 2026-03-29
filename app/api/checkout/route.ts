@@ -7,13 +7,24 @@ import { User } from "@supabase/supabase-js";
 import { sendOrderCreatedEmails } from "@/lib/email-service";
 import { discount as memberDiscountRate } from "@/contants/discount";
 
-const FREE_BAC_WATER_NAME = "Bacteriostatic Water";
-const FREE_BAC_WATER_SLUGS = ["bacteriostatic-water", "bac-water"];
-
 type CheckoutItemPayload = {
   product_id: string;
   quantity: number;
   price_at_purchase: number;
+};
+
+type PurchasedProductRecord = {
+  id: string;
+  name: string;
+  is_active: boolean | null;
+  complimentary_product_id?: string | null;
+  complimentary_quantity?: number | null;
+};
+
+type ComplimentaryItemSummary = {
+  product_id: string;
+  name: string;
+  quantity: number;
 };
 
 const normalizeCheckoutItems = (items: any): CheckoutItemPayload[] => {
@@ -35,44 +46,6 @@ const normalizeCheckoutItems = (items: any): CheckoutItemPayload[] => {
     );
 };
 
-const findFreeBacWaterProduct = async (supabaseServer: any) => {
-  const { data: slugMatches, error: slugError } = await supabaseServer
-    .from("products")
-    .select("id, name, slug")
-    .in("slug", FREE_BAC_WATER_SLUGS);
-
-  if (slugError) {
-    throw new Error(`Failed to resolve complimentary item: ${slugError.message}`);
-  }
-
-  if (slugMatches?.length) {
-    const sortedBySlugPriority = [...slugMatches].sort((a, b) => {
-      const aIdx = FREE_BAC_WATER_SLUGS.indexOf(a.slug || "");
-      const bIdx = FREE_BAC_WATER_SLUGS.indexOf(b.slug || "");
-
-      const normalizedA = aIdx === -1 ? 99 : aIdx;
-      const normalizedB = bIdx === -1 ? 99 : bIdx;
-      return normalizedA - normalizedB;
-    });
-
-    return sortedBySlugPriority[0];
-  }
-
-  const { data: fuzzyMatches, error: fuzzyError } = await supabaseServer
-    .from("products")
-    .select("id, name, slug")
-    .or(
-      "name.ilike.%bacteriostatic%water%,name.ilike.%bac%water%,label.ilike.%bacteriostatic%water%",
-    )
-    .limit(1);
-
-  if (fuzzyError) {
-    throw new Error(`Failed to resolve complimentary item: ${fuzzyError.message}`);
-  }
-
-  return fuzzyMatches?.[0] || null;
-};
-
 const cleanupFailedOrder = async (supabaseServer: any, orderId: string | null) => {
   if (!orderId) return;
 
@@ -81,27 +54,81 @@ const cleanupFailedOrder = async (supabaseServer: any, orderId: string | null) =
   await supabaseServer.from("orders").delete().eq("id", orderId);
 };
 
-const resolveComplimentaryItem = async (
+const buildComplimentaryItems = async (
   supabaseServer: any,
+  normalizedItems: CheckoutItemPayload[],
+  productLookup: Map<string, PurchasedProductRecord>,
 ): Promise<{
-  item: CheckoutItemPayload | null;
+  items: CheckoutItemPayload[];
+  summaries: ComplimentaryItemSummary[];
 }> => {
-  const complimentaryProduct = await findFreeBacWaterProduct(supabaseServer);
+  const complimentaryQuantityByProduct = new Map<string, number>();
 
-  if (!complimentaryProduct) {
-    console.warn(
-      `[Checkout] Complimentary item "${FREE_BAC_WATER_NAME}" was not found. Continuing without bonus item.`,
+  for (const item of normalizedItems) {
+    const product = productLookup.get(item.product_id);
+    if (!product?.complimentary_product_id) continue;
+
+    const complimentaryQuantity =
+      Math.max(1, Number(product.complimentary_quantity || 1)) * item.quantity;
+
+    complimentaryQuantityByProduct.set(
+      product.complimentary_product_id,
+      (complimentaryQuantityByProduct.get(product.complimentary_product_id) || 0) +
+        complimentaryQuantity,
     );
-    return { item: null };
   }
 
-  return {
-    item: {
-      product_id: complimentaryProduct.id,
-      quantity: 1,
+  if (!complimentaryQuantityByProduct.size) {
+    return { items: [], summaries: [] };
+  }
+
+  const complimentaryProductIds = Array.from(complimentaryQuantityByProduct.keys());
+  const { data: complimentaryProducts, error: complimentaryError } =
+    await supabaseServer
+      .from("products")
+      .select("id, name")
+      .in("id", complimentaryProductIds);
+
+  if (complimentaryError) {
+    throw new Error(
+      `Failed to resolve complimentary items: ${complimentaryError.message}`,
+    );
+  }
+
+  const complimentaryProductMap = new Map<string, { name: string }>(
+    (complimentaryProducts || []).map((product: any) => [
+      product.id,
+      { name: product.name || "Complimentary Item" },
+    ]),
+  );
+
+  const items: CheckoutItemPayload[] = [];
+  const summaries: ComplimentaryItemSummary[] = [];
+
+  for (const [complimentaryProductId, quantity] of complimentaryQuantityByProduct) {
+    const complimentaryProduct = complimentaryProductMap.get(complimentaryProductId);
+
+    if (!complimentaryProduct) {
+      console.warn(
+        `[Checkout] Complimentary item ${complimentaryProductId} was not found. Skipping bonus item.`,
+      );
+      continue;
+    }
+
+    items.push({
+      product_id: complimentaryProductId,
+      quantity,
       price_at_purchase: 0,
-    },
-  };
+    });
+
+    summaries.push({
+      product_id: complimentaryProductId,
+      name: complimentaryProduct.name || "Complimentary Item",
+      quantity,
+    });
+  }
+
+  return { items, summaries };
 };
 
 export const POST = withAuth(async (request: Request, user: User | null) => {
@@ -127,6 +154,14 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
       return errorResponse("Order must include at least one valid item", 400);
     }
 
+    const shippingEmail = String(orderData?.shipping_email || "")
+      .trim()
+      .toLowerCase();
+
+    if (!shippingEmail) {
+      return errorResponse("Shipping email is required", 400);
+    }
+
     const requiredStockByProduct = new Map<string, number>();
     for (const item of normalizedItems) {
       requiredStockByProduct.set(
@@ -138,7 +173,7 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
     const productIds = Array.from(requiredStockByProduct.keys());
     const { data: availableProducts, error: productsError } = await supabaseServer
       .from("products")
-      .select("id, name, is_active")
+      .select("id, name, is_active, complimentary_product_id, complimentary_quantity")
       .in("id", productIds);
 
     if (productsError) {
@@ -153,7 +188,10 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
     }
 
     const productLookup = new Map(
-      availableProducts.map((product: any) => [product.id, product]),
+      (availableProducts as PurchasedProductRecord[]).map((product) => [
+        product.id,
+        product,
+      ]),
     );
 
     for (const productId of requiredStockByProduct.keys()) {
@@ -170,12 +208,19 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
       }
     }
 
-    const { item: complimentaryItem } =
-      await resolveComplimentaryItem(supabaseServer);
+    const {
+      items: complimentaryItems,
+      summaries: complimentaryItemSummaries,
+    } = await buildComplimentaryItems(
+      supabaseServer,
+      normalizedItems,
+      productLookup,
+    );
 
-    const allOrderItems: CheckoutItemPayload[] = complimentaryItem
-      ? [...normalizedItems, complimentaryItem]
-      : normalizedItems;
+    const allOrderItems: CheckoutItemPayload[] = [
+      ...normalizedItems,
+      ...complimentaryItems,
+    ];
 
     // --- STEP 1: UPLOAD PAYMENT PROOF ---
     const fileExt = file.name.split(".").pop();
@@ -272,7 +317,7 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
         shipping_name: orderData.shipping_name,
         shipping_phone: orderData.shipping_phone,
         shipping_zip: orderData.shipping_zip,
-        shipping_email: orderData.shipping_email,
+        shipping_email: shippingEmail,
         note: orderData.note || null,
         voucher_code: voucherCode || null,
         voucher_id: voucherId,
@@ -366,9 +411,9 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
     }));
 
     // --- STEP 6: SEND EMAILS (non-blocking) ---
-    sendOrderCreatedEmails({
+    const emailSendResult = await sendOrderCreatedEmails({
       customerName: orderData.shipping_name || "Customer",
-      customerEmail: orderData.shipping_email,
+      customerEmail: shippingEmail,
       orderId: order.id,
       transactionCode: fileName,
       items: emailItems,
@@ -384,17 +429,27 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
       shippingZip: orderData.shipping_zip,
       shippingPhone: orderData.shipping_phone,
       createdAt: order.created_at,
-    }).catch((err) => {
-      console.error("[Checkout] Email sending failed:", err);
     });
+
+    if (!emailSendResult.customerSent) {
+      console.warn(
+        `[Checkout] Customer order email was not sent for order ${order.id}.`,
+      );
+    }
+
+    if (!emailSendResult.adminSent) {
+      console.warn(
+        `[Checkout] Admin order email was not sent for order ${order.id}.`,
+      );
+    }
 
     return successResponse(
       {
         orderId: order.id,
         transaction_code: fileName,
         status: order.status,
-        complimentary_item: complimentaryItem ? FREE_BAC_WATER_NAME : null,
-        complimentary_item_included: !!complimentaryItem,
+        complimentary_items: complimentaryItemSummaries,
+        complimentary_item_included: complimentaryItemSummaries.length > 0,
         voucher_code: voucherCode,
         voucher_discount: voucherDiscountAmount,
         member_discount: memberDiscountAmount,

@@ -1,11 +1,13 @@
 import React from "react";
 import {
     Document,
+    Image,
     Page,
     Text,
     View,
     StyleSheet,
 } from "@react-pdf/renderer";
+import { META_PEPTIDES_LOGO_URL } from "@/lib/brand";
 
 const styles = StyleSheet.create({
     page: {
@@ -21,6 +23,17 @@ const styles = StyleSheet.create({
         borderBottomWidth: 2,
         borderBottomColor: "#414042",
         paddingBottom: 15,
+        alignItems: "flex-start" as const,
+        gap: 16,
+    },
+    brandBlock: {
+        flex: 1,
+    },
+    logo: {
+        width: 136,
+        height: 74,
+        objectFit: "contain" as const,
+        marginBottom: 6,
     },
     companyName: {
         fontSize: 18,
@@ -161,14 +174,24 @@ function formatDate(dateStr: string) {
     });
 }
 
+function getOrderItems(order: any) {
+    return (order.order_items || []).map((item: any) => ({
+        ...item,
+        isComplimentary: Number(item.price_at_purchase) === 0,
+    }));
+}
+
 export function InvoiceDocument({ order }: { order: any }) {
+    const orderItems = getOrderItems(order);
+    const complimentaryItems = orderItems.filter((item: any) => item.isComplimentary);
+
     return (
         <Document>
             <Page size="A4" style={styles.page}>
                 {/* Header */}
                 <View style={styles.header}>
-                    <View>
-                        <Text style={styles.companyName}>MetaPeptides</Text>
+                    <View style={styles.brandBlock}>
+                        <Image src={META_PEPTIDES_LOGO_URL} style={styles.logo} />
                         <Text style={styles.companyInfo}>
                             Premium Research Peptides{"\n"}
                             meta-peptides.com{"\n"}
@@ -218,27 +241,43 @@ export function InvoiceDocument({ order }: { order: any }) {
                         </Text>
                         <Text style={[styles.headerText, styles.colTotal]}>Total</Text>
                     </View>
-                    {(order.order_items || []).map((item: any, i: number) => (
+                    {orderItems.map((item: any, i: number) => (
                         <View key={i} style={styles.tableRow}>
                             <Text style={[styles.cellText, styles.colProduct]}>
                                 {item.products?.name || "Product"}
+                                {item.isComplimentary ? " (Complimentary)" : ""}
                             </Text>
                             <Text style={[styles.cellText, styles.colQty]}>
                                 {item.quantity}
                             </Text>
                             <Text style={[styles.cellText, styles.colPrice]}>
-                                {Number(item.price_at_purchase) === 0
+                                {item.isComplimentary
                                     ? "FREE"
                                     : formatCurrency(item.price_at_purchase)}
                             </Text>
                             <Text style={[styles.cellText, styles.colTotal]}>
-                                {Number(item.price_at_purchase) === 0
+                                {item.isComplimentary
                                     ? "FREE"
                                     : formatCurrency(item.price_at_purchase * item.quantity)}
                             </Text>
                         </View>
                     ))}
                 </View>
+
+                {complimentaryItems.length > 0 && (
+                    <View style={{ marginTop: 10 }}>
+                        <Text
+                            style={{
+                                fontSize: 8,
+                                color: "#2f855a",
+                                lineHeight: 1.5,
+                            }}
+                        >
+                            Complimentary items are included at no charge and are listed
+                            above for packing and reference purposes.
+                        </Text>
+                    </View>
+                )}
 
                 {/* Totals */}
                 <View style={styles.totalsSection}>
