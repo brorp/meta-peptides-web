@@ -3,6 +3,7 @@ import {
     Document,
     Image,
     Page,
+    renderToBuffer,
     Text,
     View,
     StyleSheet,
@@ -301,5 +302,11 @@ export function InvoiceDocument({ order }: { order: any }) {
                 </Text>
             </Page>
         </Document>
+    );
+}
+
+export async function renderInvoicePdfBuffer(order: any): Promise<Buffer> {
+    return renderToBuffer(
+        React.createElement(InvoiceDocument, { order }) as any,
     );
 }

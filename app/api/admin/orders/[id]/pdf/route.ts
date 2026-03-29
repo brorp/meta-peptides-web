@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import React from "react";
-import { InvoiceDocument } from "@/lib/pdf/generate-invoice";
+import { renderInvoicePdfBuffer } from "@/lib/pdf/generate-invoice";
 import { PackingSlipDocument } from "@/lib/pdf/generate-packing-slip";
 
 export async function GET(
@@ -39,9 +39,7 @@ export async function GET(
         let pdfBuffer: Buffer;
 
         if (type === "invoice") {
-            pdfBuffer = await renderToBuffer(
-                React.createElement(InvoiceDocument, { order }) as any,
-            );
+            pdfBuffer = await renderInvoicePdfBuffer(order);
         } else {
             pdfBuffer = await renderToBuffer(
                 React.createElement(PackingSlipDocument, { order }) as any,

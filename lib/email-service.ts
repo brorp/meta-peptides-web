@@ -18,6 +18,12 @@ const normalizeRecipientEmail = (email?: string | null) =>
     .trim()
     .toLowerCase();
 
+type EmailAttachment = {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+};
+
 /**
  * Sends both customer confirmation and admin notification emails
  * when a new order is created. Non-blocking — errors are logged
@@ -91,6 +97,9 @@ export async function sendOrderCreatedEmails(
  */
 export async function sendOrderVerifiedEmail(
   data: OrderEmailData,
+  options?: {
+    invoiceAttachment?: EmailAttachment | null;
+  },
 ): Promise<boolean> {
   const customerEmail = normalizeRecipientEmail(data.customerEmail);
 
@@ -106,11 +115,23 @@ export async function sendOrderVerifiedEmail(
 
   try {
     const template = orderVerifiedCustomerTemplate(data);
+    const attachments = options?.invoiceAttachment
+      ? [
+          {
+            filename: options.invoiceAttachment.filename,
+            content: options.invoiceAttachment.content,
+            content_type:
+              options.invoiceAttachment.contentType || "application/pdf",
+          },
+        ]
+      : undefined;
+
     const { error } = await resend.emails.send({
       from: `Meta Peptides <${RESEND_FROM_EMAIL}>`,
       to: customerEmail,
       subject: template.subject,
       html: template.html,
+      attachments,
     });
 
     if (error) {

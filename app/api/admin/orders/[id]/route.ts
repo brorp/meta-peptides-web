@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { sendOrderVerifiedEmail } from "@/lib/email-service";
+import { renderInvoicePdfBuffer } from "@/lib/pdf/generate-invoice";
 
 export async function GET(
   req: NextRequest,
@@ -81,10 +82,10 @@ export async function PUT(
       return errorResponse("Order updated, but failed to load the latest data", 500);
     }
 
-    // Trigger email when status changes TO "processing" from a different status
+    // Trigger email with invoice when status changes from pending_review to processing.
     if (
       body.status === "processing" &&
-      previousStatus !== "processing" &&
+      previousStatus === "pending_review" &&
       data.shipping_email
     ) {
       const emailItems = (data.order_items || []).map((item: any) => ({
@@ -95,6 +96,25 @@ export async function PUT(
 
       const transactionCode =
         data.payments?.[0]?.transaction_code || "N/A";
+
+      let invoiceAttachment: {
+        filename: string;
+        content: Buffer;
+        contentType?: string;
+      } | null = null;
+
+      try {
+        invoiceAttachment = {
+          filename: `invoice-${data.id.slice(0, 8).toUpperCase()}.pdf`,
+          content: await renderInvoicePdfBuffer(data),
+          contentType: "application/pdf",
+        };
+      } catch (invoiceError) {
+        console.error(
+          `[Admin] Failed to generate invoice PDF for order ${data.id}:`,
+          invoiceError,
+        );
+      }
 
       const emailSent = await sendOrderVerifiedEmail({
         customerName: data.shipping_name || "Customer",
@@ -109,6 +129,8 @@ export async function PUT(
         totalPrice: data.total_price,
         status: "processing",
         createdAt: data.created_at,
+      }, {
+        invoiceAttachment,
       });
 
       if (!emailSent) {

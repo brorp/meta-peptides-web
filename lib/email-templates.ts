@@ -6,6 +6,7 @@ import {
 const BRAND_COLOR = "#10b981";
 const DARK_BG = "#414042";
 const LIGHT_BG = "#f9fafb";
+const HELP_WHATSAPP_URL = "https://wa.me/15812895785";
 
 type OrderItem = {
   name: string;
@@ -120,6 +121,20 @@ function baseLayout(content: string): string {
     <!-- Body -->
     <div style="padding:32px;">
       ${content}
+    </div>
+    <!-- Help CTA -->
+    <div style="padding:0 32px 24px;text-align:center;">
+      <div style="background:#ecfdf5;border:1px solid #a7f3d0;border-radius:16px;padding:18px 20px;">
+        <p style="margin:0 0 12px;font-size:12px;color:#065f46;line-height:1.6;">
+          Need a hand with your order, account, or payment confirmation?
+        </p>
+        <a
+          href="${HELP_WHATSAPP_URL}"
+          style="display:inline-block;background:${BRAND_COLOR};color:white;text-decoration:none;font-size:12px;font-weight:800;letter-spacing:2px;text-transform:uppercase;padding:14px 24px;border-radius:999px;"
+        >
+          Ask For Help
+        </a>
+      </div>
     </div>
     <!-- Footer -->
     <div style="background:#f1f5f9;padding:20px 32px;text-align:center;border-top:1px solid #e2e8f0;">
