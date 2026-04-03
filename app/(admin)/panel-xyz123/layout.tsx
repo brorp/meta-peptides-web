@@ -15,6 +15,7 @@ import {
     Menu,
     X,
     ChevronRight,
+    QrCode,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
     { label: "Vouchers", href: "/panel-xyz123/vouchers", icon: BadgePercent },
     { label: "Preorders", href: "/panel-xyz123/preorders", icon: Ticket },
     { label: "COAs", href: "/panel-xyz123/coas", icon: FileText },
+    { label: "QR Code", href: "/panel-xyz123/qr-code", icon: QrCode },
 ];
 
 function AdminSidebar({
@@ -129,6 +131,7 @@ function AdminHeader({
         if (pathname.includes("/vouchers")) return "Vouchers";
         if (pathname.includes("/preorders")) return "Preorders";
         if (pathname.includes("/coas")) return "COAs";
+        if (pathname.includes("/qr-code")) return "QR Code";
         return "Dashboard";
     };
 
