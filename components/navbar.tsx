@@ -23,8 +23,8 @@ export const NAV_LINKS = [
   { name: "Home", href: "/" },
   { name: "Shop", href: "/shop" },
   { name: "About Us", href: "/about" },
-  { name: "Our Peptides' Lab Test", href: "/peptide-labtest" },
-  { name: "Peptides Guides", href: "/peptide-guides" },
+  { name: "Lab Test", href: "/labtest" },
+  { name: "Guidelines", href: "/peptide-guides" },
   { name: "FAQ", href: "/faq" },
 ];
 

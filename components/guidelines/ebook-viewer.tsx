@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import type { Lang } from "./translations";
 import {
   SlideCover,
   SlidePackage,
@@ -15,21 +16,6 @@ import {
   SlideStorage,
   SlideClosing,
 } from "./slides";
-
-const SLIDES = [
-  SlideCover,
-  SlidePackage,
-  SlideOverview,
-  SlideSanitization,
-  SlideConcentration,
-  SlideReconstitution,
-  SlideDosing,
-  SlideApplication,
-  SlideStorage,
-  SlideClosing,
-];
-
-const TOTAL = SLIDES.length;
 
 const slideVariants = {
   enter: (dir: number) => ({
@@ -49,6 +35,9 @@ const slideVariants = {
 export default function GuidelinesEbookViewer() {
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(0);
+  const [lang, setLang] = useState<Lang>("ID");
+
+  const TOTAL = 10;
 
   const goTo = useCallback(
     (index: number) => {
@@ -72,8 +61,34 @@ export default function GuidelinesEbookViewer() {
     return () => window.removeEventListener("keydown", handler);
   }, [next, prev]);
 
-  const SlideComponent = SLIDES[current];
   const progress = ((current + 1) / TOTAL) * 100;
+
+  const renderSlide = () => {
+    switch (current) {
+      case 0:
+        return <SlideCover lang={lang} onLangChange={setLang} />;
+      case 1:
+        return <SlidePackage lang={lang} />;
+      case 2:
+        return <SlideOverview lang={lang} />;
+      case 3:
+        return <SlideSanitization lang={lang} />;
+      case 4:
+        return <SlideConcentration lang={lang} />;
+      case 5:
+        return <SlideReconstitution lang={lang} />;
+      case 6:
+        return <SlideDosing lang={lang} />;
+      case 7:
+        return <SlideApplication lang={lang} />;
+      case 8:
+        return <SlideStorage lang={lang} />;
+      case 9:
+        return <SlideClosing lang={lang} />;
+      default:
+        return null;
+    }
+  };
 
   return (
     <div className="fixed inset-0 flex flex-col bg-white overflow-hidden">
@@ -106,7 +121,7 @@ export default function GuidelinesEbookViewer() {
             }}
             className="absolute inset-0 cursor-grab active:cursor-grabbing"
           >
-            <SlideComponent />
+            {renderSlide()}
           </motion.div>
         </AnimatePresence>
       </div>

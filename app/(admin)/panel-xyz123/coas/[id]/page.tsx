@@ -6,16 +6,19 @@ import { ArrowLeft, Loader2, Save, Upload, X, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
 
+const MAX_IMAGES = 2;
+
 export default function EditCoaPage() {
     const router = useRouter();
     const params = useParams();
     const id = params.id as string;
 
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const fileInputRef1 = useRef<HTMLInputElement>(null);
+    const fileInputRef2 = useRef<HTMLInputElement>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [uploading, setUploading] = useState(false);
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [uploading, setUploading] = useState<boolean[]>([false, false]);
+    const [imagePreviews, setImagePreviews] = useState<(string | null)[]>([null, null]);
     const [products, setProducts] = useState<any[]>([]);
 
     const [form, setForm] = useState<Record<string, any>>({
@@ -29,26 +32,24 @@ export default function EditCoaPage() {
     useEffect(() => {
         const fetchInitialData = async () => {
             try {
-                // Fetch products
                 const prodRes = await axios.get("/admin/products?limit=100");
                 if (prodRes.data.success) {
                     setProducts(prodRes.data.data);
                 }
 
-                // Fetch COA details
                 const coaRes = await axios.get(`/admin/lab-tests/${id}`);
                 if (coaRes.data.success) {
                     const coa = coaRes.data.data;
+                    const imgs: string[] = coa.report_images || [];
                     setForm({
                         product_id: coa.product_id || "",
                         purity_level: coa.purity_level || "",
                         test_date: coa.test_date ? new Date(coa.test_date).toISOString().split("T")[0] : "",
                         report_url: coa.report_url || "",
-                        report_images: coa.report_images || [],
+                        report_images: imgs,
                     });
-                    if (coa.report_images && coa.report_images.length > 0) {
-                        setImagePreview(coa.report_images[0]);
-                    }
+                    // Populate preview slots
+                    setImagePreviews([imgs[0] ?? null, imgs[1] ?? null]);
                 }
             } catch {
                 toast.error("Failed to load data");
@@ -64,43 +65,55 @@ export default function EditCoaPage() {
         setForm((prev) => ({ ...prev, [key]: value }));
     };
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageUpload = async (
+        e: React.ChangeEvent<HTMLInputElement>,
+        slot: 0 | 1
+    ) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         const previewUrl = URL.createObjectURL(file);
-        setImagePreview(previewUrl);
-        setUploading(true);
+        setImagePreviews((prev) => { const n = [...prev]; n[slot] = previewUrl; return n; });
+        setUploading((prev) => { const n = [...prev]; n[slot] = true; return n; });
 
         try {
             const formData = new FormData();
             formData.append("file", file);
-
             const { data } = await axios.post("/admin/upload", formData, {
                 headers: { "Content-Type": "multipart/form-data" },
             });
 
             if (data.success) {
-                updateField("report_images", [data.data.url]);
-                setImagePreview(data.data.url);
-                toast.success("Image uploaded");
+                setImagePreviews((prev) => { const n = [...prev]; n[slot] = data.data.url; return n; });
+                setForm((prev) => {
+                    const imgs = [...(prev.report_images || [])];
+                    imgs[slot] = data.data.url;
+                    return { ...prev, report_images: imgs.filter(Boolean) };
+                });
+                toast.success(`Image ${slot + 1} uploaded`);
             } else {
                 toast.error(data.message);
-                setImagePreview(null);
+                setImagePreviews((prev) => { const n = [...prev]; n[slot] = null; return n; });
             }
         } catch (err: any) {
             toast.error(err?.response?.data?.message || "Failed to upload image");
-            setImagePreview(null);
+            setImagePreviews((prev) => { const n = [...prev]; n[slot] = null; return n; });
         } finally {
-            setUploading(false);
-            if (fileInputRef.current) fileInputRef.current.value = "";
+            setUploading((prev) => { const n = [...prev]; n[slot] = false; return n; });
+            const ref = slot === 0 ? fileInputRef1 : fileInputRef2;
+            if (ref.current) ref.current.value = "";
         }
     };
 
-    const removeImage = () => {
-        setImagePreview(null);
-        updateField("report_images", []);
-        if (fileInputRef.current) fileInputRef.current.value = "";
+    const removeImage = (slot: 0 | 1) => {
+        setImagePreviews((prev) => { const n = [...prev]; n[slot] = null; return n; });
+        setForm((prev) => {
+            const imgs = [...(prev.report_images || [])];
+            imgs[slot] = undefined;
+            return { ...prev, report_images: imgs.filter(Boolean) };
+        });
+        const ref = slot === 0 ? fileInputRef1 : fileInputRef2;
+        if (ref.current) ref.current.value = "";
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -150,67 +163,88 @@ export default function EditCoaPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Image Upload Section */}
                 <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-                    <h2 className="text-sm font-semibold text-foreground">
-                        Upload COA Image
-                    </h2>
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-sm font-semibold text-foreground">
+                            COA Images
+                        </h2>
+                        <span className="text-xs text-muted-foreground">
+                            Up to {MAX_IMAGES} images
+                        </span>
+                    </div>
 
-                    <div className="flex items-start gap-6">
-                        {/* Image Preview */}
-                        <div className="relative w-40 h-[225px] rounded-xl border-2 border-dashed border-border bg-muted/30 flex items-center justify-center overflow-hidden shrink-0">
-                            {uploading && (
-                                <div className="absolute inset-0 bg-background/70 flex items-center justify-center z-10 rounded-xl">
-                                    <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                    <div className="grid grid-cols-2 gap-4">
+                        {([0, 1] as const).map((slot) => (
+                            <div key={slot} className="space-y-2">
+                                <p className="text-xs text-muted-foreground font-medium">
+                                    Image {slot + 1}{slot === 0 ? " (required)" : " (optional)"}
+                                </p>
+
+                                {/* Preview box */}
+                                <div className="relative w-full aspect-[3/4] rounded-xl border-2 border-dashed border-border bg-muted/30 flex items-center justify-center overflow-hidden">
+                                    {uploading[slot] && (
+                                        <div className="absolute inset-0 bg-background/70 flex items-center justify-center z-10 rounded-xl">
+                                            <Loader2 className="w-6 h-6 animate-spin text-accent" />
+                                        </div>
+                                    )}
+                                    {imagePreviews[slot] ? (
+                                        <>
+                                            <img
+                                                src={imagePreviews[slot]!}
+                                                alt={`COA Preview ${slot + 1}`}
+                                                className="w-full h-full object-cover rounded-xl"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => removeImage(slot)}
+                                                className="absolute top-1.5 right-1.5 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90 transition-colors"
+                                            >
+                                                <X className="w-3 h-3" />
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => (slot === 0 ? fileInputRef1 : fileInputRef2).current?.click()}
+                                            disabled={uploading[slot]}
+                                            className="flex flex-col items-center gap-2 p-4 text-center disabled:opacity-50"
+                                        >
+                                            <FileText className="w-8 h-8 text-muted-foreground/40" />
+                                            <span className="text-xs text-muted-foreground font-medium">Click to upload</span>
+                                        </button>
+                                    )}
                                 </div>
-                            )}
-                            {imagePreview ? (
-                                <>
-                                    <img
-                                        src={imagePreview}
-                                        alt="COA Preview"
-                                        className="w-full h-full object-cover rounded-xl"
-                                    />
+
+                                {/* Replace button */}
+                                {imagePreviews[slot] && (
                                     <button
                                         type="button"
-                                        onClick={removeImage}
-                                        className="absolute top-1.5 right-1.5 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90 transition-colors"
+                                        onClick={() => (slot === 0 ? fileInputRef1 : fileInputRef2).current?.click()}
+                                        disabled={uploading[slot]}
+                                        className="w-full inline-flex items-center justify-center gap-1.5 border border-border rounded-xl py-1.5 text-xs font-medium text-muted-foreground hover:border-accent hover:text-accent transition-all disabled:opacity-50"
                                     >
-                                        <X className="w-3 h-3" />
+                                        <Upload className="w-3.5 h-3.5" />
+                                        Replace
                                     </button>
-                                </>
-                            ) : (
-                                <FileText className="w-10 h-10 text-muted-foreground/50" />
-                            )}
-                        </div>
+                                )}
 
-                        {/* Upload Controls */}
-                        <div className="flex flex-col gap-3 pt-2">
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/jpeg,image/png,image/webp,image/gif"
-                                onChange={handleImageUpload}
-                                className="hidden"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={uploading}
-                                className="inline-flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
-                            >
-                                <Upload className="w-4 h-4" />
-                                {imagePreview ? "Change File" : "Upload File"}
-                            </button>
-                            <p className="text-xs text-muted-foreground">
-                                JPEG, PNG, WebP. High resolution portrait recommended. (Max 5MB)
-                            </p>
-                        </div>
+                                <input
+                                    ref={slot === 0 ? fileInputRef1 : fileInputRef2}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp,image/gif"
+                                    onChange={(e) => handleImageUpload(e, slot)}
+                                    className="hidden"
+                                />
+                            </div>
+                        ))}
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                        JPEG, PNG, WebP. High resolution portrait recommended. (Max 5MB each)
+                    </p>
                 </div>
 
+                {/* COA Details */}
                 <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-                    <h2 className="text-sm font-semibold text-foreground">
-                        COA Details
-                    </h2>
+                    <h2 className="text-sm font-semibold text-foreground">COA Details</h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -274,7 +308,7 @@ export default function EditCoaPage() {
 
                 <button
                     type="submit"
-                    disabled={saving || uploading}
+                    disabled={saving || uploading.some(Boolean)}
                     className="inline-flex items-center justify-center w-full gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-6 py-4 rounded-xl text-sm font-bold transition-all disabled:opacity-50"
                 >
                     {saving ? (
