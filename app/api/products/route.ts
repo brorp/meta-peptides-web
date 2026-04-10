@@ -64,6 +64,9 @@ export async function GET(req: NextRequest) {
       case "popularity":
         query = query.order("sales_count", { ascending: false });
         break;
+      case "stock_asc":
+        query = query.order("stock", { ascending: true });
+        break;
       case "latest":
       default:
         query = query.order("created_at", { ascending: false });

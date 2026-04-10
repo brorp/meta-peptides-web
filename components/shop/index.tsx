@@ -10,12 +10,12 @@ import { api as apiClient } from "@/lib/axios";
 import { useDebounce } from "@/hooks/use-debounce";
 import { ProductCardSkeleton } from "@/components/skeleton/product-card-skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Pagination } from "../pagination";
 import { FilterSidebar } from "./filter-sidebar";
 import { MobileFilterDrawer } from "./mobile-filter-drawer";
 
 
 const SORT_OPTIONS = [
+  { label: "Lowest Stock", value: "stock_asc" },
   { label: "Popularity", value: "popularity" },
   { label: "Latest", value: "latest" },
   { label: "Price: Low to High", value: "price_asc" },
@@ -24,10 +24,9 @@ const SORT_OPTIONS = [
 
 export default function ShopPageComponent() {
   const router = useRouter();
-  const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [sortBy, setSortBy] = useState("latest");
+  const [sortBy, setSortBy] = useState("stock_asc");
   const [isCatOpen, setIsCatOpen] = useState(true);
   const [isSortOpen, setIsSortOpen] = useState(true);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
@@ -52,7 +51,8 @@ export default function ShopPageComponent() {
     searchQuery !== "" || selectedCategory !== "All" || sortBy !== "latest";
 
   const { data, isPending: isLoading } = useGetProducts({
-    page: currentPage,
+    page: 1,
+    limit: 1000,
     keyword: debouncedSearch,
     category: selectedCategory === "All" ? "" : selectedCategory,
     sort: sortBy,
@@ -72,15 +72,10 @@ export default function ShopPageComponent() {
     onOpenSortChange: setIsSortOpen,
     onReset: () => {
       setSelectedCategory("All");
-      setSortBy("latest");
+      setSortBy("stock_asc");
       setSearchQuery("");
     },
   };
-
-  useEffect(
-    () => setCurrentPage(1),
-    [debouncedSearch, selectedCategory, sortBy],
-  );
 
   return (
     <div className="min-h-screen bg-[#FAFAFA] text-foreground">
@@ -103,7 +98,7 @@ export default function ShopPageComponent() {
                 <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-accent transition-colors" />
                 <input
                   type="text"
-                  placeholder="Search for metapeptides..."
+                  placeholder="Retatrutide..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full h-full bg-white border border-slate-200 rounded-2xl py-4 pl-12 pr-12 text-sm font-bold focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all placeholder:text-slate-300"
@@ -141,14 +136,6 @@ export default function ShopPageComponent() {
                     />
                   ))}
                 </div>
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={data.pagination.total_pages}
-                  onPageChange={(p) => {
-                    setCurrentPage(p);
-                    window.scrollTo({ top: 300, behavior: "smooth" });
-                  }}
-                />
               </>
             ) : (
               <div className="py-32 text-center bg-white rounded-[3rem] border border-slate-100 border-dashed italic text-slate-400">
