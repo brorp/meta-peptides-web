@@ -26,11 +26,11 @@ export async function GET() {
             .from("orders")
             .select("*", { count: "exact", head: true });
 
-        // Revenue (sum of total_price from completed/shipped orders)
+        // Revenue (sum of total_price from paid/active order statuses)
         const { data: revenueData } = await supabaseAdmin
             .from("orders")
             .select("total_price")
-            .in("status", ["completed", "shipped", "processing"]);
+            .in("status", ["completed", "processing"]);
 
         const totalRevenue = (revenueData || []).reduce(
             (sum, order) => sum + (order.total_price || 0),

@@ -30,7 +30,6 @@ type ManualOrderItem = {
 const ORDER_STATUSES = [
     { label: "Pending Review", value: "pending_review" },
     { label: "Processing", value: "processing" },
-    { label: "Shipped", value: "shipped" },
     { label: "Completed", value: "completed" },
     { label: "Cancelled", value: "cancelled" },
 ];

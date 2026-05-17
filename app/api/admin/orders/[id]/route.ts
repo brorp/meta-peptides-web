@@ -4,6 +4,13 @@ import { successResponse, errorResponse } from "@/lib/api-response";
 import { sendOrderVerifiedEmail } from "@/lib/email-service";
 import { renderInvoicePdfBuffer } from "@/lib/pdf/generate-invoice";
 
+const ORDER_STATUSES = [
+  "pending_review",
+  "processing",
+  "completed",
+  "cancelled",
+];
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -48,7 +55,13 @@ export async function PUT(
     const previousStatus = currentOrder.status;
     const updateData: any = {};
 
-    if (body.status) updateData.status = body.status;
+    if (body.status) {
+      if (!ORDER_STATUSES.includes(body.status)) {
+        return errorResponse("Invalid order status", 400);
+      }
+
+      updateData.status = body.status;
+    }
     if (
       body.tracking_number !== undefined &&
       String(body.tracking_number).trim().length > 0

@@ -9,7 +9,6 @@ import {
 const ORDER_STATUSES = [
     "pending_review",
     "processing",
-    "shipped",
     "completed",
     "cancelled",
 ];
@@ -219,7 +218,7 @@ export async function POST(req: NextRequest) {
             receipt_url: null,
             transaction_code: transactionCode,
             sender_name: shippingName,
-            status: "manual",
+            status: "pending",
         });
 
         if (paymentError) {
