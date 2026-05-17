@@ -215,7 +215,7 @@ export async function POST(req: NextRequest) {
 
         const { error: paymentError } = await supabaseAdmin.from("payments").insert({
             order_id: order.id,
-            receipt_url: null,
+            receipt_url: "",
             transaction_code: transactionCode,
             sender_name: shippingName,
             status: "pending",
