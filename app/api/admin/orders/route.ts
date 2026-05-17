@@ -1,6 +1,51 @@
 import { NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
-import { paginateResponse, errorResponse } from "@/lib/api-response";
+import {
+    paginateResponse,
+    errorResponse,
+    successResponse,
+} from "@/lib/api-response";
+
+const ORDER_STATUSES = [
+    "pending_review",
+    "processing",
+    "shipped",
+    "completed",
+    "cancelled",
+];
+
+type ManualOrderItemPayload = {
+    product_id: string;
+    quantity: number;
+    price_at_purchase: number;
+};
+
+const normalizeManualOrderItems = (items: any): ManualOrderItemPayload[] => {
+    if (!Array.isArray(items)) return [];
+
+    return items
+        .map((item) => ({
+            product_id: String(item?.product_id || ""),
+            quantity: Number(item?.quantity || 0),
+            price_at_purchase: Number(item?.price_at_purchase || 0),
+        }))
+        .filter(
+            (item) =>
+                !!item.product_id &&
+                Number.isFinite(item.quantity) &&
+                item.quantity > 0 &&
+                Number.isFinite(item.price_at_purchase) &&
+                item.price_at_purchase >= 0,
+        );
+};
+
+const cleanupFailedManualOrder = async (orderId: string | null) => {
+    if (!orderId) return;
+
+    await supabaseAdmin.from("payments").delete().eq("order_id", orderId);
+    await supabaseAdmin.from("order_items").delete().eq("order_id", orderId);
+    await supabaseAdmin.from("orders").delete().eq("id", orderId);
+};
 
 export async function GET(req: NextRequest) {
     try {
@@ -25,7 +70,7 @@ export async function GET(req: NextRequest) {
 
         if (keyword) {
             query = query.or(
-                `shipping_name.ilike.%${keyword}%,shipping_email.ilike.%${keyword}%,id.ilike.%${keyword}%`,
+                `shipping_name.ilike.%${keyword}%,shipping_email.ilike.%${keyword}%,manual_reference.ilike.%${keyword}%,id.ilike.%${keyword}%`,
             );
         }
 
@@ -44,5 +89,156 @@ export async function GET(req: NextRequest) {
         );
     } catch (err: any) {
         return errorResponse(err.message, 500);
+    }
+}
+
+export async function POST(req: NextRequest) {
+    try {
+        const body = await req.json();
+        const shippingName = String(body.shipping_name || "").trim();
+        const shippingPhone = String(body.shipping_phone || "").trim();
+        const shippingEmail = String(body.shipping_email || "").trim().toLowerCase();
+        const shippingAddress = String(body.shipping_address || "").trim();
+        const shippingRegional = String(body.shipping_regional || "").trim();
+        const shippingZip = String(body.shipping_zip || "").trim();
+        const manualReference = String(body.manual_reference || "").trim();
+        const note = String(body.note || "").trim();
+        const status = ORDER_STATUSES.includes(body.status)
+            ? body.status
+            : "processing";
+        const manualDiscountAmount = Math.max(
+            0,
+            Number(body.manual_discount_amount || 0),
+        );
+
+        if (!shippingName) return errorResponse("Customer name is required", 400);
+        if (!shippingPhone) return errorResponse("WhatsApp number is required", 400);
+        if (!shippingAddress) return errorResponse("Shipping address is required", 400);
+        if (!shippingRegional) return errorResponse("City or regional is required", 400);
+
+        if (shippingEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(shippingEmail)) {
+            return errorResponse("Customer email is invalid", 400);
+        }
+
+        const normalizedItems = normalizeManualOrderItems(body.items);
+        if (!normalizedItems.length) {
+            return errorResponse("Order must include at least one product", 400);
+        }
+
+        const productIds = Array.from(
+            new Set(normalizedItems.map((item) => item.product_id)),
+        );
+        const { data: products, error: productsError } = await supabaseAdmin
+            .from("products")
+            .select("id, name, is_active")
+            .in("id", productIds);
+
+        if (productsError) {
+            return errorResponse(
+                `Failed to validate products: ${productsError.message}`,
+                500,
+            );
+        }
+
+        if (!products || products.length !== productIds.length) {
+            return errorResponse("Some selected products were not found", 400);
+        }
+
+        const productLookup = new Map(
+            products.map((product: any) => [product.id, product]),
+        );
+
+        for (const item of normalizedItems) {
+            const product = productLookup.get(item.product_id);
+            if (!product) {
+                return errorResponse("Some selected products were not found", 400);
+            }
+            if (product.is_active === false) {
+                return errorResponse(
+                    `${product.name || "Selected product"} is inactive`,
+                    400,
+                );
+            }
+        }
+
+        const subtotal = normalizedItems.reduce(
+            (sum, item) => sum + item.quantity * item.price_at_purchase,
+            0,
+        );
+        const totalPrice = Math.max(0, subtotal - manualDiscountAmount);
+        const transactionCode =
+            String(body.transaction_code || "").trim() ||
+            manualReference ||
+            `WA-${Date.now()}`;
+
+        const { data: order, error: orderError } = await supabaseAdmin
+            .from("orders")
+            .insert({
+                user_id: null,
+                is_guest: true,
+                total_price: totalPrice,
+                subtotal,
+                shipping_address: shippingAddress,
+                shipping_regional: shippingRegional,
+                shipping_name: shippingName,
+                shipping_phone: shippingPhone,
+                shipping_zip: shippingZip || null,
+                shipping_email: shippingEmail || null,
+                note: note || null,
+                voucher_code: null,
+                voucher_id: null,
+                voucher_discount_amount: 0,
+                status,
+                order_source: "manual_whatsapp",
+                manual_channel: "whatsapp",
+                manual_reference: manualReference || transactionCode,
+            })
+            .select()
+            .single();
+
+        if (orderError) return errorResponse(orderError.message, 400);
+
+        const { error: itemsError } = await supabaseAdmin
+            .from("order_items")
+            .insert(
+                normalizedItems.map((item) => ({
+                    order_id: order.id,
+                    product_id: item.product_id,
+                    quantity: item.quantity,
+                    price_at_purchase: item.price_at_purchase,
+                })),
+            );
+
+        if (itemsError) {
+            await cleanupFailedManualOrder(order.id);
+            return errorResponse(itemsError.message, 400);
+        }
+
+        const { error: paymentError } = await supabaseAdmin.from("payments").insert({
+            order_id: order.id,
+            receipt_url: null,
+            transaction_code: transactionCode,
+            sender_name: shippingName,
+            status: "manual",
+        });
+
+        if (paymentError) {
+            await cleanupFailedManualOrder(order.id);
+            return errorResponse(paymentError.message, 400);
+        }
+
+        const { data: createdOrder, error: loadError } = await supabaseAdmin
+            .from("orders")
+            .select("*, order_items(*, products(name, image_url)), payments(*)")
+            .eq("id", order.id)
+            .single();
+
+        if (loadError || !createdOrder) {
+            return successResponse(order, "Manual order created", 201);
+        }
+
+        return successResponse(createdOrder, "Manual order created", 201);
+    } catch (err: any) {
+        return errorResponse(err.message || "Failed to create manual order", 500);
     }
 }

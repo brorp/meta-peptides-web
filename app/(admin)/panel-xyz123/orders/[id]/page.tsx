@@ -425,6 +425,26 @@ export default function AdminOrderDetailPage({
                                 </span>
                             </div>
                         )}
+                        {order.order_source === "manual_whatsapp" && (
+                            <div>
+                                <span className="text-muted-foreground text-xs">
+                                    Order Source
+                                </span>
+                                <p className="mt-1 inline-flex rounded-full border border-green-500/20 bg-green-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green-500">
+                                    WhatsApp Manual
+                                </p>
+                            </div>
+                        )}
+                        {order.manual_reference && (
+                            <div>
+                                <span className="text-muted-foreground text-xs">
+                                    Manual Reference
+                                </span>
+                                <p className="text-foreground text-xs mt-1">
+                                    {order.manual_reference}
+                                </p>
+                            </div>
+                        )}
                         {order.note && (
                             <div>
                                 <span className="text-muted-foreground text-xs">Note</span>

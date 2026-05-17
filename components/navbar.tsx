@@ -24,6 +24,7 @@ export const NAV_LINKS = [
   { name: "Shop", href: "/shop" },
   { name: "About Us", href: "/about" },
   { name: "Lab Test", href: "/labtest" },
+  { name: "Reseller", href: "/reseller" },
   { name: "Guidelines", href: "/peptide-guides" },
   { name: "FAQ", href: "/faq" },
 ];

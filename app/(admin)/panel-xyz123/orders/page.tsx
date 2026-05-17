@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Loader2, Eye, ShoppingCart } from "lucide-react";
+import { Search, Loader2, Eye, ShoppingCart, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
 
@@ -84,7 +84,21 @@ export default function AdminOrdersPage() {
 
     return (
         <div className="space-y-6">
-            <h1 className="text-2xl font-bold text-foreground">Orders</h1>
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-foreground">Orders</h1>
+                    <p className="text-sm text-muted-foreground">
+                        Manage checkout and WhatsApp manual orders.
+                    </p>
+                </div>
+                <button
+                    onClick={() => router.push("/panel-xyz123/orders/new")}
+                    className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+                >
+                    <Plus className="w-4 h-4" />
+                    Add Manual Order
+                </button>
+            </div>
 
             {/* Status Tabs */}
             <div className="flex flex-wrap gap-2">
@@ -162,7 +176,14 @@ export default function AdminOrdersPage() {
                                         }
                                     >
                                         <td className="px-5 py-3 font-mono text-xs text-muted-foreground">
-                                            {order.id.slice(0, 8)}...
+                                            <div className="space-y-1">
+                                                <p>{order.id.slice(0, 8)}...</p>
+                                                {order.order_source === "manual_whatsapp" && (
+                                                    <span className="inline-flex rounded-full border border-green-500/20 bg-green-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green-500">
+                                                        WhatsApp
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-5 py-3">
                                             <div>
