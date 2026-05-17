@@ -1,169 +1,165 @@
 import React from "react";
 import {
     Document,
-    Image,
     Page,
     Text,
     View,
     StyleSheet,
 } from "@react-pdf/renderer";
-import { META_PEPTIDES_LOGO_URL } from "@/lib/brand";
 
 const styles = StyleSheet.create({
     page: {
-        padding: 30,
-        fontSize: 10,
+        padding: 12,
+        fontSize: 11,
         fontFamily: "Helvetica",
-        color: "#1a1a1a",
+        color: "#000",
     },
     header: {
         textAlign: "center" as const,
-        marginBottom: 20,
+        marginBottom: 8,
         borderBottomWidth: 2,
-        borderBottomColor: "#414042",
-        paddingBottom: 15,
-        alignItems: "center" as const,
-    },
-    logo: {
-        width: 136,
-        height: 74,
-        objectFit: "contain" as const,
-        marginBottom: 10,
+        borderBottomColor: "#000",
+        paddingBottom: 6,
     },
     title: {
-        fontSize: 16,
+        fontSize: 18,
         fontFamily: "Helvetica-Bold",
-        color: "#414042",
+        color: "#000",
         textTransform: "uppercase" as const,
-        letterSpacing: 2,
     },
     subtitle: {
-        fontSize: 8,
-        color: "#888",
-        marginTop: 3,
+        fontSize: 10,
+        color: "#000",
+        marginTop: 2,
     },
     addressRow: {
-        flexDirection: "row",
-        marginBottom: 20,
-        gap: 20,
+        marginBottom: 8,
+        gap: 6,
     },
     addressBox: {
-        flex: 1,
         borderWidth: 1,
-        borderColor: "#ddd",
-        borderRadius: 4,
-        padding: 12,
+        borderColor: "#000",
+        padding: 7,
     },
     addressLabel: {
         fontFamily: "Helvetica-Bold",
-        fontSize: 8,
-        color: "#414042",
+        fontSize: 10,
+        color: "#000",
         textTransform: "uppercase" as const,
-        letterSpacing: 0.5,
-        marginBottom: 6,
+        marginBottom: 3,
     },
     addressText: {
-        fontSize: 10,
-        lineHeight: 1.5,
-        color: "#333",
+        fontSize: 13,
+        lineHeight: 1.25,
+        color: "#000",
+        fontFamily: "Helvetica-Bold",
     },
     addressSmall: {
-        fontSize: 8,
-        color: "#666",
-        marginTop: 2,
-        lineHeight: 1.4,
+        fontSize: 11,
+        color: "#000",
+        marginTop: 3,
+        lineHeight: 1.25,
     },
     metaRow: {
         flexDirection: "row",
         justifyContent: "space-between",
-        marginBottom: 15,
-        backgroundColor: "#f5f5f5",
-        padding: 10,
-        borderRadius: 4,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: "#000",
+        padding: 6,
     },
     metaItem: {
-        alignItems: "center" as const,
+        flex: 1,
     },
     metaLabel: {
-        fontSize: 7,
-        color: "#888",
+        fontSize: 8,
+        color: "#000",
         textTransform: "uppercase" as const,
     },
     metaValue: {
-        fontSize: 10,
+        fontSize: 11,
         fontFamily: "Helvetica-Bold",
-        color: "#414042",
+        color: "#000",
         marginTop: 2,
     },
     section: {
-        marginBottom: 15,
+        marginBottom: 8,
     },
     sectionTitle: {
         fontFamily: "Helvetica-Bold",
-        fontSize: 9,
-        color: "#414042",
-        marginBottom: 8,
+        fontSize: 11,
+        color: "#000",
+        marginBottom: 4,
         textTransform: "uppercase" as const,
-        letterSpacing: 0.5,
+    },
+    tableHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        paddingVertical: 5,
+        borderBottomWidth: 2,
+        borderBottomColor: "#000",
+    },
+    headerText: {
+        fontFamily: "Helvetica-Bold",
+        fontSize: 10,
+        color: "#000",
+        textTransform: "uppercase" as const,
     },
     itemRow: {
         flexDirection: "row",
         justifyContent: "space-between",
-        paddingVertical: 6,
+        paddingVertical: 5,
         borderBottomWidth: 1,
-        borderBottomColor: "#eee",
+        borderBottomColor: "#000",
     },
     itemName: {
-        fontSize: 10,
-        color: "#333",
-        flex: 3,
+        fontSize: 12,
+        color: "#000",
+        flex: 5,
+        lineHeight: 1.2,
     },
     itemQty: {
-        fontSize: 10,
-        color: "#333",
+        fontSize: 13,
+        color: "#000",
         flex: 1,
-        textAlign: "center" as const,
+        textAlign: "right" as const,
+        fontFamily: "Helvetica-Bold",
     },
     trackingBox: {
-        marginTop: 20,
+        marginTop: 8,
         borderWidth: 2,
-        borderColor: "#414042",
+        borderColor: "#000",
         borderStyle: "dashed",
-        borderRadius: 4,
-        padding: 15,
+        padding: 8,
         textAlign: "center" as const,
     },
     trackingLabel: {
-        fontSize: 8,
-        color: "#888",
+        fontSize: 10,
+        color: "#000",
         textTransform: "uppercase" as const,
-        letterSpacing: 1,
     },
     trackingNumber: {
-        fontSize: 16,
+        minHeight: 28,
+        fontSize: 18,
         fontFamily: "Helvetica-Bold",
-        color: "#414042",
-        marginTop: 6,
-        letterSpacing: 2,
+        color: "#000",
+        marginTop: 10,
     },
     footer: {
-        position: "absolute" as const,
-        bottom: 20,
-        left: 30,
-        right: 30,
         textAlign: "center" as const,
-        fontSize: 7,
-        color: "#bbb",
+        fontSize: 9,
+        color: "#000",
         borderTopWidth: 1,
-        borderTopColor: "#eee",
-        paddingTop: 8,
+        borderTopColor: "#000",
+        paddingTop: 5,
+        marginTop: 6,
     },
 });
 
 function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString("id-ID", {
         day: "numeric",
-        month: "long",
+        month: "short",
         year: "numeric",
     });
 }
@@ -175,35 +171,41 @@ function getOrderItems(order: any) {
     }));
 }
 
+function getProductDisplayName(product: any) {
+    const parts = [product?.name, product?.label, product?.volume]
+        .map((value) => String(value || "").trim())
+        .filter(Boolean);
+
+    return Array.from(new Set(parts)).join(" - ") || "Product";
+}
+
 export function PackingSlipDocument({ order }: { order: any }) {
     const orderItems = getOrderItems(order);
     const complimentaryItems = orderItems.filter((item: any) => item.isComplimentary);
+    const totalQuantity = orderItems.reduce(
+        (sum: number, item: any) => sum + Number(item.quantity || 0),
+        0,
+    );
 
     return (
         <Document>
-            <Page size="A4" style={styles.page}>
-                {/* Header */}
+            <Page size={[288, 432]} style={styles.page}>
                 <View style={styles.header}>
-                    <Image src={META_PEPTIDES_LOGO_URL} style={styles.logo} />
                     <Text style={styles.title}>Packing Slip</Text>
-                    <Text style={styles.subtitle}>
-                        Resi Pengiriman — MetaWellness
-                    </Text>
+                    <Text style={styles.subtitle}>Meta Peptides</Text>
                 </View>
 
-                {/* Sender / Recipient */}
                 <View style={styles.addressRow}>
                     <View style={styles.addressBox}>
-                        <Text style={styles.addressLabel}>From (Pengirim)</Text>
-                        <Text style={styles.addressText}>MetaPeptides</Text>
+                        <Text style={styles.addressLabel}>From</Text>
+                        <Text style={styles.addressText}>Meta Wellness</Text>
                         <Text style={styles.addressSmall}>
-                            Research Peptide Supplier{"\n"}
-                            Jakarta, Indonesia{"\n"}
+                            +6285191378506{"\n"}
                             support@meta-peptides.com
                         </Text>
                     </View>
                     <View style={styles.addressBox}>
-                        <Text style={styles.addressLabel}>To (Penerima)</Text>
+                        <Text style={styles.addressLabel}>To</Text>
                         <Text style={styles.addressText}>
                             {order.shipping_name || "Customer"}
                         </Text>
@@ -218,10 +220,9 @@ export function PackingSlipDocument({ order }: { order: any }) {
                     </View>
                 </View>
 
-                {/* Order Meta */}
                 <View style={styles.metaRow}>
                     <View style={styles.metaItem}>
-                        <Text style={styles.metaLabel}>Order ID</Text>
+                        <Text style={styles.metaLabel}>Order</Text>
                         <Text style={styles.metaValue}>
                             {order.id.slice(0, 8).toUpperCase()}
                         </Text>
@@ -233,52 +234,24 @@ export function PackingSlipDocument({ order }: { order: any }) {
                         </Text>
                     </View>
                     <View style={styles.metaItem}>
-                        <Text style={styles.metaLabel}>Items</Text>
-                        <Text style={styles.metaValue}>
-                            {orderItems.length || 0}
-                        </Text>
+                        <Text style={styles.metaLabel}>Qty</Text>
+                        <Text style={styles.metaValue}>{totalQuantity}</Text>
                     </View>
                 </View>
 
-                {/* Items List */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>Package Contents</Text>
-                    <View
-                        style={{
-                            flexDirection: "row",
-                            justifyContent: "space-between",
-                            paddingVertical: 6,
-                            borderBottomWidth: 2,
-                            borderBottomColor: "#414042",
-                        }}
-                    >
-                        <Text
-                            style={{
-                                fontFamily: "Helvetica-Bold",
-                                fontSize: 8,
-                                flex: 3,
-                                textTransform: "uppercase" as const,
-                            }}
-                        >
-                            Item
-                        </Text>
-                        <Text
-                            style={{
-                                fontFamily: "Helvetica-Bold",
-                                fontSize: 8,
-                                flex: 1,
-                                textAlign: "center" as const,
-                                textTransform: "uppercase" as const,
-                            }}
-                        >
+                    <View style={styles.tableHeader}>
+                        <Text style={[styles.headerText, { flex: 5 }]}>Item</Text>
+                        <Text style={[styles.headerText, { flex: 1, textAlign: "right" }]}>
                             Qty
                         </Text>
                     </View>
                     {orderItems.map((item: any, i: number) => (
                         <View key={i} style={styles.itemRow}>
                             <Text style={styles.itemName}>
-                                {item.products?.name || "Product"}
-                                {item.isComplimentary ? " (Complimentary)" : ""}
+                                {getProductDisplayName(item.products)}
+                                {item.isComplimentary ? " (FREE)" : ""}
                             </Text>
                             <Text style={styles.itemQty}>{item.quantity}</Text>
                         </View>
@@ -289,24 +262,19 @@ export function PackingSlipDocument({ order }: { order: any }) {
                     <View style={styles.section}>
                         <Text style={styles.sectionTitle}>Packing Note</Text>
                         <Text style={styles.addressSmall}>
-                            Complimentary items are part of this shipment and should be
-                            packed together with the paid products.
+                            Free items are included at no charge and must be packed
+                            with the paid products.
                         </Text>
                     </View>
                 )}
 
-                {/* Tracking Number */}
                 <View style={styles.trackingBox}>
-                    <Text style={styles.trackingLabel}>Tracking Number / No. Resi</Text>
-                    <Text style={styles.trackingNumber}>
-                        
-                    </Text>
+                    <Text style={styles.trackingLabel}>Tracking Number / Resi</Text>
+                    <Text style={styles.trackingNumber}> </Text>
                 </View>
 
-                {/* Footer */}
                 <Text style={styles.footer}>
-                    MetaPeptides — meta-peptides.com | Handle with care — Research
-                    compounds
+                    meta-peptides.com | Handle with care
                 </Text>
             </Page>
         </Document>

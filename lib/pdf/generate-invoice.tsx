@@ -182,9 +182,25 @@ function getOrderItems(order: any) {
     }));
 }
 
+function getProductDisplayName(product: any) {
+    const parts = [product?.name, product?.label, product?.volume]
+        .map((value) => String(value || "").trim())
+        .filter(Boolean);
+
+    return Array.from(new Set(parts)).join(" - ") || "Product";
+}
+
 export function InvoiceDocument({ order }: { order: any }) {
     const orderItems = getOrderItems(order);
     const complimentaryItems = orderItems.filter((item: any) => item.isComplimentary);
+    const complimentaryQuantity = complimentaryItems.reduce(
+        (sum: number, item: any) => sum + Number(item.quantity || 0),
+        0,
+    );
+    const subtotal = Number(order.subtotal || order.total_price || 0);
+    const voucherDiscount = Number(order.voucher_discount_amount || 0);
+    const totalPrice = Number(order.total_price || 0);
+    const otherDiscount = Math.max(0, subtotal - voucherDiscount - totalPrice);
 
     return (
         <Document>
@@ -245,7 +261,7 @@ export function InvoiceDocument({ order }: { order: any }) {
                     {orderItems.map((item: any, i: number) => (
                         <View key={i} style={styles.tableRow}>
                             <Text style={[styles.cellText, styles.colProduct]}>
-                                {item.products?.name || "Product"}
+                                {getProductDisplayName(item.products)}
                                 {item.isComplimentary ? " (Complimentary)" : ""}
                             </Text>
                             <Text style={[styles.cellText, styles.colQty]}>
@@ -285,13 +301,42 @@ export function InvoiceDocument({ order }: { order: any }) {
                     <View style={styles.totalRow}>
                         <Text style={styles.totalLabel}>Subtotal</Text>
                         <Text style={styles.totalValue}>
-                            {formatCurrency(order.subtotal || order.total_price)}
+                            {formatCurrency(subtotal)}
                         </Text>
                     </View>
+                    {complimentaryQuantity > 0 && (
+                        <View style={styles.totalRow}>
+                            <Text style={styles.totalLabel}>
+                                Complimentary Items
+                            </Text>
+                            <Text style={styles.totalValue}>
+                                {complimentaryQuantity} item(s)
+                            </Text>
+                        </View>
+                    )}
+                    {voucherDiscount > 0 && (
+                        <View style={styles.totalRow}>
+                            <Text style={styles.totalLabel}>
+                                Voucher Discount
+                                {order.voucher_code ? ` (${order.voucher_code})` : ""}
+                            </Text>
+                            <Text style={styles.totalValue}>
+                                -{formatCurrency(voucherDiscount)}
+                            </Text>
+                        </View>
+                    )}
+                    {otherDiscount > 0 && (
+                        <View style={styles.totalRow}>
+                            <Text style={styles.totalLabel}>Additional Discount</Text>
+                            <Text style={styles.totalValue}>
+                                -{formatCurrency(otherDiscount)}
+                            </Text>
+                        </View>
+                    )}
                     <View style={[styles.totalRow, { marginTop: 6 }]}>
                         <Text style={[styles.totalLabel, styles.grandTotal]}>Total</Text>
                         <Text style={[styles.totalValue, styles.grandTotal]}>
-                            {formatCurrency(order.total_price)}
+                            {formatCurrency(totalPrice)}
                         </Text>
                     </View>
                 </View>

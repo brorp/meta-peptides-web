@@ -20,7 +20,7 @@ export async function GET(
 
     const { data, error } = await supabaseAdmin
       .from("orders")
-      .select("*, order_items(*, products(name, image_url, slug)), payments(*)")
+      .select("*, order_items(*, products(name, label, volume, image_url, slug)), payments(*)")
       .eq("id", id)
       .single();
 
@@ -87,7 +87,7 @@ export async function PUT(
 
     const { data, error } = await supabaseAdmin
       .from("orders")
-      .select("*, order_items(*, products(name, image_url, slug)), payments(*)")
+      .select("*, order_items(*, products(name, label, volume, image_url, slug)), payments(*)")
       .eq("id", id)
       .single();
 
