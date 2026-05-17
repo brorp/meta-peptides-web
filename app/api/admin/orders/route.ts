@@ -5,6 +5,10 @@ import {
     errorResponse,
     successResponse,
 } from "@/lib/api-response";
+import {
+    isMissingCustomerUsernameColumn,
+    withoutCustomerUsername,
+} from "@/lib/order-schema-compat";
 
 const ORDER_STATUSES = [
     "pending_review",
@@ -75,9 +79,33 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        const { data, error, count } = await query
+        let { data, error, count } = await query
             .order("created_at", { ascending: false })
             .range(from, to);
+
+        if (error && keyword && isMissingCustomerUsernameColumn(error)) {
+            let fallbackQuery = supabaseAdmin
+                .from("orders")
+                .select("*, order_items(*, products(name, image_url)), payments(*)", {
+                    count: "exact",
+                });
+
+            if (status) {
+                fallbackQuery = fallbackQuery.eq("status", status);
+            }
+
+            fallbackQuery = fallbackQuery.or(
+                `shipping_name.ilike.%${keyword}%,shipping_email.ilike.%${keyword}%,manual_reference.ilike.%${keyword}%,id.ilike.%${keyword}%`,
+            );
+
+            const fallback = await fallbackQuery
+                .order("created_at", { ascending: false })
+                .range(from, to);
+
+            data = fallback.data;
+            error = fallback.error;
+            count = fallback.count;
+        }
 
         if (error) return errorResponse(error.message, 400);
 
@@ -177,31 +205,44 @@ export async function POST(req: NextRequest) {
             manualReference ||
             `${orderSource === "shopee" ? "SHOPEE" : "WA"}-${Date.now()}`;
 
-        const { data: order, error: orderError } = await supabaseAdmin
+        const orderPayload = {
+            user_id: null,
+            is_guest: true,
+            total_price: totalPrice,
+            subtotal,
+            shipping_address: shippingAddress,
+            shipping_regional: shippingRegional,
+            shipping_name: shippingName,
+            shipping_phone: shippingPhone,
+            shipping_zip: shippingZip || null,
+            shipping_email: shippingEmail || null,
+            customer_username: customerUsername || null,
+            note: note || null,
+            voucher_code: null,
+            voucher_id: null,
+            voucher_discount_amount: 0,
+            status,
+            order_source: orderSource,
+            manual_channel: manualChannel,
+            manual_reference: manualReference || transactionCode,
+        };
+
+        let { data: order, error: orderError } = await supabaseAdmin
             .from("orders")
-            .insert({
-                user_id: null,
-                is_guest: true,
-                total_price: totalPrice,
-                subtotal,
-                shipping_address: shippingAddress,
-                shipping_regional: shippingRegional,
-                shipping_name: shippingName,
-                shipping_phone: shippingPhone,
-                shipping_zip: shippingZip || null,
-                shipping_email: shippingEmail || null,
-                customer_username: customerUsername || null,
-                note: note || null,
-                voucher_code: null,
-                voucher_id: null,
-                voucher_discount_amount: 0,
-                status,
-                order_source: orderSource,
-                manual_channel: manualChannel,
-                manual_reference: manualReference || transactionCode,
-            })
+            .insert(orderPayload)
             .select()
             .single();
+
+        if (orderError && isMissingCustomerUsernameColumn(orderError)) {
+            const retry = await supabaseAdmin
+                .from("orders")
+                .insert(withoutCustomerUsername(orderPayload))
+                .select()
+                .single();
+
+            order = retry.data;
+            orderError = retry.error;
+        }
 
         if (orderError) return errorResponse(orderError.message, 400);
 

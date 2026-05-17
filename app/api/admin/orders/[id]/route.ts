@@ -3,6 +3,10 @@ import { supabaseAdmin } from "@/lib/supabase-server";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { sendOrderVerifiedEmail } from "@/lib/email-service";
 import { renderInvoicePdfBuffer } from "@/lib/pdf/generate-invoice";
+import {
+  isMissingCustomerUsernameColumn,
+  withoutCustomerUsername,
+} from "@/lib/order-schema-compat";
 
 const ORDER_STATUSES = [
   "pending_review",
@@ -125,12 +129,24 @@ export async function PUT(
       return errorResponse("No order changes were provided", 400);
     }
 
-    const { data: updatedOrder, error: updateError } = await supabaseAdmin
+    let { data: updatedOrder, error: updateError } = await supabaseAdmin
       .from("orders")
       .update(updateData)
       .eq("id", id)
       .select("id")
       .single();
+
+    if (updateError && isMissingCustomerUsernameColumn(updateError)) {
+      const retry = await supabaseAdmin
+        .from("orders")
+        .update(withoutCustomerUsername(updateData))
+        .eq("id", id)
+        .select("id")
+        .single();
+
+      updatedOrder = retry.data;
+      updateError = retry.error;
+    }
 
     if (updateError || !updatedOrder) {
       return errorResponse(updateError?.message || "Failed to update order", 400);

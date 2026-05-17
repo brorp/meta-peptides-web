@@ -1,5 +1,9 @@
 import * as XLSX from "xlsx";
 import { supabaseAdmin } from "@/lib/supabase-server";
+import {
+    isMissingCustomerUsernameColumn,
+    withoutCustomerUsername,
+} from "@/lib/order-schema-compat";
 
 const SHOPEE_SOURCE = "shopee";
 const SHOPEE_CHANNEL = "shopee";
@@ -566,18 +570,38 @@ const upsertShopeeOrder = async (
     let orderId = existingOrderId || null;
 
     if (existingOrderId) {
-        const { error } = await supabaseAdmin
+        let { error } = await supabaseAdmin
             .from("orders")
             .update(orderPayload)
             .eq("id", existingOrderId);
 
+        if (error && isMissingCustomerUsernameColumn(error)) {
+            const retry = await supabaseAdmin
+                .from("orders")
+                .update(withoutCustomerUsername(orderPayload))
+                .eq("id", existingOrderId);
+
+            error = retry.error;
+        }
+
         if (error) throw new Error(`Failed to update order: ${error.message}`);
     } else {
-        const { data, error } = await supabaseAdmin
+        let { data, error } = await supabaseAdmin
             .from("orders")
             .insert(orderPayload)
             .select("id")
             .single();
+
+        if (error && isMissingCustomerUsernameColumn(error)) {
+            const retry = await supabaseAdmin
+                .from("orders")
+                .insert(withoutCustomerUsername(orderPayload))
+                .select("id")
+                .single();
+
+            data = retry.data;
+            error = retry.error;
+        }
 
         if (error || !data) {
             throw new Error(`Failed to create order: ${error?.message}`);
