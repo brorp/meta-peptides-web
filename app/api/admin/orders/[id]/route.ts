@@ -62,6 +62,41 @@ export async function PUT(
 
       updateData.status = body.status;
     }
+
+    for (const requiredField of [
+      "shipping_name",
+      "shipping_phone",
+      "shipping_address",
+      "shipping_regional",
+    ]) {
+      if (body[requiredField] !== undefined) {
+        const value = String(body[requiredField] || "").trim();
+        if (!value) {
+          return errorResponse(`${requiredField.replace(/_/g, " ")} is required`, 400);
+        }
+
+        updateData[requiredField] = value;
+      }
+    }
+
+    if (body.shipping_email !== undefined) {
+      const email = String(body.shipping_email || "").trim().toLowerCase();
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return errorResponse("Customer email is invalid", 400);
+      }
+
+      updateData.shipping_email = email || null;
+    }
+
+    if (body.shipping_zip !== undefined) {
+      updateData.shipping_zip = String(body.shipping_zip || "").trim() || null;
+    }
+
+    if (body.customer_username !== undefined) {
+      updateData.customer_username =
+        String(body.customer_username || "").trim() || null;
+    }
+
     if (
       body.tracking_number !== undefined &&
       String(body.tracking_number).trim().length > 0

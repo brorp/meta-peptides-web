@@ -91,6 +91,13 @@ export default function AdminOrderDetailPage({
     const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
     const [status, setStatus] = useState("");
     const [trackingNumber, setTrackingNumber] = useState("");
+    const [shippingName, setShippingName] = useState("");
+    const [customerUsername, setCustomerUsername] = useState("");
+    const [shippingPhone, setShippingPhone] = useState("");
+    const [shippingEmail, setShippingEmail] = useState("");
+    const [shippingAddress, setShippingAddress] = useState("");
+    const [shippingRegional, setShippingRegional] = useState("");
+    const [shippingZip, setShippingZip] = useState("");
     const [subtotal, setSubtotal] = useState("");
     const [discountAmount, setDiscountAmount] = useState("");
     const [shippingFee, setShippingFee] = useState("");
@@ -104,6 +111,13 @@ export default function AdminOrderDetailPage({
                     setOrder(data.data);
                     setStatus(data.data.status);
                     setTrackingNumber(data.data.tracking_number || "");
+                    setShippingName(data.data.shipping_name || "");
+                    setCustomerUsername(data.data.customer_username || "");
+                    setShippingPhone(data.data.shipping_phone || "");
+                    setShippingEmail(data.data.shipping_email || "");
+                    setShippingAddress(data.data.shipping_address || "");
+                    setShippingRegional(data.data.shipping_regional || "");
+                    setShippingZip(data.data.shipping_zip || "");
                     setSubtotal(String(Number(data.data.subtotal || data.data.total_price || 0)));
                     setDiscountAmount(
                         String(Number(data.data.voucher_discount_amount || 0)),
@@ -125,6 +139,13 @@ export default function AdminOrderDetailPage({
         try {
             const payload: Record<string, any> = {
                 status,
+                shipping_name: shippingName,
+                customer_username: customerUsername,
+                shipping_phone: shippingPhone,
+                shipping_email: shippingEmail,
+                shipping_address: shippingAddress,
+                shipping_regional: shippingRegional,
+                shipping_zip: shippingZip,
             };
 
             if (trackingNumber.trim().length > 0) {
@@ -142,6 +163,13 @@ export default function AdminOrderDetailPage({
             if (data.success) {
                 toast.success("Order updated");
                 setOrder(data.data);
+                setShippingName(data.data.shipping_name || "");
+                setCustomerUsername(data.data.customer_username || "");
+                setShippingPhone(data.data.shipping_phone || "");
+                setShippingEmail(data.data.shipping_email || "");
+                setShippingAddress(data.data.shipping_address || "");
+                setShippingRegional(data.data.shipping_regional || "");
+                setShippingZip(data.data.shipping_zip || "");
                 setSubtotal(String(Number(data.data.subtotal || data.data.total_price || 0)));
                 setDiscountAmount(
                     String(Number(data.data.voucher_discount_amount || 0)),
@@ -430,32 +458,88 @@ export default function AdminOrderDetailPage({
                 <div className="space-y-6">
                     {/* Customer Info */}
                     <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
-                        <h2 className="text-sm font-semibold text-foreground">Customer</h2>
-                        <div className="space-y-2 text-sm">
-                            <div>
-                                <span className="text-muted-foreground text-xs">Name</span>
-                                <p className="text-foreground font-medium">
-                                    {order.shipping_name || "-"}
-                                </p>
-                            </div>
-                            <div>
-                                <span className="text-muted-foreground text-xs">Phone</span>
-                                <p className="text-foreground">{order.shipping_phone || "-"}</p>
-                            </div>
-                            <div>
-                                <span className="text-muted-foreground text-xs">Email</span>
-                                <p className="text-foreground">{order.shipping_email || "-"}</p>
-                            </div>
-                            <div>
-                                <span className="text-muted-foreground text-xs">Address</span>
-                                <p className="text-foreground text-xs leading-relaxed">
-                                    {order.shipping_address}
-                                    {order.shipping_regional &&
-                                        `, ${order.shipping_regional}`}
-                                    {order.shipping_zip && ` ${order.shipping_zip}`}
-                                </p>
-                            </div>
+                        <div>
+                            <h2 className="text-sm font-semibold text-foreground">
+                                Customer & Shipping
+                            </h2>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Edit these fields, then use Save Changes below.
+                            </p>
                         </div>
+                        <label className="block space-y-1.5">
+                            <span className="text-xs font-medium text-muted-foreground">
+                                Customer Name
+                            </span>
+                            <input
+                                value={shippingName}
+                                onChange={(e) => setShippingName(e.target.value)}
+                                className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                            />
+                        </label>
+                        <label className="block space-y-1.5">
+                            <span className="text-xs font-medium text-muted-foreground">
+                                Username
+                            </span>
+                            <input
+                                value={customerUsername}
+                                onChange={(e) => setCustomerUsername(e.target.value)}
+                                placeholder="Shopee username or customer handle"
+                                className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                            />
+                        </label>
+                        <label className="block space-y-1.5">
+                            <span className="text-xs font-medium text-muted-foreground">
+                                Phone
+                            </span>
+                            <input
+                                value={shippingPhone}
+                                onChange={(e) => setShippingPhone(e.target.value)}
+                                className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                            />
+                        </label>
+                        <label className="block space-y-1.5">
+                            <span className="text-xs font-medium text-muted-foreground">
+                                Email
+                            </span>
+                            <input
+                                type="email"
+                                value={shippingEmail}
+                                onChange={(e) => setShippingEmail(e.target.value)}
+                                placeholder="Optional"
+                                className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                            />
+                        </label>
+                        <label className="block space-y-1.5">
+                            <span className="text-xs font-medium text-muted-foreground">
+                                City / Regional
+                            </span>
+                            <input
+                                value={shippingRegional}
+                                onChange={(e) => setShippingRegional(e.target.value)}
+                                className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                            />
+                        </label>
+                        <label className="block space-y-1.5">
+                            <span className="text-xs font-medium text-muted-foreground">
+                                ZIP / Postal Code
+                            </span>
+                            <input
+                                value={shippingZip}
+                                onChange={(e) => setShippingZip(e.target.value)}
+                                placeholder="Optional"
+                                className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                            />
+                        </label>
+                        <label className="block space-y-1.5">
+                            <span className="text-xs font-medium text-muted-foreground">
+                                Full Address
+                            </span>
+                            <textarea
+                                value={shippingAddress}
+                                onChange={(e) => setShippingAddress(e.target.value)}
+                                className="min-h-24 w-full resize-none bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                            />
+                        </label>
                     </div>
 
                     {/* Status & Tracking */}

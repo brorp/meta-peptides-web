@@ -264,7 +264,9 @@ export default function AdminOrdersPage() {
                                                     {order.shipping_name || "Guest"}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
-                                                    {order.shipping_email || ""}
+                                                    {order.customer_username
+                                                        ? `@${order.customer_username}`
+                                                        : order.shipping_email || ""}
                                                 </p>
                                             </div>
                                         </td>

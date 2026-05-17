@@ -3,6 +3,8 @@ import { supabaseAdmin } from "@/lib/supabase-server";
 
 const SHOPEE_SOURCE = "shopee";
 const SHOPEE_CHANNEL = "shopee";
+const SHOPEE_USERNAME_CELL_KEY = "__excel_column_ap";
+const SHOPEE_USERNAME_COLUMN_INDEX = XLSX.utils.decode_col("AP");
 
 type ShopeeRawRow = Record<string, unknown>;
 
@@ -58,11 +60,12 @@ export type ShopeeImportOrderResult = {
     orderId: string | null;
     action: "created" | "updated" | "would_create" | "would_update";
     customerName: string;
+    customerUsername: string | null;
     itemCount: number;
     totalPrice: number;
     productResolutions: Array<{
         name: string;
-        action: "matched" | "created" | "would_create";
+        action: "matched" | "missing";
     }>;
 };
 
@@ -97,12 +100,14 @@ const normalizeText = (value: string) =>
         .replace(/[\u0300-\u036f]/g, "")
         .replace(/[^a-z0-9]+/g, "");
 
-const slugify = (value: string) =>
+const normalizeWords = (value: string) =>
     value
         .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "")
-        .slice(0, 80);
+        .replace(/\+/g, " plus ")
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
 
 const getValue = (row: ShopeeRawRow, aliases: string[]) => {
     const normalized = new Map(
@@ -147,6 +152,55 @@ const extractStrengths = (value: string) => {
     );
 };
 
+const PRODUCT_MATCH_STOP_WORDS = new Set([
+    "vial",
+    "research",
+    "peptide",
+    "peptides",
+    "clinical",
+    "grade",
+    "with",
+    "coa",
+    "include",
+    "bac",
+    "water",
+    "metapeptides",
+]);
+
+const getSearchTokens = (value: string) =>
+    normalizeWords(value)
+        .split(/\s+/)
+        .filter((token) => token.length > 1 && !PRODUCT_MATCH_STOP_WORDS.has(token));
+
+const getTokenSimilarity = (a: string, b: string) => {
+    if (a === b) return 1;
+    if (!a || !b) return 0;
+
+    const matrix = Array.from({ length: a.length + 1 }, () =>
+        Array(b.length + 1).fill(0),
+    );
+
+    for (let i = 0; i <= a.length; i += 1) matrix[i][0] = i;
+    for (let j = 0; j <= b.length; j += 1) matrix[0][j] = j;
+
+    for (let i = 1; i <= a.length; i += 1) {
+        for (let j = 1; j <= b.length; j += 1) {
+            const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+            matrix[i][j] = Math.min(
+                matrix[i - 1][j] + 1,
+                matrix[i][j - 1] + 1,
+                matrix[i - 1][j - 1] + cost,
+            );
+        }
+    }
+
+    const distance = matrix[a.length][b.length];
+    return 1 - distance / Math.max(a.length, b.length);
+};
+
+const hasTokenMatch = (itemTokens: string[], productToken: string) =>
+    itemTokens.some((itemToken) => getTokenSimilarity(itemToken, productToken) >= 0.84);
+
 const cleanShopeeProductName = (name: string, variation: string) => {
     const cleaned = name
         .replace(/\s*-\s*Include\s+\d+\s*ml\s*Bac\s*Water/gi, "")
@@ -159,22 +213,43 @@ const cleanShopeeProductName = (name: string, variation: string) => {
 };
 
 const scoreProductMatch = (product: ProductRecord, item: ShopeeItem) => {
-    const itemText = normalizeText(
-        `${item.productName} ${item.variation} ${item.sku} ${item.parentSku}`,
+    const searchableItemName = cleanShopeeProductName(
+        item.productName,
+        item.variation,
     );
+    const itemText = normalizeText(`${searchableItemName} ${item.sku} ${item.parentSku}`);
+    const itemWords = normalizeWords(`${searchableItemName} ${item.sku} ${item.parentSku}`);
+    const itemTokens = getSearchTokens(`${searchableItemName} ${item.sku} ${item.parentSku}`);
     const itemStrengths = extractStrengths(`${item.productName} ${item.variation}`);
     const productName = normalizeText(product.name || "");
+    const productWords = normalizeWords(product.name || "");
+    const productTokens = getSearchTokens(product.name || "");
     const productLabel = normalizeText(product.label || "");
     const productVolumeStrengths = extractStrengths(product.volume || "");
 
-    if (!productName) return 0;
+    if (!productName || !productTokens.length) return 0;
 
     const normalizedSku = normalizeText(item.sku || item.parentSku);
     if (normalizedSku && productLabel && normalizedSku === productLabel) {
         return 100;
     }
 
-    if (!itemText.includes(productName)) return 0;
+    const allNameTokensMatch = productTokens.every((token) =>
+        hasTokenMatch(itemTokens, token),
+    );
+    if (!itemText.includes(productName) && !allNameTokensMatch) return 0;
+
+    let score = 0;
+    if (itemWords === productWords) {
+        score = 95;
+    } else if (productWords && itemWords.includes(productWords)) {
+        score = 85;
+    } else {
+        const matchedTokens = productTokens.filter((token) =>
+            hasTokenMatch(itemTokens, token),
+        );
+        score = Math.round((matchedTokens.length / productTokens.length) * 70);
+    }
 
     const hasItemStrength = itemStrengths.length > 0;
     const hasProductStrength = productVolumeStrengths.length > 0;
@@ -183,11 +258,11 @@ const scoreProductMatch = (product: ProductRecord, item: ShopeeItem) => {
         hasProductStrength &&
         productVolumeStrengths.some((strength) => itemStrengths.includes(strength));
 
-    if (strengthMatches) return 90;
-    if (hasItemStrength && hasProductStrength && !strengthMatches) return 0;
-    if ((product.name || "").length <= 4 && !strengthMatches) return 0;
+    if (strengthMatches) score += 10;
+    if (hasItemStrength && hasProductStrength && !strengthMatches) score -= 5;
+    if (productLabel && itemText.includes(productLabel)) score += 8;
 
-    return 60;
+    return Math.max(0, score);
 };
 
 const getShopeeStatus = (status: string) => {
@@ -240,7 +315,7 @@ const parseShopeeItem = (row: ShopeeRawRow): ShopeeItem => {
         ),
         buyerNote: getValue(row, ["Catatan dari Pembeli"]),
         sellerNote: getValue(row, ["Catatan"]),
-        buyerUsername: getValue(row, ["Username (Pembeli)", "Username Pembeli"]),
+        buyerUsername: String(row[SHOPEE_USERNAME_CELL_KEY] ?? "").trim(),
         recipientName: getValue(row, ["Nama Penerima"]),
         phone: getValue(row, ["No. Telepon", "No Telepon"]),
         address: getValue(row, ["Alamat Pengiriman"]),
@@ -256,13 +331,25 @@ const parseWorkbook = (input: ArrayBuffer | Buffer): ShopeeItem[] => {
     const sheetName = workbook.SheetNames[0];
     if (!sheetName) return [];
 
-    const rows = XLSX.utils.sheet_to_json<ShopeeRawRow>(workbook.Sheets[sheetName], {
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json<ShopeeRawRow>(sheet, {
+        defval: "",
+        raw: false,
+    });
+    const rowArrays = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+        header: 1,
         defval: "",
         raw: false,
     });
 
     return rows
-        .map(parseShopeeItem)
+        .map((row, index) =>
+            parseShopeeItem({
+                ...row,
+                [SHOPEE_USERNAME_CELL_KEY]:
+                    rowArrays[index + 1]?.[SHOPEE_USERNAME_COLUMN_INDEX] || "",
+            }),
+        )
         .filter((item) => item.orderNumber && item.productName && item.quantity > 0);
 };
 
@@ -300,57 +387,12 @@ const findBestProduct = (products: ProductRecord[], item: ShopeeItem) => {
         if (score > (best?.score || 0)) best = { product, score };
     }
 
-    return best && best.score >= 60 ? best.product : null;
-};
-
-const createShopeeProduct = async (
-    item: ShopeeItem,
-    products: ProductRecord[],
-    orderNumber: string,
-) => {
-    const displayName = cleanShopeeProductName(item.productName, item.variation);
-    const baseSlug = slugify(displayName) || `shopee-item-${orderNumber}`;
-    let slug = baseSlug;
-    let suffix = 1;
-
-    while (products.some((product) => product.slug === slug)) {
-        suffix += 1;
-        slug = `${baseSlug}-${suffix}`;
-    }
-
-    const { data, error } = await supabaseAdmin
-        .from("products")
-        .insert({
-            name: displayName,
-            label: item.sku || item.parentSku || "SHOPEE",
-            slug,
-            price: item.discountedUnitPrice || item.grossUnitPrice || 0,
-            original_price:
-                item.grossUnitPrice && item.grossUnitPrice !== item.discountedUnitPrice
-                    ? item.grossUnitPrice
-                    : null,
-            stock: 0,
-            category: "Shopee Import",
-            short_desc: "Imported from a Shopee order spreadsheet.",
-            is_active: false,
-        })
-        .select("id, name, label, volume, slug, price")
-        .single();
-
-    if (error || !data) {
-        throw new Error(`Failed to create Shopee product: ${error?.message}`);
-    }
-
-    const product = data as ProductRecord;
-    products.push(product);
-    return product;
+    return best && best.score >= 45 ? best.product : null;
 };
 
 const resolveProduct = async (
     item: ShopeeItem,
     products: ProductRecord[],
-    dryRun: boolean,
-    orderNumber: string,
 ) => {
     const matched = findBestProduct(products, item);
     if (matched) {
@@ -362,19 +404,10 @@ const resolveProduct = async (
     }
 
     const name = cleanShopeeProductName(item.productName, item.variation);
-    if (dryRun) {
-        return {
-            productId: null,
-            action: "would_create" as const,
-            name,
-        };
-    }
-
-    const created = await createShopeeProduct(item, products, orderNumber);
     return {
-        productId: created.id,
-        action: "created" as const,
-        name: created.name || name,
+        productId: null,
+        action: "missing" as const,
+        name,
     };
 };
 
@@ -456,8 +489,6 @@ const upsertShopeeOrder = async (
         const resolved = await resolveProduct(
             item,
             products,
-            dryRun,
-            group.orderNumber,
         );
 
         productResolutions.push({
@@ -486,10 +517,22 @@ const upsertShopeeOrder = async (
             orderId: existingOrderId || null,
             action: existingOrderId ? "would_update" : "would_create",
             customerName,
+            customerUsername: first.buyerUsername || null,
             itemCount: group.rows.length,
             totalPrice: totals.totalPrice,
             productResolutions,
         };
+    }
+
+    const missingProducts = productResolutions.filter(
+        (product) => product.action === "missing",
+    );
+    if (missingProducts.length > 0) {
+        throw new Error(
+            `No matching DB product found for: ${missingProducts
+                .map((product) => product.name)
+                .join(", ")}`,
+        );
     }
 
     if (!itemRows.length) {
@@ -510,6 +553,7 @@ const upsertShopeeOrder = async (
         shipping_address: first.address || "Shopee address unavailable",
         shipping_regional: [first.city, first.province].filter(Boolean).join(", "),
         shipping_zip: null,
+        customer_username: first.buyerUsername || null,
         note: buildNote(group),
         voucher_code: totals.voucherDiscountAmount > 0 ? "SHOPEE" : null,
         voucher_id: null,
@@ -573,6 +617,7 @@ const upsertShopeeOrder = async (
         orderId,
         action: existingOrderId ? "updated" : "created",
         customerName,
+        customerUsername: first.buyerUsername || null,
         itemCount: itemRows.length,
         totalPrice: totals.totalPrice,
         productResolutions,

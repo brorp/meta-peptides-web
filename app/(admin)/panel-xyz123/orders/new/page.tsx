@@ -75,6 +75,7 @@ export default function NewManualOrderPage() {
     const [form, setForm] = useState({
         order_source: "manual_whatsapp",
         shipping_name: "",
+        customer_username: "",
         shipping_phone: "",
         shipping_email: "",
         shipping_address: "",
@@ -244,6 +245,19 @@ export default function NewManualOrderPage() {
                                     onChange={(e) => updateForm("shipping_name", e.target.value)}
                                     className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
                                     required
+                                />
+                            </label>
+                            <label className="space-y-2">
+                                <span className="text-xs font-medium text-muted-foreground">
+                                    Username / Handle
+                                </span>
+                                <input
+                                    value={form.customer_username}
+                                    onChange={(e) =>
+                                        updateForm("customer_username", e.target.value)
+                                    }
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                                    placeholder="Optional"
                                 />
                             </label>
                             <label className="space-y-2">

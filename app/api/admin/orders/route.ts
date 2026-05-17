@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
 
         if (keyword) {
             query = query.or(
-                `shipping_name.ilike.%${keyword}%,shipping_email.ilike.%${keyword}%,manual_reference.ilike.%${keyword}%,id.ilike.%${keyword}%`,
+                `shipping_name.ilike.%${keyword}%,shipping_email.ilike.%${keyword}%,customer_username.ilike.%${keyword}%,manual_reference.ilike.%${keyword}%,id.ilike.%${keyword}%`,
             );
         }
 
@@ -102,6 +102,7 @@ export async function POST(req: NextRequest) {
         const shippingAddress = String(body.shipping_address || "").trim();
         const shippingRegional = String(body.shipping_regional || "").trim();
         const shippingZip = String(body.shipping_zip || "").trim();
+        const customerUsername = String(body.customer_username || "").trim();
         const manualReference = String(body.manual_reference || "").trim();
         const note = String(body.note || "").trim();
         const orderSource = ORDER_SOURCES.includes(body.order_source)
@@ -189,6 +190,7 @@ export async function POST(req: NextRequest) {
                 shipping_phone: shippingPhone,
                 shipping_zip: shippingZip || null,
                 shipping_email: shippingEmail || null,
+                customer_username: customerUsername || null,
                 note: note || null,
                 voucher_code: null,
                 voucher_id: null,
