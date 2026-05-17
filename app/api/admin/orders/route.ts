@@ -13,6 +13,8 @@ const ORDER_STATUSES = [
     "cancelled",
 ];
 
+const ORDER_SOURCES = ["manual_whatsapp", "shopee"];
+
 type ManualOrderItemPayload = {
     product_id: string;
     quantity: number;
@@ -102,6 +104,10 @@ export async function POST(req: NextRequest) {
         const shippingZip = String(body.shipping_zip || "").trim();
         const manualReference = String(body.manual_reference || "").trim();
         const note = String(body.note || "").trim();
+        const orderSource = ORDER_SOURCES.includes(body.order_source)
+            ? body.order_source
+            : "manual_whatsapp";
+        const manualChannel = orderSource === "shopee" ? "shopee" : "whatsapp";
         const status = ORDER_STATUSES.includes(body.status)
             ? body.status
             : "processing";
@@ -168,7 +174,7 @@ export async function POST(req: NextRequest) {
         const transactionCode =
             String(body.transaction_code || "").trim() ||
             manualReference ||
-            `WA-${Date.now()}`;
+            `${orderSource === "shopee" ? "SHOPEE" : "WA"}-${Date.now()}`;
 
         const { data: order, error: orderError } = await supabaseAdmin
             .from("orders")
@@ -188,8 +194,8 @@ export async function POST(req: NextRequest) {
                 voucher_id: null,
                 voucher_discount_amount: 0,
                 status,
-                order_source: "manual_whatsapp",
-                manual_channel: "whatsapp",
+                order_source: orderSource,
+                manual_channel: manualChannel,
                 manual_reference: manualReference || transactionCode,
             })
             .select()

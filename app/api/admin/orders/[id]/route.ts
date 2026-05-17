@@ -70,6 +70,22 @@ export async function PUT(
     }
     if (body.note !== undefined) updateData.note = body.note;
 
+    for (const moneyField of [
+      "subtotal",
+      "total_price",
+      "voucher_discount_amount",
+      "shipping_fee",
+    ]) {
+      if (body[moneyField] !== undefined) {
+        const amount = Number(body[moneyField]);
+        if (!Number.isFinite(amount) || amount < 0) {
+          return errorResponse(`${moneyField.replace(/_/g, " ")} is invalid`, 400);
+        }
+
+        updateData[moneyField] = amount;
+      }
+    }
+
     if (!Object.keys(updateData).length) {
       return errorResponse("No order changes were provided", 400);
     }
@@ -154,6 +170,36 @@ export async function PUT(
     }
 
     return successResponse(data, "Order updated");
+  } catch (err: any) {
+    return errorResponse(err.message, 500);
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await params;
+
+    const { data: order, error: fetchError } = await supabaseAdmin
+      .from("orders")
+      .select("id")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !order) {
+      return errorResponse("Order not found", 404);
+    }
+
+    await supabaseAdmin.from("payments").delete().eq("order_id", id);
+    await supabaseAdmin.from("order_items").delete().eq("order_id", id);
+
+    const { error } = await supabaseAdmin.from("orders").delete().eq("id", id);
+
+    if (error) return errorResponse(error.message, 400);
+
+    return successResponse(null, "Order deleted");
   } catch (err: any) {
     return errorResponse(err.message, 500);
   }

@@ -9,6 +9,7 @@ import {
     Plus,
     Save,
     Trash2,
+    ShoppingBag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
@@ -32,6 +33,19 @@ const ORDER_STATUSES = [
     { label: "Processing", value: "processing" },
     { label: "Completed", value: "completed" },
     { label: "Cancelled", value: "cancelled" },
+];
+
+const ORDER_SOURCES = [
+    {
+        label: "WhatsApp Manual",
+        value: "manual_whatsapp",
+        badgeClass: "border-green-500/20 bg-green-500/10 text-green-500",
+    },
+    {
+        label: "Shopee",
+        value: "shopee",
+        badgeClass: "border-orange-500/20 bg-orange-500/10 text-orange-500",
+    },
 ];
 
 const buildBlankItem = (): ManualOrderItem => ({
@@ -59,6 +73,7 @@ export default function NewManualOrderPage() {
     const [loadingProducts, setLoadingProducts] = useState(true);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({
+        order_source: "manual_whatsapp",
         shipping_name: "",
         shipping_phone: "",
         shipping_email: "",
@@ -105,6 +120,9 @@ export default function NewManualOrderPage() {
     );
     const manualDiscount = Math.max(0, Number(form.manual_discount_amount || 0));
     const total = Math.max(0, subtotal - manualDiscount);
+    const selectedSource =
+        ORDER_SOURCES.find((source) => source.value === form.order_source) ||
+        ORDER_SOURCES[0];
 
     const updateForm = (key: keyof typeof form, value: string) => {
         setForm((prev) => ({ ...prev, [key]: value }));
@@ -166,7 +184,7 @@ export default function NewManualOrderPage() {
             });
 
             if (data.success) {
-                toast.success("Manual WhatsApp order created");
+                toast.success(`${selectedSource.label} order created`);
                 router.push(`/panel-xyz123/orders/${data.data.id}`);
             }
         } catch (error: any) {
@@ -194,13 +212,19 @@ export default function NewManualOrderPage() {
                             Add Manual Order
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            Create a WhatsApp order and keep it in the normal order flow.
+                            Create a WhatsApp or Shopee order and keep it in the normal order flow.
                         </p>
                     </div>
                 </div>
-                <div className="inline-flex items-center gap-2 rounded-xl border border-green-500/20 bg-green-500/10 px-3 py-2 text-xs font-medium text-green-500">
-                    <MessageCircle className="w-4 h-4" />
-                    WhatsApp Manual
+                <div
+                    className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium ${selectedSource.badgeClass}`}
+                >
+                    {selectedSource.value === "shopee" ? (
+                        <ShoppingBag className="w-4 h-4" />
+                    ) : (
+                        <MessageCircle className="w-4 h-4" />
+                    )}
+                    {selectedSource.label}
                 </div>
             </div>
 
@@ -280,13 +304,19 @@ export default function NewManualOrderPage() {
                             </label>
                             <label className="space-y-2">
                                 <span className="text-xs font-medium text-muted-foreground">
-                                    WhatsApp Reference
+                                    {form.order_source === "shopee"
+                                        ? "Shopee Order No."
+                                        : "WhatsApp Reference"}
                                 </span>
                                 <input
                                     value={form.manual_reference}
                                     onChange={(e) => updateForm("manual_reference", e.target.value)}
                                     className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
-                                    placeholder="WA chat/order code"
+                                    placeholder={
+                                        form.order_source === "shopee"
+                                            ? "No. Pesanan"
+                                            : "WA chat/order code"
+                                    }
                                 />
                             </label>
                         </div>
@@ -374,6 +404,22 @@ export default function NewManualOrderPage() {
                         <h2 className="text-sm font-semibold text-foreground">
                             Order Settings
                         </h2>
+                        <label className="space-y-2 block">
+                            <span className="text-xs font-medium text-muted-foreground">
+                                Order Source
+                            </span>
+                            <select
+                                value={form.order_source}
+                                onChange={(e) => updateForm("order_source", e.target.value)}
+                                className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                            >
+                                {ORDER_SOURCES.map((source) => (
+                                    <option key={source.value} value={source.value}>
+                                        {source.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
                         <label className="space-y-2 block">
                             <span className="text-xs font-medium text-muted-foreground">
                                 Initial Status

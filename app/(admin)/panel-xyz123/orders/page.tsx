@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Loader2, Eye, ShoppingCart, Plus } from "lucide-react";
+import { Search, Loader2, Eye, ShoppingCart, Plus, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
 
@@ -50,10 +50,32 @@ function StatusBadge({ status }: { status: string }) {
     );
 }
 
+function SourceBadge({ source }: { source?: string }) {
+    if (source === "manual_whatsapp") {
+        return (
+            <span className="inline-flex rounded-full border border-green-500/20 bg-green-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green-500">
+                WhatsApp
+            </span>
+        );
+    }
+
+    if (source === "shopee") {
+        return (
+            <span className="inline-flex rounded-full border border-orange-500/20 bg-orange-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-orange-500">
+                Shopee
+            </span>
+        );
+    }
+
+    return null;
+}
+
 export default function AdminOrdersPage() {
     const router = useRouter();
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [importing, setImporting] = useState(false);
     const [keyword, setKeyword] = useState("");
     const [status, setStatus] = useState("");
     const [page, setPage] = useState(1);
@@ -80,22 +102,79 @@ export default function AdminOrdersPage() {
         fetchOrders();
     }, [page, keyword, status]);
 
+    const handleShopeeImport = async (
+        event: React.ChangeEvent<HTMLInputElement>,
+    ) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        setImporting(true);
+        try {
+            const { data } = await axios.post("/admin/orders/import-shopee", formData);
+            const result = data.data;
+            const importedCount =
+                Number(result?.created || 0) + Number(result?.updated || 0);
+            const errorCount = Number(result?.errors?.length || 0);
+
+            toast.success("Shopee XLSX imported", {
+                description: `${importedCount} order(s) synced. ${errorCount} error(s).`,
+            });
+
+            setPage(1);
+            fetchOrders();
+        } catch (error: any) {
+            toast.error("Failed to import Shopee XLSX", {
+                description:
+                    error?.message ||
+                    error?.error?.errors?.[0]?.message ||
+                    "Please check the file and try again.",
+            });
+        } finally {
+            setImporting(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-foreground">Orders</h1>
                     <p className="text-sm text-muted-foreground">
-                        Manage checkout and WhatsApp manual orders.
+                        Manage checkout, WhatsApp manual, and Shopee orders.
                     </p>
                 </div>
-                <button
-                    onClick={() => router.push("/panel-xyz123/orders/new")}
-                    className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
-                >
-                    <Plus className="w-4 h-4" />
-                    Add Manual Order
-                </button>
+                <div className="flex flex-wrap gap-2">
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".xlsx,.xls"
+                        onChange={handleShopeeImport}
+                        className="hidden"
+                    />
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={importing}
+                        className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-60"
+                    >
+                        {importing ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                            <Upload className="w-4 h-4" />
+                        )}
+                        Import Shopee XLSX
+                    </button>
+                    <button
+                        onClick={() => router.push("/panel-xyz123/orders/new")}
+                        className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Add Manual Order
+                    </button>
+                </div>
             </div>
 
             {/* Status Tabs */}
@@ -122,7 +201,7 @@ export default function AdminOrdersPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                     type="text"
-                    placeholder="Search by name or email..."
+                    placeholder="Search by name, email, or Shopee order no..."
                     value={keyword}
                     onChange={(e) => {
                         setKeyword(e.target.value);
@@ -176,11 +255,7 @@ export default function AdminOrdersPage() {
                                         <td className="px-5 py-3 font-mono text-xs text-muted-foreground">
                                             <div className="space-y-1">
                                                 <p>{order.id.slice(0, 8)}...</p>
-                                                {order.order_source === "manual_whatsapp" && (
-                                                    <span className="inline-flex rounded-full border border-green-500/20 bg-green-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green-500">
-                                                        WhatsApp
-                                                    </span>
-                                                )}
+                                                <SourceBadge source={order.order_source} />
                                             </div>
                                         </td>
                                         <td className="px-5 py-3">

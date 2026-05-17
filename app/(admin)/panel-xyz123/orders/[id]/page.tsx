@@ -9,6 +9,7 @@ import {
     FileText,
     Package,
     Printer,
+    Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
@@ -56,6 +57,26 @@ function StatusBadge({ status }: { status: string }) {
     );
 }
 
+function SourceBadge({ source }: { source?: string }) {
+    if (source === "manual_whatsapp") {
+        return (
+            <p className="mt-1 inline-flex rounded-full border border-green-500/20 bg-green-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green-500">
+                WhatsApp Manual
+            </p>
+        );
+    }
+
+    if (source === "shopee") {
+        return (
+            <p className="mt-1 inline-flex rounded-full border border-orange-500/20 bg-orange-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-orange-500">
+                Shopee
+            </p>
+        );
+    }
+
+    return null;
+}
+
 export default function AdminOrderDetailPage({
     params,
 }: {
@@ -66,9 +87,14 @@ export default function AdminOrderDetailPage({
     const [order, setOrder] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
     const [status, setStatus] = useState("");
     const [trackingNumber, setTrackingNumber] = useState("");
+    const [subtotal, setSubtotal] = useState("");
+    const [discountAmount, setDiscountAmount] = useState("");
+    const [shippingFee, setShippingFee] = useState("");
+    const [totalPrice, setTotalPrice] = useState("");
 
     useEffect(() => {
         const fetchOrder = async () => {
@@ -78,6 +104,12 @@ export default function AdminOrderDetailPage({
                     setOrder(data.data);
                     setStatus(data.data.status);
                     setTrackingNumber(data.data.tracking_number || "");
+                    setSubtotal(String(Number(data.data.subtotal || data.data.total_price || 0)));
+                    setDiscountAmount(
+                        String(Number(data.data.voucher_discount_amount || 0)),
+                    );
+                    setShippingFee(String(Number(data.data.shipping_fee || 0)));
+                    setTotalPrice(String(Number(data.data.total_price || 0)));
                 }
             } catch {
                 toast.error("Failed to fetch order");
@@ -99,10 +131,23 @@ export default function AdminOrderDetailPage({
                 payload.tracking_number = trackingNumber.trim();
             }
 
+            if (order.order_source === "shopee") {
+                payload.subtotal = Number(subtotal || 0);
+                payload.voucher_discount_amount = Number(discountAmount || 0);
+                payload.shipping_fee = Number(shippingFee || 0);
+                payload.total_price = Number(totalPrice || 0);
+            }
+
             const { data } = await axios.put(`/admin/orders/${id}`, payload);
             if (data.success) {
                 toast.success("Order updated");
                 setOrder(data.data);
+                setSubtotal(String(Number(data.data.subtotal || data.data.total_price || 0)));
+                setDiscountAmount(
+                    String(Number(data.data.voucher_discount_amount || 0)),
+                );
+                setShippingFee(String(Number(data.data.shipping_fee || 0)));
+                setTotalPrice(String(Number(data.data.total_price || 0)));
             } else {
                 toast.error(data.message);
             }
@@ -141,6 +186,32 @@ export default function AdminOrderDetailPage({
             toast.error(`Failed to generate ${type}`);
         } finally {
             setGeneratingPdf(null);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (
+            !confirm(
+                `Delete order ${order.id.slice(0, 8)}? This will remove the order, items, and payment record.`,
+            )
+        ) {
+            return;
+        }
+
+        setDeleting(true);
+        try {
+            await axios.delete(`/admin/orders/${id}`);
+            toast.success("Order deleted");
+            router.push("/panel-xyz123/orders");
+        } catch (error: any) {
+            toast.error("Failed to delete order", {
+                description:
+                    error?.message ||
+                    error?.error ||
+                    "Please try again.",
+            });
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -208,6 +279,18 @@ export default function AdminOrderDetailPage({
                         <Printer className="w-4 h-4 text-accent" />
                     )}
                     Generate Packing Slip
+                </button>
+                <button
+                    onClick={handleDelete}
+                    disabled={deleting || generatingPdf !== null}
+                    className="inline-flex items-center gap-2 bg-card border border-red-500/25 hover:border-red-500/50 hover:bg-red-500/10 px-4 py-2.5 rounded-xl text-sm font-medium text-red-500 transition-all disabled:opacity-50"
+                >
+                    {deleting ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                        <Trash2 className="w-4 h-4" />
+                    )}
+                    Delete Order
                 </button>
             </div>
 
@@ -278,6 +361,24 @@ export default function AdminOrderDetailPage({
                                     {formatCurrency(order.subtotal || order.total_price)}
                                 </span>
                             </div>
+                            {Number(order.voucher_discount_amount || 0) > 0 && (
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">
+                                        Discount{order.voucher_code ? ` (${order.voucher_code})` : ""}
+                                    </span>
+                                    <span className="text-green-500">
+                                        -{formatCurrency(order.voucher_discount_amount)}
+                                    </span>
+                                </div>
+                            )}
+                            {Number(order.shipping_fee || 0) > 0 && (
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Shipping</span>
+                                    <span className="text-foreground">
+                                        {formatCurrency(order.shipping_fee)}
+                                    </span>
+                                </div>
+                            )}
                             <div className="flex justify-between text-sm font-bold">
                                 <span className="text-foreground">Total</span>
                                 <span className="text-accent">
@@ -393,6 +494,62 @@ export default function AdminOrderDetailPage({
                             />
                         </div>
 
+                        {order.order_source === "shopee" && (
+                            <div className="space-y-3 rounded-xl border border-orange-500/20 bg-orange-500/5 p-3">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-orange-500">
+                                    Shopee Financials
+                                </p>
+                                <label className="block space-y-1.5">
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                        Subtotal
+                                    </span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={subtotal}
+                                        onChange={(e) => setSubtotal(e.target.value)}
+                                        className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                                    />
+                                </label>
+                                <label className="block space-y-1.5">
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                        Discount Total
+                                    </span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={discountAmount}
+                                        onChange={(e) => setDiscountAmount(e.target.value)}
+                                        className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                                    />
+                                </label>
+                                <label className="block space-y-1.5">
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                        Shipping Fee
+                                    </span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={shippingFee}
+                                        onChange={(e) => setShippingFee(e.target.value)}
+                                        className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                                    />
+                                </label>
+                                <label className="block space-y-1.5">
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                        Final Total / Income
+                                    </span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={totalPrice}
+                                        onChange={(e) => setTotalPrice(e.target.value)}
+                                        className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                                    />
+                                </label>
+                            </div>
+                        )}
+
                         <button
                             onClick={handleSave}
                             disabled={saving}
@@ -423,20 +580,20 @@ export default function AdminOrderDetailPage({
                                 </span>
                             </div>
                         )}
-                        {order.order_source === "manual_whatsapp" && (
+                        {order.order_source && order.order_source !== "checkout" && (
                             <div>
                                 <span className="text-muted-foreground text-xs">
                                     Order Source
                                 </span>
-                                <p className="mt-1 inline-flex rounded-full border border-green-500/20 bg-green-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-green-500">
-                                    WhatsApp Manual
-                                </p>
+                                <SourceBadge source={order.order_source} />
                             </div>
                         )}
                         {order.manual_reference && (
                             <div>
                                 <span className="text-muted-foreground text-xs">
-                                    Manual Reference
+                                    {order.order_source === "shopee"
+                                        ? "Shopee Order No."
+                                        : "Manual Reference"}
                                 </span>
                                 <p className="text-foreground text-xs mt-1">
                                     {order.manual_reference}
