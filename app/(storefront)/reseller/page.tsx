@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import {
   CheckCircle2,
@@ -24,6 +25,7 @@ const initialForm = {
   full_name: "",
   email: "",
   whatsapp_number: "",
+  occupation: "",
   business_name: "",
   business_type: "",
   city: "",
@@ -31,6 +33,7 @@ const initialForm = {
   social_link: "",
   estimated_monthly_orders: "",
   notes: "",
+  accepted_terms: false,
 };
 
 function getErrorMessage(error: any, fallback: string) {
@@ -42,7 +45,10 @@ export default function ResellerRegistrationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const updateForm = (key: keyof typeof form, value: string) => {
+  const updateForm = <K extends keyof typeof form>(
+    key: K,
+    value: (typeof form)[K],
+  ) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -61,11 +67,11 @@ export default function ResellerRegistrationPage() {
       if (data.success) {
         setIsSubmitted(true);
         setForm(initialForm);
-        toast.success("Pendaftaran reseller berhasil dikirim");
+        toast.success("Reseller application submitted");
       }
     } catch (error: any) {
-      toast.error("Gagal mengirim pendaftaran", {
-        description: getErrorMessage(error, "Silakan cek data lalu coba lagi."),
+      toast.error("Failed to submit reseller application", {
+        description: getErrorMessage(error, "Please review your details and try again."),
       });
     } finally {
       setIsSubmitting(false);
@@ -122,11 +128,11 @@ export default function ResellerRegistrationPage() {
               <CheckCircle2 className="h-8 w-8" />
             </div>
             <h2 className="text-2xl font-black tracking-tight">
-              Pendaftaran Diterima
+              Application Received
             </h2>
             <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-muted-foreground">
-              Data kamu sudah masuk ke dashboard admin Meta Peptides. Tim kami
-              akan review dan menghubungi WhatsApp yang kamu isi.
+              Your reseller profile has been sent to the Meta Peptides team.
+              We will review your application and contact you through WhatsApp.
             </p>
           </div>
         ) : (
@@ -137,7 +143,7 @@ export default function ResellerRegistrationPage() {
             <div className="grid gap-5 md:grid-cols-2">
               <label className="space-y-2">
                 <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                  Nama Lengkap
+                  Full Name
                 </span>
                 <input
                   value={form.full_name}
@@ -160,7 +166,7 @@ export default function ResellerRegistrationPage() {
               </label>
               <label className="space-y-2">
                 <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                  Nomor WhatsApp
+                  WhatsApp Number
                 </span>
                 <input
                   value={form.whatsapp_number}
@@ -171,7 +177,19 @@ export default function ResellerRegistrationPage() {
               </label>
               <label className="space-y-2">
                 <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                  Nama Bisnis
+                  Occupation
+                </span>
+                <input
+                  value={form.occupation}
+                  onChange={(e) => updateForm("occupation", e.target.value)}
+                  className="w-full rounded-2xl border-2 border-slate-100 bg-white px-4 py-3 text-sm font-medium outline-none transition-all focus:border-accent"
+                  placeholder="Your current role or profession"
+                  required
+                />
+              </label>
+              <label className="space-y-2">
+                <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                  Business Name
                 </span>
                 <input
                   value={form.business_name}
@@ -182,14 +200,14 @@ export default function ResellerRegistrationPage() {
               </label>
               <label className="space-y-2">
                 <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                  Tipe Bisnis
+                  Business Type
                 </span>
                 <select
                   value={form.business_type}
                   onChange={(e) => updateForm("business_type", e.target.value)}
                   className="w-full rounded-2xl border-2 border-slate-100 bg-white px-4 py-3 text-sm font-medium outline-none transition-all focus:border-accent"
                 >
-                  <option value="">Pilih tipe bisnis</option>
+                  <option value="">Select business type</option>
                   {BUSINESS_TYPES.map((type) => (
                     <option key={type} value={type}>
                       {type}
@@ -199,7 +217,7 @@ export default function ResellerRegistrationPage() {
               </label>
               <label className="space-y-2">
                 <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                  Kota
+                  City
                 </span>
                 <input
                   value={form.city}
@@ -210,7 +228,7 @@ export default function ResellerRegistrationPage() {
               </label>
               <label className="space-y-2">
                 <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                  Negara
+                  Country
                 </span>
                 <input
                   value={form.country}
@@ -220,7 +238,7 @@ export default function ResellerRegistrationPage() {
               </label>
               <label className="space-y-2">
                 <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                  Estimasi Order / Bulan
+                  Estimated Orders / Month
                 </span>
                 <input
                   type="number"
@@ -235,31 +253,51 @@ export default function ResellerRegistrationPage() {
               </label>
               <label className="space-y-2 md:col-span-2">
                 <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                  Link Store / Social Media
+                  Ecommerce / Website / Social Media Link
                 </span>
                 <input
                   value={form.social_link}
                   onChange={(e) => updateForm("social_link", e.target.value)}
                   className="w-full rounded-2xl border-2 border-slate-100 bg-white px-4 py-3 text-sm font-medium outline-none transition-all focus:border-accent"
-                  placeholder="Instagram, website, marketplace, or community link"
+                  placeholder="Paste one link: marketplace, website, Instagram, TikTok, or community page"
                 />
               </label>
               <label className="space-y-2 md:col-span-2">
                 <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">
-                  Catatan
+                  Notes
                 </span>
                 <textarea
                   value={form.notes}
                   onChange={(e) => updateForm("notes", e.target.value)}
                   className="min-h-32 w-full resize-none rounded-3xl border-2 border-slate-100 bg-white px-4 py-3 text-sm font-medium outline-none transition-all focus:border-accent"
-                  placeholder="Ceritakan channel penjualan, audience, atau kebutuhan reseller kamu."
+                  placeholder="Tell us about your sales channel, audience, or reseller needs."
                 />
+              </label>
+              <label className="flex items-start gap-3 rounded-2xl border-2 border-slate-100 bg-slate-50 px-4 py-4 md:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={form.accepted_terms}
+                  onChange={(e) => updateForm("accepted_terms", e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-accent focus:ring-accent"
+                  required
+                />
+                <span className="text-sm font-medium leading-6 text-muted-foreground">
+                  I have read and agree to the{" "}
+                  <Link
+                    href="/tnc"
+                    target="_blank"
+                    className="font-bold text-accent underline underline-offset-4"
+                  >
+                    Terms and Conditions
+                  </Link>
+                  .
+                </span>
               </label>
             </div>
 
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !form.accepted_terms}
               className="mt-8 inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-accent px-5 text-sm font-black uppercase tracking-widest text-white shadow-lg shadow-accent/20 transition-all hover:bg-accent/90 disabled:opacity-60"
             >
               {isSubmitting ? (

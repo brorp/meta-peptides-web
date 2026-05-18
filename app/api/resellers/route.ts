@@ -9,12 +9,14 @@ export async function POST(req: Request) {
     const fullName = normalizeText(body.full_name);
     const email = normalizeText(body.email).toLowerCase();
     const whatsappNumber = normalizeText(body.whatsapp_number);
+    const occupation = normalizeText(body.occupation);
     const businessName = normalizeText(body.business_name);
     const businessType = normalizeText(body.business_type);
     const city = normalizeText(body.city);
     const country = normalizeText(body.country) || "Indonesia";
     const socialLink = normalizeText(body.social_link);
     const notes = normalizeText(body.notes);
+    const acceptedTerms = body.accepted_terms === true;
     const estimatedMonthlyOrders =
       body.estimated_monthly_orders === "" ||
       body.estimated_monthly_orders === null ||
@@ -22,19 +24,23 @@ export async function POST(req: Request) {
         ? null
         : Number(body.estimated_monthly_orders);
 
-    if (!fullName) return errorResponse("Nama lengkap wajib diisi", 400);
-    if (!email) return errorResponse("Email wajib diisi", 400);
+    if (!fullName) return errorResponse("Full name is required", 400);
+    if (!email) return errorResponse("Email is required", 400);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return errorResponse("Format email tidak valid", 400);
+      return errorResponse("Email format is invalid", 400);
     }
-    if (!whatsappNumber) return errorResponse("Nomor WhatsApp wajib diisi", 400);
-    if (!businessName) return errorResponse("Nama bisnis wajib diisi", 400);
-    if (!city) return errorResponse("Kota domisili wajib diisi", 400);
+    if (!whatsappNumber) return errorResponse("WhatsApp number is required", 400);
+    if (!occupation) return errorResponse("Occupation is required", 400);
+    if (!businessName) return errorResponse("Business name is required", 400);
+    if (!city) return errorResponse("City is required", 400);
+    if (!acceptedTerms) {
+      return errorResponse("You must agree to the Terms and Conditions", 400);
+    }
     if (
       estimatedMonthlyOrders !== null &&
       (!Number.isFinite(estimatedMonthlyOrders) || estimatedMonthlyOrders < 0)
     ) {
-      return errorResponse("Estimasi order bulanan tidak valid", 400);
+      return errorResponse("Estimated monthly orders is invalid", 400);
     }
 
     const { data, error } = await supabaseAdmin
@@ -43,6 +49,7 @@ export async function POST(req: Request) {
         full_name: fullName,
         email,
         whatsapp_number: whatsappNumber,
+        occupation,
         business_name: businessName,
         business_type: businessType || null,
         city,
@@ -50,6 +57,7 @@ export async function POST(req: Request) {
         social_link: socialLink || null,
         estimated_monthly_orders: estimatedMonthlyOrders,
         notes: notes || null,
+        accepted_terms: acceptedTerms,
         status: "new",
       })
       .select()
@@ -57,16 +65,16 @@ export async function POST(req: Request) {
 
     if (error) {
       console.error("[Reseller] Submission insert failed:", error);
-      return errorResponse("Gagal menyimpan pendaftaran reseller", 500);
+      return errorResponse("Failed to save reseller application", 500);
     }
 
     return successResponse(
       data,
-      "Pendaftaran reseller berhasil dikirim",
+      "Reseller application submitted",
       201,
     );
   } catch (err: any) {
     console.error("[Reseller] Submission error:", err);
-    return errorResponse(err.message || "Terjadi kesalahan server", 500);
+    return errorResponse(err.message || "Server error", 500);
   }
 }

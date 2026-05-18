@@ -17,6 +17,7 @@ type ResellerApplication = {
     full_name: string;
     email: string;
     whatsapp_number: string;
+    occupation?: string | null;
     business_name: string;
     business_type?: string | null;
     city: string;
@@ -25,6 +26,7 @@ type ResellerApplication = {
     estimated_monthly_orders?: number | null;
     notes?: string | null;
     admin_notes?: string | null;
+    accepted_terms?: boolean | null;
     status: string;
     created_at: string;
 };
@@ -164,7 +166,7 @@ export default function AdminResellersPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                     type="text"
-                    placeholder="Search name, email, WhatsApp, business..."
+                    placeholder="Search name, email, WhatsApp, occupation, business..."
                     value={keyword}
                     onChange={(e) => {
                         setKeyword(e.target.value);
@@ -227,6 +229,11 @@ export default function AdminResellersPage() {
                                                     <MessageCircle className="w-3 h-3" />
                                                     {application.whatsapp_number}
                                                 </a>
+                                                {application.occupation && (
+                                                    <p className="mt-1 text-xs text-muted-foreground">
+                                                        {application.occupation}
+                                                    </p>
+                                                )}
                                             </div>
                                         </td>
                                         <td className="px-5 py-3">
@@ -247,6 +254,11 @@ export default function AdminResellersPage() {
                                                     Open link
                                                 </a>
                                             )}
+                                            <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                                {application.accepted_terms
+                                                    ? "Terms accepted"
+                                                    : "Terms not recorded"}
+                                            </p>
                                         </td>
                                         <td className="px-5 py-3 text-muted-foreground">
                                             <p className="text-foreground">

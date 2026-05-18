@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
     if (keyword) {
       query = query.or(
-        `full_name.ilike.%${keyword}%,email.ilike.%${keyword}%,whatsapp_number.ilike.%${keyword}%,business_name.ilike.%${keyword}%,city.ilike.%${keyword}%`,
+        `full_name.ilike.%${keyword}%,email.ilike.%${keyword}%,whatsapp_number.ilike.%${keyword}%,occupation.ilike.%${keyword}%,business_name.ilike.%${keyword}%,social_link.ilike.%${keyword}%,city.ilike.%${keyword}%`,
       );
     }
 
