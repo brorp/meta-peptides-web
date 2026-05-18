@@ -114,6 +114,7 @@ export async function PUT(
       "total_price",
       "voucher_discount_amount",
       "shipping_fee",
+      "marketplace_fee",
     ]) {
       if (body[moneyField] !== undefined) {
         const amount = Number(body[moneyField]);
@@ -122,6 +123,14 @@ export async function PUT(
         }
 
         updateData[moneyField] = amount;
+      }
+    }
+
+    // Allow updating the order date
+    if (body.created_at !== undefined) {
+      const parsedDate = new Date(body.created_at);
+      if (!isNaN(parsedDate.getTime())) {
+        updateData.created_at = parsedDate.toISOString();
       }
     }
 

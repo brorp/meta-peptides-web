@@ -144,6 +144,10 @@ export async function POST(req: NextRequest) {
             0,
             Number(body.manual_discount_amount || 0),
         );
+        const marketplaceFee = Math.max(0, Number(body.marketplace_fee || 0));
+        // Optional custom order date (ISO string or YYYY-MM-DD)
+        const orderDateRaw = body.order_date ? String(body.order_date).trim() : null;
+        const orderDate = orderDateRaw ? new Date(orderDateRaw) : null;
 
         if (!shippingName) return errorResponse("Customer name is required", 400);
         if (!shippingPhone) return errorResponse("WhatsApp number is required", 400);
@@ -199,17 +203,18 @@ export async function POST(req: NextRequest) {
             (sum, item) => sum + item.quantity * item.price_at_purchase,
             0,
         );
-        const totalPrice = Math.max(0, subtotal - manualDiscountAmount);
+        const totalPrice = Math.max(0, subtotal - manualDiscountAmount - (orderSource === "shopee" ? marketplaceFee : 0));
         const transactionCode =
             String(body.transaction_code || "").trim() ||
             manualReference ||
             `${orderSource === "shopee" ? "SHOPEE" : "WA"}-${Date.now()}`;
 
-        const orderPayload = {
+        const orderPayload: Record<string, any> = {
             user_id: null,
             is_guest: true,
             total_price: totalPrice,
             subtotal,
+            marketplace_fee: orderSource === "shopee" ? marketplaceFee : 0,
             shipping_address: shippingAddress,
             shipping_regional: shippingRegional,
             shipping_name: shippingName,
@@ -220,12 +225,16 @@ export async function POST(req: NextRequest) {
             note: note || null,
             voucher_code: null,
             voucher_id: null,
-            voucher_discount_amount: 0,
+            voucher_discount_amount: manualDiscountAmount,
             status,
             order_source: orderSource,
             manual_channel: manualChannel,
             manual_reference: manualReference || transactionCode,
         };
+
+        if (orderDate && !isNaN(orderDate.getTime())) {
+            orderPayload.created_at = orderDate.toISOString();
+        }
 
         let { data: order, error: orderError } = await supabaseAdmin
             .from("orders")

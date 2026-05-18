@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { DollarSign, Package, ShoppingCart, Users, Clock } from "lucide-react";
+import { DollarSign, Package, ShoppingCart, Users, Clock, Tag, Store } from "lucide-react";
 import { api as axios } from "@/lib/axios";
 
 type Stats = {
@@ -9,6 +9,8 @@ type Stats = {
     totalProducts: number;
     totalOrders: number;
     totalRevenue: number;
+    totalDiscount: number;
+    totalMarketplaceFee: number;
     pendingOrders: number;
     recentOrders: any[];
 };
@@ -96,8 +98,8 @@ export default function AdminDashboardPage() {
     if (loading) {
         return (
             <div className="space-y-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {[...Array(4)].map((_, i) => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[...Array(6)].map((_, i) => (
                         <div
                             key={i}
                             className="h-24 bg-card border border-border rounded-2xl animate-pulse"
@@ -114,7 +116,7 @@ export default function AdminDashboardPage() {
             <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <StatsCard
                     label="Total Revenue"
                     value={formatCurrency(stats?.totalRevenue || 0)}
@@ -138,6 +140,18 @@ export default function AdminDashboardPage() {
                     value={stats?.totalUsers || 0}
                     icon={Users}
                     color="bg-orange-500/10 text-orange-500"
+                />
+                <StatsCard
+                    label="Total Discount"
+                    value={formatCurrency(stats?.totalDiscount || 0)}
+                    icon={Tag}
+                    color="bg-pink-500/10 text-pink-500"
+                />
+                <StatsCard
+                    label="Marketplace Fee"
+                    value={formatCurrency(stats?.totalMarketplaceFee || 0)}
+                    icon={Store}
+                    color="bg-yellow-500/10 text-yellow-500"
                 />
             </div>
 

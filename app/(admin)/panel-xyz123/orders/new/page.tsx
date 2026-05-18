@@ -67,6 +67,15 @@ function getErrorMessage(error: any, fallback: string) {
     return error?.message || error?.error || fallback;
 }
 
+/** Returns today's date in "YYYY-MM-DD" format (local timezone) */
+function todayLocalDate() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
+
 export default function NewManualOrderPage() {
     const router = useRouter();
     const [products, setProducts] = useState<ProductOption[]>([]);
@@ -84,7 +93,9 @@ export default function NewManualOrderPage() {
         manual_reference: "",
         status: "processing",
         manual_discount_amount: "0",
+        marketplace_fee: "0",
         note: "",
+        order_date: todayLocalDate(),
     });
     const [items, setItems] = useState<ManualOrderItem[]>([buildBlankItem()]);
 
@@ -115,12 +126,16 @@ export default function NewManualOrderPage() {
         [products],
     );
 
+    const isShopee = form.order_source === "shopee";
+
     const subtotal = items.reduce(
         (sum, item) => sum + Number(item.quantity || 0) * Number(item.price_at_purchase || 0),
         0,
     );
-    const manualDiscount = Math.max(0, Number(form.manual_discount_amount || 0));
-    const total = Math.max(0, subtotal - manualDiscount);
+    const manualDiscount = isShopee ? 0 : Math.max(0, Number(form.manual_discount_amount || 0));
+    const marketplaceFee = isShopee ? Math.max(0, Number(form.marketplace_fee || 0)) : 0;
+    const total = Math.max(0, subtotal - manualDiscount - marketplaceFee);
+
     const selectedSource =
         ORDER_SOURCES.find((source) => source.value === form.order_source) ||
         ORDER_SOURCES[0];
@@ -181,6 +196,7 @@ export default function NewManualOrderPage() {
             const { data } = await axios.post("/admin/orders", {
                 ...form,
                 manual_discount_amount: manualDiscount,
+                marketplace_fee: marketplaceFee,
                 items: payloadItems,
             });
 
@@ -436,6 +452,17 @@ export default function NewManualOrderPage() {
                         </label>
                         <label className="space-y-2 block">
                             <span className="text-xs font-medium text-muted-foreground">
+                                Tanggal Pesanan
+                            </span>
+                            <input
+                                type="date"
+                                value={form.order_date}
+                                onChange={(e) => updateForm("order_date", e.target.value)}
+                                className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                            />
+                        </label>
+                        <label className="space-y-2 block">
+                            <span className="text-xs font-medium text-muted-foreground">
                                 Initial Status
                             </span>
                             <select
@@ -450,20 +477,44 @@ export default function NewManualOrderPage() {
                                 ))}
                             </select>
                         </label>
-                        <label className="space-y-2 block">
-                            <span className="text-xs font-medium text-muted-foreground">
-                                Manual Discount
-                            </span>
-                            <input
-                                type="number"
-                                min="0"
-                                value={form.manual_discount_amount}
-                                onChange={(e) =>
-                                    updateForm("manual_discount_amount", e.target.value)
-                                }
-                                className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
-                            />
-                        </label>
+
+                        {/* Discount (WhatsApp only) */}
+                        {!isShopee && (
+                            <label className="space-y-2 block">
+                                <span className="text-xs font-medium text-muted-foreground">
+                                    Manual Discount
+                                </span>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={form.manual_discount_amount}
+                                    onChange={(e) =>
+                                        updateForm("manual_discount_amount", e.target.value)
+                                    }
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                                />
+                            </label>
+                        )}
+
+                        {/* Shopee Fee (Shopee only) */}
+                        {isShopee && (
+                            <label className="space-y-2 block">
+                                <span className="text-xs font-medium text-muted-foreground">
+                                    Shopee Fee (Marketplace Fee)
+                                </span>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={form.marketplace_fee}
+                                    onChange={(e) =>
+                                        updateForm("marketplace_fee", e.target.value)
+                                    }
+                                    className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                                    placeholder="Biaya platform Shopee"
+                                />
+                            </label>
+                        )}
+
                         <label className="space-y-2 block">
                             <span className="text-xs font-medium text-muted-foreground">
                                 Internal Note
@@ -488,12 +539,22 @@ export default function NewManualOrderPage() {
                                     {formatCurrency(subtotal)}
                                 </span>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Discount</span>
-                                <span className="text-green-500">
-                                    -{formatCurrency(manualDiscount)}
-                                </span>
-                            </div>
+                            {!isShopee && manualDiscount > 0 && (
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Discount</span>
+                                    <span className="text-green-500">
+                                        -{formatCurrency(manualDiscount)}
+                                    </span>
+                                </div>
+                            )}
+                            {isShopee && marketplaceFee > 0 && (
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Marketplace Fee</span>
+                                    <span className="text-orange-500">
+                                        -{formatCurrency(marketplaceFee)}
+                                    </span>
+                                </div>
+                            )}
                             <div className="flex justify-between border-t border-border pt-3 font-bold">
                                 <span className="text-foreground">Total</span>
                                 <span className="text-accent">{formatCurrency(total)}</span>

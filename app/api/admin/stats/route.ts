@@ -26,14 +26,24 @@ export async function GET() {
             .from("orders")
             .select("*", { count: "exact", head: true });
 
-        // Revenue (sum of total_price from paid/active order statuses)
+        // Revenue, discount, and marketplace fee (from paid/active order statuses)
         const { data: revenueData } = await supabaseAdmin
             .from("orders")
-            .select("total_price")
+            .select("total_price, voucher_discount_amount, marketplace_fee")
             .in("status", ["completed", "processing"]);
 
         const totalRevenue = (revenueData || []).reduce(
             (sum, order) => sum + (order.total_price || 0),
+            0,
+        );
+
+        const totalDiscount = (revenueData || []).reduce(
+            (sum, order) => sum + (Number(order.voucher_discount_amount) || 0),
+            0,
+        );
+
+        const totalMarketplaceFee = (revenueData || []).reduce(
+            (sum, order) => sum + (Number(order.marketplace_fee) || 0),
             0,
         );
 
@@ -57,6 +67,8 @@ export async function GET() {
                 totalProducts: totalProducts || 0,
                 totalOrders: totalOrders || 0,
                 totalRevenue,
+                totalDiscount,
+                totalMarketplaceFee,
                 pendingOrders: pendingOrders || 0,
                 recentOrders: recentOrders || [],
             },

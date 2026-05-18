@@ -90,6 +90,7 @@ export default function AdminOrderDetailPage({
     const [deleting, setDeleting] = useState(false);
     const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
     const [status, setStatus] = useState("");
+    const [orderDate, setOrderDate] = useState("");
     const [trackingNumber, setTrackingNumber] = useState("");
     const [shippingName, setShippingName] = useState("");
     const [customerUsername, setCustomerUsername] = useState("");
@@ -100,7 +101,7 @@ export default function AdminOrderDetailPage({
     const [shippingZip, setShippingZip] = useState("");
     const [subtotal, setSubtotal] = useState("");
     const [discountAmount, setDiscountAmount] = useState("");
-    const [shippingFee, setShippingFee] = useState("");
+    const [marketplaceFee, setMarketplaceFee] = useState("");
     const [totalPrice, setTotalPrice] = useState("");
 
     useEffect(() => {
@@ -110,6 +111,12 @@ export default function AdminOrderDetailPage({
                 if (data.success) {
                     setOrder(data.data);
                     setStatus(data.data.status);
+                    // Format created_at to "YYYY-MM-DD" for the date input
+                    const raw = data.data.created_at ? new Date(data.data.created_at) : new Date();
+                    const y = raw.getFullYear();
+                    const mo = String(raw.getMonth() + 1).padStart(2, "0");
+                    const d = String(raw.getDate()).padStart(2, "0");
+                    setOrderDate(`${y}-${mo}-${d}`);
                     setTrackingNumber(data.data.tracking_number || "");
                     setShippingName(data.data.shipping_name || "");
                     setCustomerUsername(data.data.customer_username || "");
@@ -122,7 +129,7 @@ export default function AdminOrderDetailPage({
                     setDiscountAmount(
                         String(Number(data.data.voucher_discount_amount || 0)),
                     );
-                    setShippingFee(String(Number(data.data.shipping_fee || 0)));
+                    setMarketplaceFee(String(Number(data.data.marketplace_fee || 0)));
                     setTotalPrice(String(Number(data.data.total_price || 0)));
                 }
             } catch {
@@ -148,6 +155,11 @@ export default function AdminOrderDetailPage({
                 shipping_zip: shippingZip,
             };
 
+            // Send updated order date
+            if (orderDate) {
+                payload.created_at = new Date(orderDate).toISOString();
+            }
+
             if (trackingNumber.trim().length > 0) {
                 payload.tracking_number = trackingNumber.trim();
             }
@@ -155,7 +167,7 @@ export default function AdminOrderDetailPage({
             if (order.order_source === "shopee") {
                 payload.subtotal = Number(subtotal || 0);
                 payload.voucher_discount_amount = Number(discountAmount || 0);
-                payload.shipping_fee = Number(shippingFee || 0);
+                payload.marketplace_fee = Number(marketplaceFee || 0);
                 payload.total_price = Number(totalPrice || 0);
             }
 
@@ -163,6 +175,11 @@ export default function AdminOrderDetailPage({
             if (data.success) {
                 toast.success("Order updated");
                 setOrder(data.data);
+                const rawUpdated = data.data.created_at ? new Date(data.data.created_at) : new Date();
+                const yu = rawUpdated.getFullYear();
+                const mou = String(rawUpdated.getMonth() + 1).padStart(2, "0");
+                const du = String(rawUpdated.getDate()).padStart(2, "0");
+                setOrderDate(`${yu}-${mou}-${du}`);
                 setShippingName(data.data.shipping_name || "");
                 setCustomerUsername(data.data.customer_username || "");
                 setShippingPhone(data.data.shipping_phone || "");
@@ -174,7 +191,7 @@ export default function AdminOrderDetailPage({
                 setDiscountAmount(
                     String(Number(data.data.voucher_discount_amount || 0)),
                 );
-                setShippingFee(String(Number(data.data.shipping_fee || 0)));
+                setMarketplaceFee(String(Number(data.data.marketplace_fee || 0)));
                 setTotalPrice(String(Number(data.data.total_price || 0)));
             } else {
                 toast.error(data.message);
@@ -399,11 +416,11 @@ export default function AdminOrderDetailPage({
                                     </span>
                                 </div>
                             )}
-                            {Number(order.shipping_fee || 0) > 0 && (
+                            {Number(order.marketplace_fee || 0) > 0 && (
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">Shipping</span>
-                                    <span className="text-foreground">
-                                        {formatCurrency(order.shipping_fee)}
+                                    <span className="text-muted-foreground">Marketplace Fee</span>
+                                    <span className="text-orange-500">
+                                        -{formatCurrency(order.marketplace_fee)}
                                     </span>
                                 </div>
                             )}
@@ -550,6 +567,18 @@ export default function AdminOrderDetailPage({
 
                         <div>
                             <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                                Tanggal Pesanan
+                            </label>
+                            <input
+                                type="date"
+                                value={orderDate}
+                                onChange={(e) => setOrderDate(e.target.value)}
+                                className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                                 Status
                             </label>
                             <select
@@ -609,13 +638,13 @@ export default function AdminOrderDetailPage({
                                 </label>
                                 <label className="block space-y-1.5">
                                     <span className="text-xs font-medium text-muted-foreground">
-                                        Shipping Fee
+                                        Shopee Fee (Marketplace Fee)
                                     </span>
                                     <input
                                         type="number"
                                         min="0"
-                                        value={shippingFee}
-                                        onChange={(e) => setShippingFee(e.target.value)}
+                                        value={marketplaceFee}
+                                        onChange={(e) => setMarketplaceFee(e.target.value)}
                                         className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
                                     />
                                 </label>
@@ -651,7 +680,7 @@ export default function AdminOrderDetailPage({
                     {/* Order Meta */}
                     <div className="bg-card border border-border rounded-2xl p-5 space-y-2 text-sm">
                         <div className="flex justify-between">
-                            <span className="text-muted-foreground">Created</span>
+                            <span className="text-muted-foreground">Tanggal Pesanan</span>
                             <span className="text-foreground text-xs">
                                 {formatDate(order.created_at)}
                             </span>
