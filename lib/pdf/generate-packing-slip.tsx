@@ -1,158 +1,157 @@
 import React from "react";
 import {
     Document,
+    Image,
     Page,
     Text,
     View,
     StyleSheet,
 } from "@react-pdf/renderer";
 
+const PACKING_SLIP_LOGO_PATH = `${process.cwd()}/public/icon-meta.png`;
+
 const styles = StyleSheet.create({
     page: {
-        padding: 12,
-        fontSize: 11,
+        padding: 8,
+        fontSize: 9,
         fontFamily: "Helvetica",
         color: "#000",
     },
     header: {
         textAlign: "center" as const,
-        marginBottom: 8,
+        marginBottom: 5,
         borderBottomWidth: 2,
         borderBottomColor: "#000",
-        paddingBottom: 6,
+        paddingBottom: 4,
+    },
+    logo: {
+        width: 34,
+        height: 34,
+        objectFit: "contain" as const,
+        alignSelf: "center" as const,
+        marginBottom: 2,
     },
     title: {
-        fontSize: 18,
+        fontSize: 15,
         fontFamily: "Helvetica-Bold",
         color: "#000",
         textTransform: "uppercase" as const,
     },
-    subtitle: {
-        fontSize: 10,
-        color: "#000",
-        marginTop: 2,
-    },
     addressRow: {
-        marginBottom: 8,
-        gap: 6,
+        marginBottom: 5,
     },
     addressBox: {
         borderWidth: 1,
         borderColor: "#000",
-        padding: 7,
+        padding: 5,
     },
     addressLabel: {
         fontFamily: "Helvetica-Bold",
-        fontSize: 10,
+        fontSize: 8,
         color: "#000",
         textTransform: "uppercase" as const,
-        marginBottom: 3,
+        marginBottom: 2,
     },
     addressText: {
-        fontSize: 13,
-        lineHeight: 1.25,
+        fontSize: 12,
+        lineHeight: 1.12,
         color: "#000",
         fontFamily: "Helvetica-Bold",
     },
     addressSmall: {
-        fontSize: 11,
+        fontSize: 9,
         color: "#000",
-        marginTop: 3,
-        lineHeight: 1.25,
+        marginTop: 2,
+        lineHeight: 1.12,
     },
     metaRow: {
         flexDirection: "row",
         justifyContent: "space-between",
-        marginBottom: 8,
+        marginBottom: 5,
         borderWidth: 1,
         borderColor: "#000",
-        padding: 6,
+        padding: 4,
     },
     metaItem: {
         flex: 1,
     },
     metaLabel: {
-        fontSize: 8,
+        fontSize: 7,
         color: "#000",
         textTransform: "uppercase" as const,
     },
     metaValue: {
-        fontSize: 11,
+        fontSize: 9,
         fontFamily: "Helvetica-Bold",
         color: "#000",
-        marginTop: 2,
+        marginTop: 1,
     },
     section: {
-        marginBottom: 8,
+        marginBottom: 5,
     },
     sectionTitle: {
         fontFamily: "Helvetica-Bold",
-        fontSize: 11,
+        fontSize: 9,
         color: "#000",
-        marginBottom: 4,
+        marginBottom: 2,
         textTransform: "uppercase" as const,
     },
     tableHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
-        paddingVertical: 5,
+        paddingVertical: 3,
         borderBottomWidth: 2,
         borderBottomColor: "#000",
     },
     headerText: {
         fontFamily: "Helvetica-Bold",
-        fontSize: 10,
+        fontSize: 8,
         color: "#000",
         textTransform: "uppercase" as const,
     },
     itemRow: {
         flexDirection: "row",
         justifyContent: "space-between",
-        paddingVertical: 5,
+        paddingVertical: 3,
         borderBottomWidth: 1,
         borderBottomColor: "#000",
     },
     itemName: {
-        fontSize: 12,
+        fontSize: 9,
         color: "#000",
         flex: 5,
-        lineHeight: 1.2,
+        lineHeight: 1.1,
+    },
+    itemNameCompact: {
+        fontSize: 8,
+        lineHeight: 1.05,
     },
     itemQty: {
-        fontSize: 13,
+        fontSize: 10,
         color: "#000",
         flex: 1,
         textAlign: "right" as const,
         fontFamily: "Helvetica-Bold",
     },
     trackingBox: {
-        marginTop: 8,
+        marginTop: 5,
         borderWidth: 2,
         borderColor: "#000",
         borderStyle: "dashed",
-        padding: 8,
+        padding: 5,
         textAlign: "center" as const,
     },
     trackingLabel: {
-        fontSize: 10,
+        fontSize: 8,
         color: "#000",
         textTransform: "uppercase" as const,
     },
     trackingNumber: {
-        minHeight: 28,
-        fontSize: 18,
+        minHeight: 16,
+        fontSize: 12,
         fontFamily: "Helvetica-Bold",
         color: "#000",
-        marginTop: 10,
-    },
-    footer: {
-        textAlign: "center" as const,
-        fontSize: 9,
-        color: "#000",
-        borderTopWidth: 1,
-        borderTopColor: "#000",
-        paddingTop: 5,
-        marginTop: 6,
+        marginTop: 4,
     },
 });
 
@@ -171,9 +170,17 @@ function getOrderItems(order: any) {
     }));
 }
 
+function sanitizeSlipText(value: unknown) {
+    return String(value || "")
+        .replace(/meta\s*peptides/gi, "")
+        .replace(/metapeptides/gi, "")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+}
+
 function getProductDisplayName(product: any) {
     const parts = [product?.name, product?.label, product?.volume]
-        .map((value) => String(value || "").trim())
+        .map((value) => sanitizeSlipText(value))
         .filter(Boolean);
 
     return Array.from(new Set(parts)).join(" - ") || "Product";
@@ -181,41 +188,37 @@ function getProductDisplayName(product: any) {
 
 export function PackingSlipDocument({ order }: { order: any }) {
     const orderItems = getOrderItems(order);
-    const complimentaryItems = orderItems.filter((item: any) => item.isComplimentary);
     const totalQuantity = orderItems.reduce(
         (sum: number, item: any) => sum + Number(item.quantity || 0),
         0,
     );
+    const orderCode = sanitizeSlipText(order.id).slice(0, 8).toUpperCase();
+    const isDenseOrder = orderItems.length > 6;
 
     return (
         <Document>
-            <Page size={[288, 432]} style={styles.page}>
+            <Page size={[288, 432]} style={styles.page} wrap={false}>
                 <View style={styles.header}>
+                    <Image src={PACKING_SLIP_LOGO_PATH} style={styles.logo} />
                     <Text style={styles.title}>Packing Slip</Text>
-                    <Text style={styles.subtitle}>Meta Peptides</Text>
                 </View>
 
                 <View style={styles.addressRow}>
                     <View style={styles.addressBox}>
-                        <Text style={styles.addressLabel}>From</Text>
-                        <Text style={styles.addressText}>Meta Wellness</Text>
-                        <Text style={styles.addressSmall}>
-                            +6285191378506{"\n"}
-                            support@meta-peptides.com
-                        </Text>
-                    </View>
-                    <View style={styles.addressBox}>
-                        <Text style={styles.addressLabel}>To</Text>
+                        <Text style={styles.addressLabel}>Ship To</Text>
                         <Text style={styles.addressText}>
-                            {order.shipping_name || "Customer"}
+                            {sanitizeSlipText(order.shipping_name) || "Customer"}
                         </Text>
                         <Text style={styles.addressSmall}>
-                            {order.shipping_phone || ""}{"\n"}
-                            {order.shipping_address || ""}
+                            {sanitizeSlipText(order.shipping_phone)}
+                            {order.shipping_phone ? "\n" : ""}
+                            {sanitizeSlipText(order.shipping_address)}
                             {order.shipping_regional
-                                ? `\n${order.shipping_regional}`
+                                ? `\n${sanitizeSlipText(order.shipping_regional)}`
                                 : ""}
-                            {order.shipping_zip ? ` ${order.shipping_zip}` : ""}
+                            {order.shipping_zip
+                                ? ` ${sanitizeSlipText(order.shipping_zip)}`
+                                : ""}
                         </Text>
                     </View>
                 </View>
@@ -223,9 +226,7 @@ export function PackingSlipDocument({ order }: { order: any }) {
                 <View style={styles.metaRow}>
                     <View style={styles.metaItem}>
                         <Text style={styles.metaLabel}>Order</Text>
-                        <Text style={styles.metaValue}>
-                            {order.id.slice(0, 8).toUpperCase()}
-                        </Text>
+                        <Text style={styles.metaValue}>{orderCode}</Text>
                     </View>
                     <View style={styles.metaItem}>
                         <Text style={styles.metaLabel}>Date</Text>
@@ -249,7 +250,12 @@ export function PackingSlipDocument({ order }: { order: any }) {
                     </View>
                     {orderItems.map((item: any, i: number) => (
                         <View key={i} style={styles.itemRow}>
-                            <Text style={styles.itemName}>
+                            <Text
+                                style={[
+                                    styles.itemName,
+                                    isDenseOrder ? styles.itemNameCompact : {},
+                                ]}
+                            >
                                 {getProductDisplayName(item.products)}
                                 {item.isComplimentary ? " (FREE)" : ""}
                             </Text>
@@ -258,24 +264,10 @@ export function PackingSlipDocument({ order }: { order: any }) {
                     ))}
                 </View>
 
-                {complimentaryItems.length > 0 && (
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Packing Note</Text>
-                        <Text style={styles.addressSmall}>
-                            Free items are included at no charge and must be packed
-                            with the paid products.
-                        </Text>
-                    </View>
-                )}
-
                 <View style={styles.trackingBox}>
                     <Text style={styles.trackingLabel}>Tracking Number / Resi</Text>
                     <Text style={styles.trackingNumber}> </Text>
                 </View>
-
-                <Text style={styles.footer}>
-                    meta-peptides.com | Handle with care
-                </Text>
             </Page>
         </Document>
     );
