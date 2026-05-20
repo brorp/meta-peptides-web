@@ -1,4 +1,5 @@
 import React from "react";
+import { readFileSync } from "fs";
 import {
     Document,
     Image,
@@ -8,7 +9,9 @@ import {
     StyleSheet,
 } from "@react-pdf/renderer";
 
-const PACKING_SLIP_LOGO_PATH = `${process.cwd()}/public/icon-meta.png`;
+const PACKING_SLIP_LOGO_SRC = `data:image/png;base64,${readFileSync(
+    `${process.cwd()}/public/icon-meta.png`,
+).toString("base64")}`;
 
 const styles = StyleSheet.create({
     page: {
@@ -16,6 +19,9 @@ const styles = StyleSheet.create({
         fontSize: 9,
         fontFamily: "Helvetica",
         color: "#000",
+    },
+    body: {
+        width: "100%",
     },
     header: {
         textAlign: "center" as const,
@@ -25,20 +31,21 @@ const styles = StyleSheet.create({
         paddingBottom: 4,
     },
     logo: {
-        width: 34,
-        height: 34,
+        width: 38,
+        height: 38,
         objectFit: "contain" as const,
         alignSelf: "center" as const,
         marginBottom: 2,
     },
     title: {
-        fontSize: 15,
+        fontSize: 17,
         fontFamily: "Helvetica-Bold",
         color: "#000",
         textTransform: "uppercase" as const,
     },
     addressRow: {
         marginBottom: 5,
+        gap: 4,
     },
     addressBox: {
         borderWidth: 1,
@@ -53,16 +60,28 @@ const styles = StyleSheet.create({
         marginBottom: 2,
     },
     addressText: {
-        fontSize: 12,
+        fontSize: 13,
         lineHeight: 1.12,
         color: "#000",
         fontFamily: "Helvetica-Bold",
     },
     addressSmall: {
-        fontSize: 9,
+        fontSize: 10,
         color: "#000",
         marginTop: 2,
         lineHeight: 1.12,
+    },
+    senderText: {
+        fontSize: 10,
+        color: "#000",
+        fontFamily: "Helvetica-Bold",
+        lineHeight: 1.1,
+    },
+    senderSmall: {
+        fontSize: 9,
+        color: "#000",
+        marginTop: 1,
+        lineHeight: 1.08,
     },
     metaRow: {
         flexDirection: "row",
@@ -81,7 +100,7 @@ const styles = StyleSheet.create({
         textTransform: "uppercase" as const,
     },
     metaValue: {
-        fontSize: 9,
+        fontSize: 10,
         fontFamily: "Helvetica-Bold",
         color: "#000",
         marginTop: 1,
@@ -91,7 +110,7 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontFamily: "Helvetica-Bold",
-        fontSize: 9,
+        fontSize: 10,
         color: "#000",
         marginBottom: 2,
         textTransform: "uppercase" as const,
@@ -105,7 +124,7 @@ const styles = StyleSheet.create({
     },
     headerText: {
         fontFamily: "Helvetica-Bold",
-        fontSize: 8,
+        fontSize: 9,
         color: "#000",
         textTransform: "uppercase" as const,
     },
@@ -117,17 +136,17 @@ const styles = StyleSheet.create({
         borderBottomColor: "#000",
     },
     itemName: {
-        fontSize: 9,
+        fontSize: 10,
         color: "#000",
         flex: 5,
         lineHeight: 1.1,
     },
     itemNameCompact: {
-        fontSize: 8,
+        fontSize: 9,
         lineHeight: 1.05,
     },
     itemQty: {
-        fontSize: 10,
+        fontSize: 11,
         color: "#000",
         flex: 1,
         textAlign: "right" as const,
@@ -138,16 +157,16 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: "#000",
         borderStyle: "dashed",
-        padding: 5,
+        padding: 7,
         textAlign: "center" as const,
     },
     trackingLabel: {
-        fontSize: 8,
+        fontSize: 9,
         color: "#000",
         textTransform: "uppercase" as const,
     },
     trackingNumber: {
-        minHeight: 16,
+        minHeight: 26,
         fontSize: 12,
         fontFamily: "Helvetica-Bold",
         color: "#000",
@@ -197,76 +216,88 @@ export function PackingSlipDocument({ order }: { order: any }) {
 
     return (
         <Document>
-            <Page size={[288, 432]} style={styles.page} wrap={false}>
-                <View style={styles.header}>
-                    <Image src={PACKING_SLIP_LOGO_PATH} style={styles.logo} />
-                    <Text style={styles.title}>Packing Slip</Text>
-                </View>
+            <Page size={[288, 432]} style={styles.page}>
+                <View style={styles.body} wrap={false}>
+                    <View style={styles.header}>
+                        <Image src={PACKING_SLIP_LOGO_SRC} style={styles.logo} />
+                        <Text style={styles.title}>Packing Slip</Text>
+                    </View>
 
-                <View style={styles.addressRow}>
-                    <View style={styles.addressBox}>
-                        <Text style={styles.addressLabel}>Ship To</Text>
-                        <Text style={styles.addressText}>
-                            {sanitizeSlipText(order.shipping_name) || "Customer"}
-                        </Text>
-                        <Text style={styles.addressSmall}>
-                            {sanitizeSlipText(order.shipping_phone)}
-                            {order.shipping_phone ? "\n" : ""}
-                            {sanitizeSlipText(order.shipping_address)}
-                            {order.shipping_regional
-                                ? `\n${sanitizeSlipText(order.shipping_regional)}`
-                                : ""}
-                            {order.shipping_zip
-                                ? ` ${sanitizeSlipText(order.shipping_zip)}`
-                                : ""}
-                        </Text>
+                    <View style={styles.addressRow}>
+                        <View style={styles.addressBox}>
+                            <Text style={styles.addressLabel}>Sender</Text>
+                            <Text style={styles.senderText}>Fulfillment Team</Text>
+                            <Text style={styles.senderSmall}>+6285191378506</Text>
+                        </View>
+                        <View style={styles.addressBox}>
+                            <Text style={styles.addressLabel}>Recipient</Text>
+                            <Text style={styles.addressText}>
+                                {sanitizeSlipText(order.shipping_name) || "Customer"}
+                            </Text>
+                            <Text style={styles.addressSmall}>
+                                {sanitizeSlipText(order.shipping_phone)}
+                                {order.shipping_phone ? "\n" : ""}
+                                {sanitizeSlipText(order.shipping_address)}
+                                {order.shipping_regional
+                                    ? `\n${sanitizeSlipText(order.shipping_regional)}`
+                                    : ""}
+                                {order.shipping_zip
+                                    ? ` ${sanitizeSlipText(order.shipping_zip)}`
+                                    : ""}
+                            </Text>
+                        </View>
                     </View>
-                </View>
 
-                <View style={styles.metaRow}>
-                    <View style={styles.metaItem}>
-                        <Text style={styles.metaLabel}>Order</Text>
-                        <Text style={styles.metaValue}>{orderCode}</Text>
+                    <View style={styles.metaRow}>
+                        <View style={styles.metaItem}>
+                            <Text style={styles.metaLabel}>Order</Text>
+                            <Text style={styles.metaValue}>{orderCode}</Text>
+                        </View>
+                        <View style={styles.metaItem}>
+                            <Text style={styles.metaLabel}>Date</Text>
+                            <Text style={styles.metaValue}>
+                                {formatDate(order.created_at)}
+                            </Text>
+                        </View>
+                        <View style={styles.metaItem}>
+                            <Text style={styles.metaLabel}>Qty</Text>
+                            <Text style={styles.metaValue}>{totalQuantity}</Text>
+                        </View>
                     </View>
-                    <View style={styles.metaItem}>
-                        <Text style={styles.metaLabel}>Date</Text>
-                        <Text style={styles.metaValue}>
-                            {formatDate(order.created_at)}
-                        </Text>
-                    </View>
-                    <View style={styles.metaItem}>
-                        <Text style={styles.metaLabel}>Qty</Text>
-                        <Text style={styles.metaValue}>{totalQuantity}</Text>
-                    </View>
-                </View>
 
-                <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Package Contents</Text>
-                    <View style={styles.tableHeader}>
-                        <Text style={[styles.headerText, { flex: 5 }]}>Item</Text>
-                        <Text style={[styles.headerText, { flex: 1, textAlign: "right" }]}>
-                            Qty
-                        </Text>
-                    </View>
-                    {orderItems.map((item: any, i: number) => (
-                        <View key={i} style={styles.itemRow}>
+                    <View style={styles.section}>
+                        <Text style={styles.sectionTitle}>Package Contents</Text>
+                        <View style={styles.tableHeader}>
+                            <Text style={[styles.headerText, { flex: 5 }]}>Item</Text>
                             <Text
                                 style={[
-                                    styles.itemName,
-                                    isDenseOrder ? styles.itemNameCompact : {},
+                                    styles.headerText,
+                                    { flex: 1, textAlign: "right" },
                                 ]}
                             >
-                                {getProductDisplayName(item.products)}
-                                {item.isComplimentary ? " (FREE)" : ""}
+                                Qty
                             </Text>
-                            <Text style={styles.itemQty}>{item.quantity}</Text>
                         </View>
-                    ))}
-                </View>
+                        {orderItems.map((item: any, i: number) => (
+                            <View key={i} style={styles.itemRow}>
+                                <Text
+                                    style={[
+                                        styles.itemName,
+                                        isDenseOrder ? styles.itemNameCompact : {},
+                                    ]}
+                                >
+                                    {getProductDisplayName(item.products)}
+                                    {item.isComplimentary ? " (FREE)" : ""}
+                                </Text>
+                                <Text style={styles.itemQty}>{item.quantity}</Text>
+                            </View>
+                        ))}
+                    </View>
 
-                <View style={styles.trackingBox}>
-                    <Text style={styles.trackingLabel}>Tracking Number / Resi</Text>
-                    <Text style={styles.trackingNumber}> </Text>
+                    <View style={styles.trackingBox}>
+                        <Text style={styles.trackingLabel}>Tracking Number / Resi</Text>
+                        <Text style={styles.trackingNumber}> </Text>
+                    </View>
                 </View>
             </Page>
         </Document>
