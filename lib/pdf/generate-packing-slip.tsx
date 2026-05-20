@@ -197,12 +197,8 @@ function sanitizeSlipText(value: unknown) {
         .trim();
 }
 
-function getProductDisplayName(product: any) {
-    const parts = [product?.name, product?.label, product?.volume]
-        .map((value) => sanitizeSlipText(value))
-        .filter(Boolean);
-
-    return Array.from(new Set(parts)).join(" - ") || "Product";
+function getPackingSlipItemCode(product: any) {
+    return sanitizeSlipText(product?.label) || "Product";
 }
 
 export function PackingSlipDocument({ order }: { order: any }) {
@@ -226,8 +222,8 @@ export function PackingSlipDocument({ order }: { order: any }) {
                     <View style={styles.addressRow}>
                         <View style={styles.addressBox}>
                             <Text style={styles.addressLabel}>Sender</Text>
-                            <Text style={styles.senderText}>Fulfillment Team</Text>
-                            <Text style={styles.senderSmall}>+6285191378506</Text>
+                            <Text style={styles.senderText}>MetaWellness</Text>
+                            <Text style={styles.senderSmall}>081513392028</Text>
                         </View>
                         <View style={styles.addressBox}>
                             <Text style={styles.addressLabel}>Recipient</Text>
@@ -286,7 +282,7 @@ export function PackingSlipDocument({ order }: { order: any }) {
                                         isDenseOrder ? styles.itemNameCompact : {},
                                     ]}
                                 >
-                                    {getProductDisplayName(item.products)}
+                                    {getPackingSlipItemCode(item.products)}
                                     {item.isComplimentary ? " (FREE)" : ""}
                                 </Text>
                                 <Text style={styles.itemQty}>{item.quantity}</Text>
