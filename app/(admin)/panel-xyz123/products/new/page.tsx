@@ -11,6 +11,7 @@ const PRODUCT_FIELDS = [
     { key: "label", label: "Label / Subtitle" },
     { key: "slug", label: "Slug (auto-generated if empty)" },
     { key: "price", label: "Price (IDR)", type: "number", required: true },
+    { key: "cost_of_goods", label: "COGS / Unit (IDR)", type: "number" },
     { key: "original_price", label: "Original Price (IDR)", type: "number" },
     { key: "stock", label: "Stock Quantity", type: "number", required: true },
     { key: "volume", label: "Volume / Size" },
@@ -38,6 +39,7 @@ export default function NewProductPage() {
     const [form, setForm] = useState<Record<string, any>>({
         name: "",
         price: "",
+        cost_of_goods: "0",
         stock: "0",
         complimentary_quantity: "1",
         is_active: true,

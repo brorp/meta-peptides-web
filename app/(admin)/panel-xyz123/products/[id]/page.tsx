@@ -11,6 +11,7 @@ const PRODUCT_FIELDS = [
     { key: "label", label: "Label / Subtitle" },
     { key: "slug", label: "Slug" },
     { key: "price", label: "Price (IDR)", type: "number", required: true },
+    { key: "cost_of_goods", label: "COGS / Unit (IDR)", type: "number" },
     { key: "original_price", label: "Original Price (IDR)", type: "number" },
     { key: "stock", label: "Stock Quantity", type: "number", required: true },
     { key: "volume", label: "Volume / Size" },

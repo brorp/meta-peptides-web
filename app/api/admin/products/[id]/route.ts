@@ -51,7 +51,7 @@ export async function PUT(
 
         const updateData: any = {};
         const fields = [
-            "name", "label", "slug", "price", "original_price", "stock",
+            "name", "label", "slug", "price", "cost_of_goods", "original_price", "stock",
             "image_url", "category", "purity", "volume", "formula", "cas",
             "short_desc", "overview", "storage_instruction", "usage_instruction",
             "dosing", "complimentary_product_id", "complimentary_quantity",
@@ -65,6 +65,13 @@ export async function PUT(
         }
 
         if (updateData.price) updateData.price = parseFloat(updateData.price);
+        if (updateData.cost_of_goods !== undefined) {
+            const costOfGoods = Number(updateData.cost_of_goods || 0);
+            if (!Number.isFinite(costOfGoods) || costOfGoods < 0) {
+                return errorResponse("COGS must be a valid non-negative number", 400);
+            }
+            updateData.cost_of_goods = costOfGoods;
+        }
         if (updateData.original_price)
             updateData.original_price = parseFloat(updateData.original_price);
         if (updateData.stock !== undefined)
@@ -89,6 +96,14 @@ export async function PUT(
             .single();
 
         if (error) return errorResponse(error.message, 400);
+
+        if (updateData.cost_of_goods !== undefined) {
+            await supabaseAdmin
+                .from("order_items")
+                .update({ cogs_at_purchase: updateData.cost_of_goods })
+                .eq("product_id", id)
+                .eq("cogs_at_purchase", 0);
+        }
 
         return successResponse(data, "Product updated");
     } catch (err: any) {

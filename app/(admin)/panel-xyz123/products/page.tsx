@@ -112,6 +112,7 @@ export default function AdminProductsPage() {
                                 <th className="text-left px-5 py-3 font-medium">Product</th>
                                 <th className="text-left px-5 py-3 font-medium">Category</th>
                                 <th className="text-left px-5 py-3 font-medium">Price</th>
+                                <th className="text-left px-5 py-3 font-medium">COGS</th>
                                 <th className="text-left px-5 py-3 font-medium">Free Item</th>
                                 <th className="text-left px-5 py-3 font-medium">Stock</th>
                                 <th className="text-left px-5 py-3 font-medium">Status</th>
@@ -121,14 +122,14 @@ export default function AdminProductsPage() {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={7} className="px-5 py-12 text-center">
+                                    <td colSpan={8} className="px-5 py-12 text-center">
                                         <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
                                     </td>
                                 </tr>
                             ) : products.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={7}
+                                        colSpan={8}
                                         className="px-5 py-12 text-center text-muted-foreground"
                                     >
                                         <PackageX className="w-8 h-8 mx-auto mb-2 opacity-30" />
@@ -169,6 +170,9 @@ export default function AdminProductsPage() {
                                         </td>
                                         <td className="px-5 py-3 text-foreground font-medium">
                                             {formatCurrency(product.price)}
+                                        </td>
+                                        <td className="px-5 py-3 text-muted-foreground">
+                                            {formatCurrency(product.cost_of_goods || 0)}
                                         </td>
                                         <td className="px-5 py-3 text-muted-foreground">
                                             {product.complimentary_product_name ? (

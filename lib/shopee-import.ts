@@ -19,6 +19,7 @@ type ProductRecord = {
     volume: string | null;
     slug: string | null;
     price: number | null;
+    cost_of_goods: number | null;
 };
 
 type ShopeeItem = {
@@ -377,7 +378,7 @@ const groupByOrderNumber = (items: ShopeeItem[]) => {
 const loadProducts = async () => {
     const { data, error } = await supabaseAdmin
         .from("products")
-        .select("id, name, label, volume, slug, price");
+        .select("id, name, label, volume, slug, price, cost_of_goods");
 
     if (error) throw new Error(`Failed to load products: ${error.message}`);
     return (data || []) as ProductRecord[];
@@ -404,6 +405,7 @@ const resolveProduct = async (
             productId: matched.id,
             action: "matched" as const,
             name: matched.name || item.productName,
+            costOfGoods: Number(matched.cost_of_goods || 0),
         };
     }
 
@@ -412,6 +414,7 @@ const resolveProduct = async (
         productId: null,
         action: "missing" as const,
         name,
+        costOfGoods: 0,
     };
 };
 
@@ -506,6 +509,7 @@ const upsertShopeeOrder = async (
                 quantity,
                 price_at_purchase:
                     item.discountedUnitPrice || item.grossUnitPrice || 0,
+                cogs_at_purchase: resolved.costOfGoods,
             });
         }
     }

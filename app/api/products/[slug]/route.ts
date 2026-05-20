@@ -2,6 +2,9 @@ import { NextRequest } from "next/server";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { createClientCookies } from "@/lib/supabase-server";
 
+const PUBLIC_PRODUCT_SELECT =
+  "id, name, label, slug, price, original_price, stock, image_url, category, purity, volume, formula, cas, short_desc, overview, storage_instruction, usage_instruction, dosing, complimentary_product_id, complimentary_quantity, is_active, created_at, updated_at";
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> },
@@ -17,16 +20,16 @@ export async function GET(
 
     const { data, error } = await supabaseServer
       .from("products")
-      .select("*")
+      .select(PUBLIC_PRODUCT_SELECT)
       .eq("slug", slug)
       .eq("is_active", true)
       .single();
 
     if (error || !data) {
-      if (error?.code === "PGRST116" || !data) {
+      if ((error as any)?.code === "PGRST116" || !data) {
         return errorResponse("Bio-sample not found in database", 404);
       }
-      return errorResponse(error?.message || "Unknown error", 400);
+      return errorResponse((error as any)?.message || "Unknown error", 400);
     }
 
     let complimentaryProductName: string | null = null;

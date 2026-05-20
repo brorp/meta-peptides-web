@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
         );
         const { data: products, error: productsError } = await supabaseAdmin
             .from("products")
-            .select("id, name, is_active")
+            .select("id, name, is_active, cost_of_goods")
             .in("id", productIds);
 
         if (productsError) {
@@ -263,6 +263,9 @@ export async function POST(req: NextRequest) {
                     product_id: item.product_id,
                     quantity: item.quantity,
                     price_at_purchase: item.price_at_purchase,
+                    cogs_at_purchase: Number(
+                        productLookup.get(item.product_id)?.cost_of_goods || 0,
+                    ),
                 })),
             );
 

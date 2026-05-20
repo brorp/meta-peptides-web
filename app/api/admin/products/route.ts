@@ -93,6 +93,11 @@ export async function POST(req: NextRequest) {
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, "-")
                 .replace(/(^-|-$)/g, "");
+        const costOfGoods = Number(body.cost_of_goods || 0);
+
+        if (!Number.isFinite(costOfGoods) || costOfGoods < 0) {
+            return errorResponse("COGS must be a valid non-negative number", 400);
+        }
 
         const { data, error } = await supabaseAdmin
             .from("products")
@@ -101,6 +106,7 @@ export async function POST(req: NextRequest) {
                 label: body.label || null,
                 slug,
                 price: parseFloat(body.price),
+                cost_of_goods: costOfGoods,
                 original_price: body.original_price
                     ? parseFloat(body.original_price)
                     : null,

@@ -9,8 +9,26 @@ type Stats = {
     totalProducts: number;
     totalOrders: number;
     totalRevenue: number;
+    totalGrossSales: number;
+    totalNetRevenue: number;
     totalDiscount: number;
     totalMarketplaceFee: number;
+    totalCogs: number;
+    totalExpenses: number;
+    grossProfit: number;
+    netProfit: number;
+    grossMargin: number;
+    netMargin: number;
+    expenseBreakdown: Array<{ category: string; amount: number }>;
+    productProfit: Array<{
+        productId: string;
+        name: string;
+        label: string | null;
+        unitsSold: number;
+        revenue: number;
+        cogs: number;
+        grossProfit: number;
+    }>;
     pendingOrders: number;
     recentOrders: any[];
 };
@@ -47,6 +65,10 @@ function formatCurrency(value: number) {
         currency: "IDR",
         minimumFractionDigits: 0,
     }).format(value);
+}
+
+function formatPercentage(value: number) {
+    return `${Number(value || 0).toFixed(1)}%`;
 }
 
 function formatDate(dateStr: string) {
@@ -115,45 +137,197 @@ export default function AdminDashboardPage() {
         <div className="space-y-6">
             <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <StatsCard
-                    label="Total Revenue"
-                    value={formatCurrency(stats?.totalRevenue || 0)}
-                    icon={DollarSign}
-                    color="bg-green-500/10 text-green-500"
-                />
-                <StatsCard
-                    label="Total Orders"
-                    value={stats?.totalOrders || 0}
-                    icon={ShoppingCart}
-                    color="bg-blue-500/10 text-blue-500"
-                />
-                <StatsCard
-                    label="Total Products"
-                    value={stats?.totalProducts || 0}
-                    icon={Package}
-                    color="bg-purple-500/10 text-purple-500"
-                />
-                <StatsCard
-                    label="Total Users"
-                    value={stats?.totalUsers || 0}
-                    icon={Users}
-                    color="bg-orange-500/10 text-orange-500"
-                />
-                <StatsCard
-                    label="Total Discount"
-                    value={formatCurrency(stats?.totalDiscount || 0)}
-                    icon={Tag}
-                    color="bg-pink-500/10 text-pink-500"
-                />
-                <StatsCard
-                    label="Marketplace Fee"
-                    value={formatCurrency(stats?.totalMarketplaceFee || 0)}
-                    icon={Store}
-                    color="bg-yellow-500/10 text-yellow-500"
-                />
+            <section className="space-y-3">
+                <div>
+                    <h2 className="text-lg font-semibold text-foreground">
+                        Financial Report
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                        Net revenue uses order totals, COGS uses the per-order
+                        item snapshot, and net profit subtracts recorded expenses.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <StatsCard
+                        label="Gross Sales"
+                        value={formatCurrency(stats?.totalGrossSales || 0)}
+                        icon={DollarSign}
+                        color="bg-emerald-500/10 text-emerald-500"
+                    />
+                    <StatsCard
+                        label="Net Revenue"
+                        value={formatCurrency(stats?.totalNetRevenue || 0)}
+                        icon={DollarSign}
+                        color="bg-green-500/10 text-green-500"
+                    />
+                    <StatsCard
+                        label="COGS"
+                        value={formatCurrency(stats?.totalCogs || 0)}
+                        icon={Package}
+                        color="bg-orange-500/10 text-orange-500"
+                    />
+                    <StatsCard
+                        label="Expenses"
+                        value={formatCurrency(stats?.totalExpenses || 0)}
+                        icon={Tag}
+                        color="bg-red-500/10 text-red-500"
+                    />
+                    <StatsCard
+                        label="Gross Profit"
+                        value={`${formatCurrency(stats?.grossProfit || 0)} (${formatPercentage(stats?.grossMargin || 0)})`}
+                        icon={DollarSign}
+                        color="bg-cyan-500/10 text-cyan-500"
+                    />
+                    <StatsCard
+                        label="Net Profit"
+                        value={`${formatCurrency(stats?.netProfit || 0)} (${formatPercentage(stats?.netMargin || 0)})`}
+                        icon={DollarSign}
+                        color="bg-lime-500/10 text-lime-500"
+                    />
+                    <StatsCard
+                        label="Total Discount"
+                        value={formatCurrency(stats?.totalDiscount || 0)}
+                        icon={Tag}
+                        color="bg-pink-500/10 text-pink-500"
+                    />
+                    <StatsCard
+                        label="Marketplace Fee"
+                        value={formatCurrency(stats?.totalMarketplaceFee || 0)}
+                        icon={Store}
+                        color="bg-yellow-500/10 text-yellow-500"
+                    />
+                </div>
+            </section>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+                <section className="bg-card border border-border rounded-2xl overflow-hidden">
+                    <div className="px-5 py-4 border-b border-border">
+                        <h2 className="text-sm font-semibold text-foreground">
+                            Product Gross Profit
+                        </h2>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-border text-muted-foreground">
+                                    <th className="text-left px-5 py-3 font-medium">Product</th>
+                                    <th className="text-left px-5 py-3 font-medium">Units</th>
+                                    <th className="text-left px-5 py-3 font-medium">COGS</th>
+                                    <th className="text-left px-5 py-3 font-medium">Profit</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {(stats?.productProfit || []).map((product) => (
+                                    <tr
+                                        key={product.productId}
+                                        className="border-b border-border/50"
+                                    >
+                                        <td className="px-5 py-3">
+                                            <p className="font-medium text-foreground">
+                                                {product.name}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {product.label || "-"}
+                                            </p>
+                                        </td>
+                                        <td className="px-5 py-3 text-muted-foreground">
+                                            {product.unitsSold}
+                                        </td>
+                                        <td className="px-5 py-3 text-muted-foreground">
+                                            {formatCurrency(product.cogs)}
+                                        </td>
+                                        <td className="px-5 py-3 font-medium text-foreground">
+                                            {formatCurrency(product.grossProfit)}
+                                        </td>
+                                    </tr>
+                                ))}
+                                {(!stats?.productProfit ||
+                                    stats.productProfit.length === 0) && (
+                                    <tr>
+                                        <td
+                                            colSpan={4}
+                                            className="px-5 py-8 text-center text-muted-foreground"
+                                        >
+                                            No product profit data yet
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <section className="bg-card border border-border rounded-2xl overflow-hidden">
+                    <div className="px-5 py-4 border-b border-border">
+                        <h2 className="text-sm font-semibold text-foreground">
+                            Expenses by Category
+                        </h2>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b border-border text-muted-foreground">
+                                    <th className="text-left px-5 py-3 font-medium">Category</th>
+                                    <th className="text-right px-5 py-3 font-medium">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {(stats?.expenseBreakdown || []).map((expense) => (
+                                    <tr
+                                        key={expense.category}
+                                        className="border-b border-border/50"
+                                    >
+                                        <td className="px-5 py-3 text-foreground">
+                                            {expense.category}
+                                        </td>
+                                        <td className="px-5 py-3 text-right font-medium text-foreground">
+                                            {formatCurrency(expense.amount)}
+                                        </td>
+                                    </tr>
+                                ))}
+                                {(!stats?.expenseBreakdown ||
+                                    stats.expenseBreakdown.length === 0) && (
+                                    <tr>
+                                        <td
+                                            colSpan={2}
+                                            className="px-5 py-8 text-center text-muted-foreground"
+                                        >
+                                            No expenses recorded yet
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
             </div>
+
+            <section className="space-y-3">
+                <h2 className="text-lg font-semibold text-foreground">
+                    Operations
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <StatsCard
+                        label="Total Orders"
+                        value={stats?.totalOrders || 0}
+                        icon={ShoppingCart}
+                        color="bg-blue-500/10 text-blue-500"
+                    />
+                    <StatsCard
+                        label="Total Products"
+                        value={stats?.totalProducts || 0}
+                        icon={Package}
+                        color="bg-purple-500/10 text-purple-500"
+                    />
+                    <StatsCard
+                        label="Total Users"
+                        value={stats?.totalUsers || 0}
+                        icon={Users}
+                        color="bg-orange-500/10 text-orange-500"
+                    />
+                </div>
+            </section>
 
             {/* Pending Orders Alert */}
             {(stats?.pendingOrders || 0) > 0 && (

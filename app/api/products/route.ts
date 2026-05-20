@@ -6,6 +6,9 @@ import {
 } from "@/lib/api-response";
 import { createClientCookies } from "@/lib/supabase-server";
 
+const PUBLIC_PRODUCT_SELECT =
+  "id, name, label, slug, price, original_price, stock, image_url, category, purity, volume, formula, cas, short_desc, overview, storage_instruction, usage_instruction, dosing, complimentary_product_id, complimentary_quantity, is_active, created_at, updated_at";
+
 export async function GET(req: NextRequest) {
   try {
     const supabaseServer = await createClientCookies();
@@ -39,7 +42,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabaseServer
       .from("products")
-      .select("*", { count: "exact" })
+      .select(PUBLIC_PRODUCT_SELECT, { count: "exact" })
       .eq("is_active", true);
 
     // --- FILTERING ---

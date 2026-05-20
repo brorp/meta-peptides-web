@@ -11,12 +11,14 @@ type CheckoutItemPayload = {
   product_id: string;
   quantity: number;
   price_at_purchase: number;
+  cogs_at_purchase?: number;
 };
 
 type PurchasedProductRecord = {
   id: string;
   name: string;
   is_active: boolean | null;
+  cost_of_goods?: number | null;
   complimentary_product_id?: string | null;
   complimentary_quantity?: number | null;
 };
@@ -86,7 +88,7 @@ const buildComplimentaryItems = async (
   const { data: complimentaryProducts, error: complimentaryError } =
     await supabaseServer
       .from("products")
-      .select("id, name")
+      .select("id, name, cost_of_goods")
       .in("id", complimentaryProductIds);
 
   if (complimentaryError) {
@@ -95,10 +97,16 @@ const buildComplimentaryItems = async (
     );
   }
 
-  const complimentaryProductMap = new Map<string, { name: string }>(
+  const complimentaryProductMap = new Map<
+    string,
+    { name: string; cost_of_goods: number | null }
+  >(
     (complimentaryProducts || []).map((product: any) => [
       product.id,
-      { name: product.name || "Complimentary Item" },
+      {
+        name: product.name || "Complimentary Item",
+        cost_of_goods: product.cost_of_goods ?? 0,
+      },
     ]),
   );
 
@@ -119,6 +127,7 @@ const buildComplimentaryItems = async (
       product_id: complimentaryProductId,
       quantity,
       price_at_purchase: 0,
+      cogs_at_purchase: Number(complimentaryProduct.cost_of_goods || 0),
     });
 
     summaries.push({
@@ -173,7 +182,7 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
     const productIds = Array.from(requiredStockByProduct.keys());
     const { data: availableProducts, error: productsError } = await supabaseServer
       .from("products")
-      .select("id, name, is_active, complimentary_product_id, complimentary_quantity")
+      .select("id, name, is_active, cost_of_goods, complimentary_product_id, complimentary_quantity")
       .in("id", productIds);
 
     if (productsError) {
@@ -217,8 +226,15 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
       productLookup,
     );
 
+    const paidOrderItems = normalizedItems.map((item) => ({
+      ...item,
+      cogs_at_purchase: Number(
+        productLookup.get(item.product_id)?.cost_of_goods || 0,
+      ),
+    }));
+
     const allOrderItems: CheckoutItemPayload[] = [
-      ...normalizedItems,
+      ...paidOrderItems,
       ...complimentaryItems,
     ];
 
@@ -354,6 +370,7 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
       product_id: item.product_id,
       quantity: item.quantity,
       price_at_purchase: item.price_at_purchase,
+      cogs_at_purchase: Number(item.cogs_at_purchase || 0),
     }));
 
     const { error: itemsError } = await supabaseServer
