@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { isMissingCustomerUsernameColumn } from "@/lib/order-schema-compat";
 
 export const CUSTOMER_JOURNEY_STAGES = [
     "new_leads",
@@ -71,13 +72,29 @@ export const isCustomerJourneyStage = (
     CUSTOMER_JOURNEY_STAGES.includes(value as CustomerJourneyStage);
 
 export async function syncCustomersFromOrders() {
-    const { data: orders, error } = await supabaseAdmin
+    const initialOrdersQuery = await supabaseAdmin
         .from("orders")
         .select(
             "id, created_at, status, shipping_name, shipping_phone, shipping_email, shipping_regional, customer_username",
         )
         .neq("status", "cancelled")
         .order("created_at", { ascending: true });
+
+    let orders: any[] | null = initialOrdersQuery.data;
+    let error = initialOrdersQuery.error;
+
+    if (error && isMissingCustomerUsernameColumn(error)) {
+        const fallback = await supabaseAdmin
+            .from("orders")
+            .select(
+                "id, created_at, status, shipping_name, shipping_phone, shipping_email, shipping_regional",
+            )
+            .neq("status", "cancelled")
+            .order("created_at", { ascending: true });
+
+        orders = fallback.data;
+        error = fallback.error;
+    }
 
     if (error) throw new Error(error.message);
     if (!orders?.length) return;
