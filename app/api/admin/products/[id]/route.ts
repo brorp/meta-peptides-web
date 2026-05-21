@@ -51,7 +51,7 @@ export async function PUT(
 
         const updateData: any = {};
         const fields = [
-            "name", "label", "slug", "price", "cost_of_goods", "original_price", "stock",
+            "name", "label", "slug", "price", "cost_of_goods", "original_price", "stock", "usage_days",
             "image_url", "category", "purity", "volume", "formula", "cas",
             "short_desc", "overview", "storage_instruction", "usage_instruction",
             "dosing", "complimentary_product_id", "complimentary_quantity",
@@ -76,6 +76,11 @@ export async function PUT(
             updateData.original_price = parseFloat(updateData.original_price);
         if (updateData.stock !== undefined)
             updateData.stock = parseInt(updateData.stock);
+        if (updateData.usage_days !== undefined)
+            updateData.usage_days = Math.max(
+                0,
+                parseInt(updateData.usage_days) || 0,
+            );
         if (updateData.complimentary_product_id === "")
             updateData.complimentary_product_id = null;
         if (updateData.complimentary_quantity !== undefined) {

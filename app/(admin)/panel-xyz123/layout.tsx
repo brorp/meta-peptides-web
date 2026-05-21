@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -18,13 +18,17 @@ import {
     ChevronRight,
     QrCode,
     ReceiptText,
+    ClipboardList,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
 
-const NAV_ITEMS = [
+type AdminRole = "root" | "admin";
+
+const ROOT_NAV_ITEMS = [
     { label: "Dashboard", href: "/panel-xyz123", icon: LayoutDashboard },
     { label: "Users", href: "/panel-xyz123/users", icon: Users },
+    { label: "Customers", href: "/panel-xyz123/customers", icon: Users },
     { label: "Products", href: "/panel-xyz123/products", icon: Package },
     { label: "Orders", href: "/panel-xyz123/orders", icon: ShoppingCart },
     { label: "Resellers", href: "/panel-xyz123/resellers", icon: Handshake },
@@ -35,12 +39,25 @@ const NAV_ITEMS = [
     { label: "QR Code", href: "/panel-xyz123/qr-code", icon: QrCode },
 ];
 
+const ADMIN_NAV_ITEMS = [
+    { label: "Daily Tasks", href: "/panel-xyz123/daily-tasks", icon: ClipboardList },
+    { label: "Users", href: "/panel-xyz123/users", icon: Users },
+    { label: "Orders", href: "/panel-xyz123/orders", icon: ShoppingCart },
+    { label: "Resellers", href: "/panel-xyz123/resellers", icon: Handshake },
+    { label: "Vouchers", href: "/panel-xyz123/vouchers", icon: BadgePercent },
+    { label: "Customers", href: "/panel-xyz123/customers", icon: Users },
+];
+
 function AdminSidebar({
     collapsed,
     onToggle,
+    role,
+    dailyTaskCount,
 }: {
     collapsed: boolean;
     onToggle: () => void;
+    role: AdminRole | null;
+    dailyTaskCount: number;
 }) {
     const pathname = usePathname();
     const router = useRouter();
@@ -78,7 +95,7 @@ function AdminSidebar({
 
             {/* Navigation */}
             <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-                {NAV_ITEMS.map((item) => {
+                {(role === "admin" ? ADMIN_NAV_ITEMS : ROOT_NAV_ITEMS).map((item) => {
                     const isActive =
                         pathname === item.href ||
                         (item.href !== "/panel-xyz123" &&
@@ -96,6 +113,13 @@ function AdminSidebar({
                         >
                             <item.icon className={`w-4 h-4 shrink-0 ${isActive ? "text-accent" : ""}`} />
                             {!collapsed && <span>{item.label}</span>}
+                            {!collapsed &&
+                                item.href === "/panel-xyz123/daily-tasks" &&
+                                dailyTaskCount > 0 && (
+                                    <span className="ml-auto rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold text-destructive-foreground">
+                                        {dailyTaskCount}
+                                    </span>
+                                )}
                             {!collapsed && isActive && (
                                 <ChevronRight className="w-3 h-3 ml-auto text-accent" />
                             )}
@@ -129,7 +153,9 @@ function AdminHeader({
 
     const getPageTitle = () => {
         if (pathname === "/panel-xyz123") return "Dashboard";
+        if (pathname.includes("/daily-tasks")) return "Daily Tasks";
         if (pathname.includes("/users")) return "Users";
+        if (pathname.includes("/customers")) return "Customers";
         if (pathname.includes("/products")) return "Products";
         if (pathname.includes("/orders")) return "Orders";
         if (pathname.includes("/resellers")) return "Resellers";
@@ -198,6 +224,27 @@ export default function AdminLayout({
     children: React.ReactNode;
 }) {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [role, setRole] = useState<AdminRole | null>(null);
+    const [dailyTaskCount, setDailyTaskCount] = useState(0);
+
+    useEffect(() => {
+        const fetchAdminContext = async () => {
+            try {
+                const { data } = await axios.get("/admin/auth/me");
+                const nextRole = data.data?.role || null;
+                setRole(nextRole);
+
+                if (nextRole === "admin") {
+                    const taskResponse = await axios.get("/admin/daily-tasks");
+                    setDailyTaskCount(Number(taskResponse.data?.data?.count || 0));
+                }
+            } catch {
+                setRole(null);
+            }
+        };
+
+        fetchAdminContext();
+    }, []);
 
     return (
         <div className="dark">
@@ -213,6 +260,8 @@ export default function AdminLayout({
                 <AdminSidebar
                     collapsed={sidebarCollapsed}
                     onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+                    role={role}
+                    dailyTaskCount={dailyTaskCount}
                 />
 
                 <div className="flex-1 flex flex-col min-w-0">

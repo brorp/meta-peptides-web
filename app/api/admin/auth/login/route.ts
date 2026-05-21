@@ -16,20 +16,20 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const isValid = await validateAccessCode(code);
+        const role = await validateAccessCode(code);
 
-        if (!isValid) {
+        if (!role) {
             return NextResponse.json(
                 { success: false, message: "Invalid access code" },
                 { status: 401 },
             );
         }
 
-        const token = await createAdminSession();
+        const token = await createAdminSession(role);
         await setAdminSessionCookie(token);
 
         return NextResponse.json(
-            { success: true, message: "Authenticated" },
+            { success: true, message: "Authenticated", data: { role } },
             { status: 200 },
         );
     } catch (err: any) {

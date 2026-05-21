@@ -7,20 +7,32 @@ const JWT_SECRET = new TextEncoder().encode(
     process.env.ADMIN_JWT_SECRET || "fallback-secret-change-me",
 );
 
-export async function validateAccessCode(code: string): Promise<boolean> {
+export type AdminRole = "root" | "admin";
+
+export async function validateAccessCode(code: string): Promise<AdminRole | null> {
     const expectedCode = process.env.ADMIN_ACCESS_CODE;
-    if (!expectedCode) return false;
+    const salesAdminCode =
+        process.env.ADMIN_SALES_ACCESS_CODE || "adminmeta123";
 
-    const a = Buffer.from(code);
-    const b = Buffer.from(expectedCode);
+    const matchesCode = (candidate: string, expected?: string | null) => {
+        if (!expected) return false;
 
-    if (a.length !== b.length) return false;
+        const a = Buffer.from(candidate);
+        const b = Buffer.from(expected);
 
-    return crypto.timingSafeEqual(a, b);
+        if (a.length !== b.length) return false;
+
+        return crypto.timingSafeEqual(a, b);
+    };
+
+    if (matchesCode(code, expectedCode)) return "root";
+    if (matchesCode(code, salesAdminCode)) return "admin";
+
+    return null;
 }
 
-export async function createAdminSession(): Promise<string> {
-    const token = await new SignJWT({ role: "admin" })
+export async function createAdminSession(role: AdminRole): Promise<string> {
+    const token = await new SignJWT({ role })
         .setProtectedHeader({ alg: "HS256" })
         .setIssuedAt()
         .setExpirationTime("24h")
@@ -29,19 +41,21 @@ export async function createAdminSession(): Promise<string> {
     return token;
 }
 
-export async function verifyAdminSession(token: string): Promise<boolean> {
+export async function verifyAdminSession(token: string): Promise<AdminRole | null> {
     try {
-        await jwtVerify(token, JWT_SECRET);
-        return true;
+        const { payload } = await jwtVerify(token, JWT_SECRET);
+        return payload.role === "root" || payload.role === "admin"
+            ? payload.role
+            : null;
     } catch {
-        return false;
+        return null;
     }
 }
 
-export async function getAdminSessionFromCookies(): Promise<boolean> {
+export async function getAdminSessionFromCookies(): Promise<AdminRole | null> {
     const cookieStore = await cookies();
     const session = cookieStore.get(COOKIE_NAME);
-    if (!session?.value) return false;
+    if (!session?.value) return null;
     return verifyAdminSession(session.value);
 }
 

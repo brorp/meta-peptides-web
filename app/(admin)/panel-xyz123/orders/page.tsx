@@ -14,6 +14,8 @@ const STATUS_TABS = [
     { label: "Cancelled", value: "cancelled" },
 ];
 
+const ORDER_STATUS_OPTIONS = STATUS_TABS.filter((tab) => tab.value);
+
 function formatCurrency(value: number) {
     return new Intl.NumberFormat("id-ID", {
         style: "currency",
@@ -135,6 +137,35 @@ export default function AdminOrdersPage() {
         } finally {
             setImporting(false);
             if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
+    const updateOrderStatus = async (orderId: string, nextStatus: string) => {
+        setOrders((prev) =>
+            prev.map((order) =>
+                order.id === orderId ? { ...order, status: nextStatus } : order,
+            ),
+        );
+
+        try {
+            const { data } = await axios.put(`/admin/orders/${orderId}`, {
+                status: nextStatus,
+            });
+
+            if (!data.success) {
+                throw new Error(data.message || "Failed to update order status");
+            }
+
+            toast.success("Order status updated");
+            if (status && status !== nextStatus) fetchOrders();
+        } catch (error: any) {
+            toast.error("Failed to update order status", {
+                description:
+                    error?.response?.data?.message ||
+                    error?.message ||
+                    "Please try again.",
+            });
+            fetchOrders();
         }
     };
 
@@ -277,7 +308,20 @@ export default function AdminOrdersPage() {
                                             {formatCurrency(order.total_price)}
                                         </td>
                                         <td className="px-5 py-3">
-                                            <StatusBadge status={order.status} />
+                                            <select
+                                                value={order.status}
+                                                onClick={(e) => e.stopPropagation()}
+                                                onChange={(e) =>
+                                                    updateOrderStatus(order.id, e.target.value)
+                                                }
+                                                className="rounded-lg border border-border bg-background px-2 py-1 text-xs font-medium text-foreground outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                                            >
+                                                {ORDER_STATUS_OPTIONS.map((option) => (
+                                                    <option key={option.value} value={option.value}>
+                                                        {option.label}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </td>
                                         <td className="px-5 py-3 text-muted-foreground text-xs">
                                             {formatDate(order.created_at)}

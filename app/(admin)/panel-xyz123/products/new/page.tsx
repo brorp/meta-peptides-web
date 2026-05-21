@@ -14,6 +14,7 @@ const PRODUCT_FIELDS = [
     { key: "cost_of_goods", label: "COGS / Unit (IDR)", type: "number" },
     { key: "original_price", label: "Original Price (IDR)", type: "number" },
     { key: "stock", label: "Stock Quantity", type: "number", required: true },
+    { key: "usage_days", label: "Masa Pakai (Days)", type: "number" },
     { key: "volume", label: "Volume / Size" },
     { key: "purity", label: "Purity %" },
     { key: "formula", label: "Chemical Formula" },
@@ -41,6 +42,7 @@ export default function NewProductPage() {
         price: "",
         cost_of_goods: "0",
         stock: "0",
+        usage_days: "0",
         complimentary_quantity: "1",
         is_active: true,
     });

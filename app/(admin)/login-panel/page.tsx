@@ -23,7 +23,11 @@ export default function LoginPanelPage() {
             const { data } = await axios.post("/admin/auth/login", { code });
             if (data.success) {
                 toast.success("Access granted");
-                router.push("/panel-xyz123");
+                router.push(
+                    data.data?.role === "admin"
+                        ? "/panel-xyz123/daily-tasks"
+                        : "/panel-xyz123",
+                );
                 router.refresh();
             } else {
                 toast.error(data.message || "Access denied");

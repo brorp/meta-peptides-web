@@ -111,6 +111,7 @@ export async function POST(req: NextRequest) {
                     ? parseFloat(body.original_price)
                     : null,
                 stock: parseInt(body.stock) || 0,
+                usage_days: Math.max(0, parseInt(body.usage_days) || 0),
                 image_url: body.image_url || null,
                 category: body.category || null,
                 purity: body.purity || null,
