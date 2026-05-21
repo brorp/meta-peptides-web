@@ -77,7 +77,6 @@ export async function syncCustomersFromOrders() {
         .select(
             "id, created_at, status, shipping_name, shipping_phone, shipping_email, shipping_regional, customer_username",
         )
-        .neq("status", "cancelled")
         .order("created_at", { ascending: true });
 
     let orders: any[] | null = initialOrdersQuery.data;
@@ -89,7 +88,6 @@ export async function syncCustomersFromOrders() {
             .select(
                 "id, created_at, status, shipping_name, shipping_phone, shipping_email, shipping_regional",
             )
-            .neq("status", "cancelled")
             .order("created_at", { ascending: true });
 
         orders = fallback.data;
@@ -97,7 +95,8 @@ export async function syncCustomersFromOrders() {
     }
 
     if (error) throw new Error(error.message);
-    if (!orders?.length) return;
+    orders = (orders || []).filter((order) => order.status !== "cancelled");
+    if (!orders.length) return;
 
     const { data: customers, error: customersError } = await supabaseAdmin
         .from("customers")
