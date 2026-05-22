@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { supabaseAdmin } from "@/lib/supabase-server";
-import { getAdminSessionFromCookies } from "@/lib/admin-auth";
 import {
     isCustomerJourneyStage,
     normalizePhone,
@@ -35,7 +34,6 @@ export async function PUT(
 ) {
     try {
         const { id } = await params;
-        const role = await getAdminSessionFromCookies();
         const body = await req.json();
         const updateData: Record<string, any> = {};
 
@@ -70,12 +68,6 @@ export async function PUT(
         }
 
         if (body.current_journey !== undefined) {
-            if (role === "admin") {
-                return errorResponse(
-                    "Sales admin must update customer journey from Daily Tasks with screenshot evidence",
-                    403,
-                );
-            }
             if (!isCustomerJourneyStage(body.current_journey)) {
                 return errorResponse("Invalid customer journey stage", 400);
             }

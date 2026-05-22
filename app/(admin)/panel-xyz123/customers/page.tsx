@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Edit, Loader2, Plus, Search, Trash2, Users } from "lucide-react";
+import {
+  Edit,
+  Loader2,
+  Plus,
+  Search,
+  Trash2,
+  UserPlus,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
 
@@ -85,6 +93,8 @@ export default function AdminCustomersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<CustomerForm>(buildBlankForm);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [updatingJourneyId, setUpdatingJourneyId] = useState<string | null>(null);
 
   const fetchAdminRole = async () => {
     try {
@@ -129,9 +139,16 @@ export default function AdminCustomersPage() {
     fetchCustomers();
   }, [page, keyword, journey]);
 
-  const resetForm = () => {
+  const closeModal = () => {
+    setIsModalOpen(false);
     setEditingId(null);
     setForm(buildBlankForm());
+  };
+
+  const openCreateModal = () => {
+    setEditingId(null);
+    setForm(buildBlankForm());
+    setIsModalOpen(true);
   };
 
   const updateForm = (key: keyof CustomerForm, value: string) => {
@@ -143,20 +160,8 @@ export default function AdminCustomersPage() {
     setSaving(true);
 
     try {
-      const payload =
-        role === "admin"
-          ? {
-              full_name: form.full_name,
-              username: form.username,
-              whatsapp_phone: form.whatsapp_phone,
-              email: form.email,
-              domicile: form.domicile,
-              notes: form.notes,
-            }
-          : form;
-
       if (editingId) {
-        await axios.put(`/admin/customers/${editingId}`, payload);
+        await axios.put(`/admin/customers/${editingId}`, form);
         toast.success("Customer updated");
       } else {
         await axios.post("/admin/customers", {
@@ -164,15 +169,18 @@ export default function AdminCustomersPage() {
           lead_source: "manual",
           current_journey: "new_leads",
         });
-        toast.success("Customer created");
+        toast.success("Manual customer created");
       }
 
-      resetForm();
+      closeModal();
       fetchCustomers();
     } catch (error: any) {
-      toast.error(editingId ? "Failed to update customer" : "Failed to create customer", {
-        description: getErrorMessage(error, "Please review the customer data."),
-      });
+      toast.error(
+        editingId ? "Failed to update customer" : "Failed to create customer",
+        {
+          description: getErrorMessage(error, "Please review the customer data."),
+        },
+      );
     } finally {
       setSaving(false);
     }
@@ -189,6 +197,43 @@ export default function AdminCustomersPage() {
       current_journey: customer.current_journey || "new_leads",
       notes: customer.notes || "",
     });
+    setIsModalOpen(true);
+  };
+
+  const handleJourneyChange = async (customer: Customer, nextJourney: string) => {
+    if (customer.current_journey === nextJourney) return;
+
+    setUpdatingJourneyId(customer.id);
+    const previousJourney = customer.current_journey;
+
+    setCustomers((prev) =>
+      prev.map((item) =>
+        item.id === customer.id ? { ...item, current_journey: nextJourney } : item,
+      ),
+    );
+
+    try {
+      await axios.put(`/admin/customers/${customer.id}`, {
+        current_journey: nextJourney,
+      });
+      toast.success("Customer journey updated", {
+        description: `${customer.full_name} is now ${journeyLabel(nextJourney)}.`,
+      });
+      fetchCustomers();
+    } catch (error: any) {
+      setCustomers((prev) =>
+        prev.map((item) =>
+          item.id === customer.id
+            ? { ...item, current_journey: previousJourney }
+            : item,
+        ),
+      );
+      toast.error("Failed to update journey", {
+        description: getErrorMessage(error, "Please try again."),
+      });
+    } finally {
+      setUpdatingJourneyId(null);
+    }
   };
 
   const handleDelete = async (customer: Customer) => {
@@ -197,7 +242,7 @@ export default function AdminCustomersPage() {
     try {
       await axios.delete(`/admin/customers/${customer.id}`);
       toast.success("Customer deleted");
-      if (editingId === customer.id) resetForm();
+      if (editingId === customer.id) closeModal();
       fetchCustomers();
     } catch (error: any) {
       toast.error("Failed to delete customer", {
@@ -208,7 +253,7 @@ export default function AdminCustomersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Customers</h1>
           <p className="text-sm text-muted-foreground">
@@ -217,153 +262,35 @@ export default function AdminCustomersPage() {
         </div>
         <button
           type="button"
-          onClick={resetForm}
-          className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+          onClick={openCreateModal}
+          className="inline-flex w-fit items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground transition-all hover:bg-accent/90"
         >
-          <Plus className="w-4 h-4" />
-          {editingId ? "New Customer" : "Reset Form"}
+          <UserPlus className="h-4 w-4" />
+          Create Manual Customer
         </button>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="bg-card border border-border rounded-2xl p-5 space-y-5"
-      >
-        <div className="flex items-center gap-2">
-          <Users className="w-5 h-5 text-accent" />
-          <h2 className="text-lg font-semibold text-foreground">
-            {editingId ? "Edit Customer" : "Manual Lead Input"}
-          </h2>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <label className="space-y-2">
-            <span className="text-xs font-medium text-muted-foreground">Name</span>
-            <input
-              value={form.full_name}
-              onChange={(e) => updateForm("full_name", e.target.value)}
-              className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
-              required
-            />
-          </label>
-
-          <label className="space-y-2">
-            <span className="text-xs font-medium text-muted-foreground">
-              Username / Shopee Handle
-            </span>
-            <input
-              value={form.username}
-              onChange={(e) => updateForm("username", e.target.value)}
-              className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
-              placeholder="@username"
-            />
-          </label>
-
-          <label className="space-y-2">
-            <span className="text-xs font-medium text-muted-foreground">
-              WhatsApp Number
-            </span>
-            <input
-              value={form.whatsapp_phone}
-              onChange={(e) => updateForm("whatsapp_phone", e.target.value)}
-              className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
-              placeholder="0812..."
-            />
-          </label>
-
-          <label className="space-y-2">
-            <span className="text-xs font-medium text-muted-foreground">Email</span>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => updateForm("email", e.target.value)}
-              className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
-            />
-          </label>
-
-          <label className="space-y-2">
-            <span className="text-xs font-medium text-muted-foreground">
-              Domicile
-            </span>
-            <input
-              value={form.domicile}
-              onChange={(e) => updateForm("domicile", e.target.value)}
-              className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
-            />
-          </label>
-
-          {editingId && role === "root" && (
-            <label className="space-y-2">
-              <span className="text-xs font-medium text-muted-foreground">
-                Journey
-              </span>
-              <select
-                value={form.current_journey}
-                onChange={(e) => updateForm("current_journey", e.target.value)}
-                className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
-              >
-                {JOURNEY_OPTIONS.map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-
-          <label className="space-y-2 md:col-span-2 xl:col-span-3">
-            <span className="text-xs font-medium text-muted-foreground">Notes</span>
-            <textarea
-              value={form.notes}
-              onChange={(e) => updateForm("notes", e.target.value)}
-              rows={3}
-              className="w-full resize-none bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
-            />
-          </label>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={saving}
-            className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-60"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-            {editingId ? "Save Changes" : "Create Customer"}
-          </button>
-          {editingId && (
-            <button
-              type="button"
-              onClick={resetForm}
-              className="px-4 py-2.5 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors"
-            >
-              Cancel Edit
-            </button>
-          )}
-        </div>
-      </form>
-
       <div className="flex flex-col gap-3 md:flex-row md:items-center">
         <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search customers..."
             value={keyword}
-            onChange={(e) => {
-              setKeyword(e.target.value);
+            onChange={(event) => {
+              setKeyword(event.target.value);
               setPage(1);
             }}
-            className="w-full bg-card border border-border rounded-xl py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+            className="w-full rounded-xl border border-border bg-card py-2.5 pl-10 pr-4 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground focus:border-accent focus:ring-2 focus:ring-accent/30"
           />
         </div>
         <select
           value={journey}
-          onChange={(e) => {
-            setJourney(e.target.value);
+          onChange={(event) => {
+            setJourney(event.target.value);
             setPage(1);
           }}
-          className="bg-card border border-border rounded-xl py-2.5 px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+          className="rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
         >
           <option value="">All journeys</option>
           {JOURNEY_OPTIONS.map(([value, label]) => (
@@ -374,29 +301,32 @@ export default function AdminCustomersPage() {
         </select>
       </div>
 
-      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border text-muted-foreground">
-                <th className="text-left px-5 py-3 font-medium">Customer</th>
-                <th className="text-left px-5 py-3 font-medium">Contact</th>
-                <th className="text-left px-5 py-3 font-medium">Journey</th>
-                <th className="text-left px-5 py-3 font-medium">Source</th>
-                <th className="text-left px-5 py-3 font-medium">Last Order</th>
-                <th className="text-right px-5 py-3 font-medium">Actions</th>
+                <th className="px-5 py-3 text-left font-medium">Customer</th>
+                <th className="px-5 py-3 text-left font-medium">Contact</th>
+                <th className="px-5 py-3 text-left font-medium">Journey</th>
+                <th className="px-5 py-3 text-left font-medium">Source</th>
+                <th className="px-5 py-3 text-left font-medium">Last Order</th>
+                <th className="px-5 py-3 text-right font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
                   <td colSpan={6} className="px-5 py-12 text-center">
-                    <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
+                    <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
                   </td>
                 </tr>
               ) : customers.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-muted-foreground">
+                  <td
+                    colSpan={6}
+                    className="px-5 py-12 text-center text-muted-foreground"
+                  >
                     No customers found
                   </td>
                 </tr>
@@ -404,7 +334,9 @@ export default function AdminCustomersPage() {
                 customers.map((customer) => (
                   <tr key={customer.id} className="border-b border-border/50">
                     <td className="px-5 py-3">
-                      <p className="font-medium text-foreground">{customer.full_name}</p>
+                      <p className="font-medium text-foreground">
+                        {customer.full_name}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         {customer.domicile || "-"}
                       </p>
@@ -412,13 +344,32 @@ export default function AdminCustomersPage() {
                     <td className="px-5 py-3 text-muted-foreground">
                       <p>{customer.whatsapp_phone || "-"}</p>
                       <p className="text-xs">
-                        {customer.username ? `@${customer.username}` : customer.email || ""}
+                        {customer.username
+                          ? `@${customer.username}`
+                          : customer.email || ""}
                       </p>
                     </td>
                     <td className="px-5 py-3">
-                      <span className="inline-flex rounded-full border border-accent/20 bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent">
-                        {journeyLabel(customer.current_journey)}
-                      </span>
+                      <div className="relative">
+                        <select
+                          aria-label={`Update ${customer.full_name} journey`}
+                          value={customer.current_journey}
+                          disabled={updatingJourneyId === customer.id}
+                          onChange={(event) =>
+                            handleJourneyChange(customer, event.target.value)
+                          }
+                          className="min-w-44 rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5 text-xs font-medium text-accent outline-none transition-all hover:border-accent/40 focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:opacity-60"
+                        >
+                          {JOURNEY_OPTIONS.map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                        {updatingJourneyId === customer.id && (
+                          <Loader2 className="absolute right-7 top-1/2 h-3.5 w-3.5 -translate-y-1/2 animate-spin text-accent" />
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-3 text-muted-foreground">
                       {customer.lead_source}
@@ -440,17 +391,19 @@ export default function AdminCustomersPage() {
                       <div className="flex justify-end gap-1">
                         <button
                           type="button"
+                          aria-label={`Edit ${customer.full_name}`}
                           onClick={() => handleEdit(customer)}
-                          className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="h-4 w-4" />
                         </button>
                         <button
                           type="button"
+                          aria-label={`Delete ${customer.full_name}`}
                           onClick={() => handleDelete(customer)}
-                          className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
                     </td>
@@ -461,7 +414,7 @@ export default function AdminCustomersPage() {
           </table>
         </div>
         {totalPages > 1 && (
-          <div className="px-5 py-3 border-t border-border flex items-center justify-between">
+          <div className="flex items-center justify-between border-t border-border px-5 py-3">
             <p className="text-xs text-muted-foreground">
               Page {page} of {totalPages}
             </p>
@@ -469,14 +422,14 @@ export default function AdminCustomersPage() {
               <button
                 onClick={() => setPage(Math.max(1, page - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 text-xs rounded-lg border border-border hover:bg-muted disabled:opacity-30 transition-colors"
+                className="rounded-lg border border-border px-3 py-1.5 text-xs transition-colors hover:bg-muted disabled:opacity-30"
               >
                 Previous
               </button>
               <button
                 onClick={() => setPage(Math.min(totalPages, page + 1))}
                 disabled={page === totalPages}
-                className="px-3 py-1.5 text-xs rounded-lg border border-border hover:bg-muted disabled:opacity-30 transition-colors"
+                className="rounded-lg border border-border px-3 py-1.5 text-xs transition-colors hover:bg-muted disabled:opacity-30"
               >
                 Next
               </button>
@@ -486,8 +439,8 @@ export default function AdminCustomersPage() {
       </div>
 
       {role === "root" && (
-        <section className="bg-card border border-border rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-border">
+        <section className="overflow-hidden rounded-2xl border border-border bg-card">
+          <div className="border-b border-border px-5 py-4">
             <h2 className="text-sm font-semibold text-foreground">
               Recent Daily Task Logs
             </h2>
@@ -496,10 +449,10 @@ export default function AdminCustomersPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-muted-foreground">
-                  <th className="text-left px-5 py-3 font-medium">Customer</th>
-                  <th className="text-left px-5 py-3 font-medium">Task</th>
-                  <th className="text-left px-5 py-3 font-medium">Journey</th>
-                  <th className="text-left px-5 py-3 font-medium">Evidence</th>
+                  <th className="px-5 py-3 text-left font-medium">Customer</th>
+                  <th className="px-5 py-3 text-left font-medium">Task</th>
+                  <th className="px-5 py-3 text-left font-medium">Journey</th>
+                  <th className="px-5 py-3 text-left font-medium">Evidence</th>
                 </tr>
               </thead>
               <tbody>
@@ -512,7 +465,8 @@ export default function AdminCustomersPage() {
                       {log.task_type || "-"}
                     </td>
                     <td className="px-5 py-3 text-muted-foreground">
-                      {journeyLabel(log.from_journey)} to {journeyLabel(log.to_journey)}
+                      {journeyLabel(log.from_journey)} to{" "}
+                      {journeyLabel(log.to_journey)}
                     </td>
                     <td className="px-5 py-3">
                       <a
@@ -527,7 +481,10 @@ export default function AdminCustomersPage() {
                 ))}
                 {logs.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="px-5 py-8 text-center text-muted-foreground">
+                    <td
+                      colSpan={4}
+                      className="px-5 py-8 text-center text-muted-foreground"
+                    >
                       No daily task logs yet
                     </td>
                   </tr>
@@ -536,6 +493,152 @@ export default function AdminCustomersPage() {
             </table>
           </div>
         </section>
+      )}
+
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm">
+          <div className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-border bg-card shadow-2xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-5 py-4">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  {editingId ? "Edit Customer" : "Create Manual Customer"}
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  {editingId
+                    ? "Update contact information and customer journey."
+                    : "Manual customers start from New Leads by default."}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5 p-5">
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="space-y-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Name
+                  </span>
+                  <input
+                    value={form.full_name}
+                    onChange={(event) => updateForm("full_name", event.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                    required
+                  />
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Username / Shopee Handle
+                  </span>
+                  <input
+                    value={form.username}
+                    onChange={(event) => updateForm("username", event.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                    placeholder="@username"
+                  />
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    WhatsApp Number
+                  </span>
+                  <input
+                    value={form.whatsapp_phone}
+                    onChange={(event) =>
+                      updateForm("whatsapp_phone", event.target.value)
+                    }
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                    placeholder="0812..."
+                  />
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Email
+                  </span>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(event) => updateForm("email", event.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                  />
+                </label>
+
+                <label className="space-y-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Domicile
+                  </span>
+                  <input
+                    value={form.domicile}
+                    onChange={(event) => updateForm("domicile", event.target.value)}
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                  />
+                </label>
+
+                {editingId && (
+                  <label className="space-y-2">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Journey
+                    </span>
+                    <select
+                      value={form.current_journey}
+                      onChange={(event) =>
+                        updateForm("current_journey", event.target.value)
+                      }
+                      className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                    >
+                      {JOURNEY_OPTIONS.map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                <label className="space-y-2 md:col-span-2">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Notes
+                  </span>
+                  <textarea
+                    value={form.notes}
+                    onChange={(event) => updateForm("notes", event.target.value)}
+                    rows={3}
+                    className="w-full resize-none rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
+                  />
+                </label>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="rounded-xl border border-border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground transition-all hover:bg-accent/90 disabled:opacity-60"
+                >
+                  {saving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Plus className="h-4 w-4" />
+                  )}
+                  {editingId ? "Save Changes" : "Create Customer"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
