@@ -55,7 +55,7 @@ export async function PUT(
             "image_url", "category", "purity", "volume", "formula", "cas",
             "short_desc", "overview", "storage_instruction", "usage_instruction",
             "dosing", "complimentary_product_id", "complimentary_quantity",
-            // "is_active", temporarily removed
+            "is_active",
         ];
 
         for (const field of fields) {
@@ -64,7 +64,8 @@ export async function PUT(
             }
         }
 
-        if (updateData.price) updateData.price = parseFloat(updateData.price);
+        if (updateData.price !== undefined)
+            updateData.price = parseFloat(updateData.price);
         if (updateData.cost_of_goods !== undefined) {
             const costOfGoods = Number(updateData.cost_of_goods || 0);
             if (!Number.isFinite(costOfGoods) || costOfGoods < 0) {
@@ -72,7 +73,7 @@ export async function PUT(
             }
             updateData.cost_of_goods = costOfGoods;
         }
-        if (updateData.original_price)
+        if (updateData.original_price !== undefined && updateData.original_price !== null)
             updateData.original_price = parseFloat(updateData.original_price);
         if (updateData.stock !== undefined)
             updateData.stock = parseInt(updateData.stock);
@@ -88,6 +89,9 @@ export async function PUT(
                 1,
                 parseInt(updateData.complimentary_quantity) || 1,
             );
+        }
+        if (updateData.is_active !== undefined) {
+            updateData.is_active = updateData.is_active !== false;
         }
         if (!updateData.complimentary_product_id) {
             updateData.complimentary_quantity = 1;

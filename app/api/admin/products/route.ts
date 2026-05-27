@@ -127,8 +127,7 @@ export async function POST(req: NextRequest) {
                 complimentary_quantity: body.complimentary_product_id
                     ? Math.max(1, parseInt(body.complimentary_quantity) || 1)
                     : 1,
-                // temporarily removed until column is added
-                // is_active: body.is_active !== false,
+                is_active: body.is_active !== false,
             })
             .select()
             .single();

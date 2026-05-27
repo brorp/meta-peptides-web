@@ -9,24 +9,24 @@ import { useGetProducts } from "@/hooks/api/useGetProducts";
 import { api as apiClient } from "@/lib/axios";
 import { useDebounce } from "@/hooks/use-debounce";
 import { ProductCardSkeleton } from "@/components/skeleton/product-card-skeleton";
-import { Badge } from "@/components/ui/badge";
 import { FilterSidebar } from "./filter-sidebar";
 import { MobileFilterDrawer } from "./mobile-filter-drawer";
 
-
 const SORT_OPTIONS = [
+  { label: "Best Seller", value: "popularity" },
   { label: "Lowest Stock", value: "stock_asc" },
-  { label: "Popularity", value: "popularity" },
   { label: "Latest", value: "latest" },
   { label: "Price: Low to High", value: "price_asc" },
   { label: "Price: High to Low", value: "price_desc" },
 ];
 
+const DEFAULT_SORT = "popularity";
+
 export default function ShopPageComponent() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [sortBy, setSortBy] = useState("stock_asc");
+  const [sortBy, setSortBy] = useState(DEFAULT_SORT);
   const [isCatOpen, setIsCatOpen] = useState(true);
   const [isSortOpen, setIsSortOpen] = useState(true);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
@@ -48,7 +48,7 @@ export default function ShopPageComponent() {
 
   const debouncedSearch = useDebounce(searchQuery, 500);
   const isFiltering =
-    searchQuery !== "" || selectedCategory !== "All" || sortBy !== "latest";
+    searchQuery !== "" || selectedCategory !== "All" || sortBy !== DEFAULT_SORT;
 
   const { data, isPending: isLoading } = useGetProducts({
     page: 1,
@@ -72,7 +72,7 @@ export default function ShopPageComponent() {
     onOpenSortChange: setIsSortOpen,
     onReset: () => {
       setSelectedCategory("All");
-      setSortBy("stock_asc");
+      setSortBy(DEFAULT_SORT);
       setSearchQuery("");
     },
   };

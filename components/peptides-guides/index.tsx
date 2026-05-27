@@ -23,27 +23,27 @@ import Link from "next/link";
 export default function PeptidesGuidesComponent() {
   const kitItems = [
     {
-      name: "1pc Vial Peptide",
+      name: "Products",
       desc: "Lyophilized Powder form",
       icon: <Box size={16} />,
     },
     {
-      name: "1pc Bac Water",
+      name: "Bac Water",
       desc: "Bacteriostatic Water",
       icon: <Droplets size={16} />,
     },
     {
-      name: "10pcs Alcohol Swab",
+      name: "Alcohol Swabs",
       desc: "Sanitization Protocol",
       icon: <ShieldCheck size={16} />,
     },
     {
-      name: "1pc 3mL Syringe",
+      name: "Syringes",
       desc: "For Reconstitution",
       icon: <Syringe size={16} />,
     },
     {
-      name: "10pcs 0.5mL Syringe",
+      name: "5pcs 0.5mL Syringe",
       desc: "Precise Dosing",
       icon: <Zap size={16} />,
     },
@@ -325,8 +325,12 @@ export default function PeptidesGuidesComponent() {
                 Pilih area yang paling nyaman. Area abdomen adalah yang paling
                 umum karena mudah dijangkau dan visible secara langsung.
               </p>
-              <div className="aspect-square bg-slate-100 rounded-[2rem] border-2 border-slate-200 flex items-center justify-center italic text-muted-foreground font-bold uppercase text-[10px]">
-                [ Image: Injection Site Diagram ]
+              <div className="relative aspect-square rounded-[2rem] border border-slate-200 overflow-hidden bg-white shadow-sm flex items-center justify-center">
+                <img
+                  src="/injection-site.png"
+                  alt="Injection Site Diagram"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <p className="text-red-600 text-[11px] font-black uppercase tracking-widest">
                 Safety Reminder: Jangan pernah menggunakan syringe yang sama

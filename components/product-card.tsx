@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Beaker, ShieldCheck } from "lucide-react";
+import { ShoppingCart } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/format";
@@ -44,19 +44,6 @@ export function ProductCard({
 
         {/* Overlay for hover effect */}
         <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-        <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
-          {product.purity && (
-            <div className="backdrop-blur-md bg-white/80 border border-white/20 text-accent text-[10px] font-bold px-2.5 py-1 rounded-full shadow-sm flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3" />
-              {product.purity} PURITY
-            </div>
-          )}
-        </div>
-
-        <div className="absolute top-3 right-3 z-10 bg-emerald-500/90 backdrop-blur-sm text-white text-[9px] font-black px-2 py-1 rounded-md shadow-lg">
-          READY TO ORDER
-        </div>
       </div>
 
       {/* Content Section */}

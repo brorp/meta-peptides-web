@@ -138,7 +138,7 @@ export function Navbar() {
             <div className="flex items-center gap-1 md:gap-3">
               <button
                 onClick={() => setIsCartOpen(true)}
-                className="group relative p-2 hover:bg-accent/10 rounded-full transition-colors"
+                className="hidden md:block group relative p-2 hover:bg-accent/10 rounded-full transition-colors"
               >
                 <ShoppingCart className="w-5 h-5 text-foreground" />
                 {isMounted && cartCount > 0 && (
@@ -178,18 +178,16 @@ export function Navbar() {
                 </Link>
               )}
 
-              <Button
-                variant="ghost"
-                size="icon"
-                className="md:hidden rounded-full hover:bg-accent/10"
+              <button
+                className="md:hidden p-2 rounded-full hover:bg-accent/10 transition-colors text-foreground"
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               >
                 {isMobileMenuOpen ? (
-                  <X className="w-6 h-6 text-foreground" />
+                  <X className="w-7 h-7" />
                 ) : (
-                  <Menu className="w-6 h-6 text-foreground" />
+                  <Menu className="w-7 h-7" />
                 )}
-              </Button>
+              </button>
             </div>
           </div>
         </div>
@@ -218,9 +216,9 @@ export function Navbar() {
             </Link>
           ))}
           <hr className="border-muted my-2" />
-          <Link href="/contact" className="w-full">
+          <Link href="/auth" className="w-full">
             <Button className="w-full rounded-2xl py-6 bg-foreground text-background text-lg">
-              Contact Us
+              Get 10% Coupon
             </Button>
           </Link>
         </div>

@@ -6,7 +6,7 @@ import {
   ShieldCheck,
   Zap,
   Microscope,
-  FlaskConical,
+  BadgeCheck,
   Dna,
   ArrowRight,
   Globe2,
@@ -17,8 +17,9 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { features, GOLD_STANDARD_FEATURES } from "@/contants/home";
+import { features } from "@/contants/home";
 import { useRouter } from "next/navigation";
+
 
 function Annotation({
   number,
@@ -77,6 +78,25 @@ function Annotation({
   );
 }
 
+const testimonials = [
+  {
+    author: "Dr. Irfan S.",
+    role: "Clinic Owner",
+    quote: "Premium packaging and legit products",
+  },
+  {
+    author: "Brian P.",
+    role: "Bodybuilder",
+    quote: "The 1-on-1 support and guidance was game-changing for me. Truly professional and caring service.",
+  },
+  {
+    author: "Emma",
+    role: "Biotechnology Specialist",
+    quote: "Highly recommended peptide supplier.",
+  },
+];
+
+
 export default function HomePageComponent() {
   const router = useRouter();
   return (
@@ -132,7 +152,7 @@ export default function HomePageComponent() {
                     onClick={() => {
                       router.push("/shop");
                     }}
-                    className="h-14 px-8 rounded-2xl bg-slate-900 hover:bg-accent text-white font-bold uppercase tracking-widest text-xs transition-all shadow-xl shadow-slate-200 group"
+                    className="h-14 px-8 rounded-2xl bg-slate-900 hover:bg-accent text-white font-bold uppercase tracking-widest text-xs transition-all shadow-xl shadow-slate-200 group w-full sm:w-56"
                   >
                     Explore Products
                     <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -140,42 +160,13 @@ export default function HomePageComponent() {
 
                   <Button
                     variant="outline"
-                    className="h-14 px-8 rounded-2xl border-slate-200 text-slate-600 font-bold uppercase tracking-widest text-xs hover:bg-slate-50 transition-all"
+                    className="h-14 px-8 rounded-2xl border-slate-200 text-slate-600 font-bold uppercase tracking-widest text-xs hover:bg-slate-50 transition-all w-full sm:w-56"
                     onClick={() => {
                       router.push("/about");
                     }}
                   >
-                    Learn more about Peptides
+                    Learn more
                   </Button>
-                </div>
-              </div>
-
-              {/* Stats Section */}
-              <div className="flex  items-center justify-center lg:justify-start gap-8 lg:gap-14 pt-2 border-t border-slate-100 w-full lg:w-fit">
-                <div className="group cursor-default">
-                  <div className="flex items-baseline gap-1">
-                    <p className="text-3xl lg:text-4xl font-black tracking-tighter text-slate-900 group-hover:text-accent transition-all duration-300">
-                      99.8%
-                    </p>
-                    <span className="w-1 h-1 rounded-full bg-accent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-[0.2em] mt-1">
-                    Avg. Purity
-                  </p>
-                </div>
-
-                <div className="w-px h-12 bg-slate-100 rotate-[15deg]" />
-
-                <div className="group cursor-default">
-                  <div className="flex items-baseline gap-1">
-                    <p className="text-3xl lg:text-4xl font-black tracking-tighter text-slate-900 group-hover:text-accent transition-all duration-300">
-                      24h
-                    </p>
-                    <span className="w-1 h-1 rounded-full bg-accent opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </div>
-                  <p className="text-[10px] uppercase font-bold text-slate-400 tracking-[0.2em] mt-1">
-                    Dispatch Time
-                  </p>
                 </div>
               </div>
             </div>
@@ -237,11 +228,11 @@ export default function HomePageComponent() {
                       Series
                     </p>
                     <p className="text-sm lg:text-xl font-black text-slate-800 tracking-tighter">
-                      RETRATUTIDE 10mg
+                      RETRATUTIDE
                     </p>
                   </div>
                   <div className="p-2 lg:p-3 bg-accent text-white rounded-xl lg:rounded-2xl">
-                    <FlaskConical className="w-4 h-4 lg:w-6 lg:h-6" />
+                    <BadgeCheck className="w-4 h-4 lg:w-6 lg:h-6" />
                   </div>
                 </div>
               </div>
@@ -334,7 +325,7 @@ export default function HomePageComponent() {
         </div>
       </section>
 
-      {/* 4. ABOUT (Premium Dark) */}
+      {/* 4. TESTIMONIALS (Premium Dark) */}
       <section className="py-24 px-4">
         <div className="max-w-7xl mx-auto bg-[#414042] rounded-[4rem] overflow-hidden relative shadow-2xl">
           {/* Decorative DNA Icon */}
@@ -346,33 +337,33 @@ export default function HomePageComponent() {
             <div className="space-y-8">
               <div className="flex items-center gap-3 text-accent font-black text-[10px] uppercase tracking-[0.4em]">
                 <span className="w-8 h-px bg-accent" />
-                Domestic Research Excellence
+                Researchers & Labs Trust
               </div>
               <h2 className="text-5xl md:text-7xl font-black text-white tracking-tighter leading-[0.85]">
-                GLOBAL <br />{" "}
-                <span className="text-accent italic">PREMIER SOURCE.</span>
+                FOLLOW US ON <br />{" "}
+                <span className="text-accent italic">THE JOURNEY.</span>
               </h2>
               <p className="text-white/70 text-lg leading-relaxed font-medium italic">
-                MetaPeptides is the definitive bridge between
-                high-purity biochemistry and laboratory precision. We facilitate
-                most demanding research through strictly audited
-                peptide sequences.
+                Hear from the biotechnology facilities, independent researchers, and scientific laboratories across Indonesia that trust MetaPeptides for their high-precision chemical sequences.
               </p>
             </div>
 
-            <div className="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-12 space-y-10">
-              {GOLD_STANDARD_FEATURES.map((step, idx) => (
-                <div key={idx} className="flex gap-6 group">
-                  <div className="text-accent font-black text-2xl group-hover:scale-125 transition-transform">
-                    {step.n}
-                  </div>
-                  <div>
-                    <h4 className="text-xl font-bold text-white mb-1 uppercase tracking-tight">
-                      {step.t}
-                    </h4>
-                    <p className="text-white/40 text-sm font-medium">
-                      {step.d}
-                    </p>
+            <div className="bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[3rem] p-8 md:p-12 space-y-10">
+              {testimonials.map((t, idx) => (
+                <div key={idx} className="flex flex-col gap-3 group border-b border-white/5 pb-8 last:border-0 last:pb-0">
+                  <p className="text-white/80 text-sm font-medium italic leading-relaxed">
+                    &ldquo;{t.quote}&rdquo;
+                  </p>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="w-4 h-px bg-accent" />
+                    <div>
+                      <h4 className="text-xs font-black text-white uppercase tracking-wider">
+                        {t.author}
+                      </h4>
+                      <p className="text-[10px] text-slate-400 font-medium">
+                        {t.role}
+                      </p>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -389,8 +380,7 @@ export default function HomePageComponent() {
             <span className="text-accent italic">Breakthrough.</span>
           </h2>
           <p className="text-xl text-muted-foreground font-medium max-w-xl mx-auto italic">
-            Join 5,000+ facilities trusting MetaPeptides for high-precision
-            compounds.
+            Join 100+ journeys trusting MetaPeptides for better a life
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-6">
             <Link href="/shop">
@@ -399,15 +389,6 @@ export default function HomePageComponent() {
                 className="h-20 px-16 rounded-[2rem] bg-accent hover:bg-accent/90 text-white font-black text-2xl shadow-[0_20px_50px_rgba(59,130,246,0.3)] transition-all hover:scale-105 active:scale-95"
               >
                 Browse Shop
-              </Button>
-            </Link>
-            <Link href="/faq">
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-20 px-16 rounded-[2rem] border-2 font-black text-2xl transition-all hover:bg-muted/50"
-              >
-                View FAQ
               </Button>
             </Link>
           </div>

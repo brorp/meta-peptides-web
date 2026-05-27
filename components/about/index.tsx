@@ -12,7 +12,7 @@ import {
   FileSearch,
   CheckCircle2,
   ChevronRight,
-  Globe,
+  Headset,
 } from "lucide-react";
 
 export default function OurCompanyPageComponent() {
@@ -21,19 +21,25 @@ export default function OurCompanyPageComponent() {
       icon: <ShieldCheck className="w-6 h-6" />,
       title: "Quality",
       description:
-        "We partner with ISO 9001:2015 approved sources to ensure the highest purity products available in the Indonesian market.",
+        "We partner with ISO 9001:2015 approved manufacturer to ensure the highest quality products available.",
     },
     {
       icon: <Truck className="w-6 h-6" />,
-      title: "Local Service",
+      title: "Safety Shipment",
       description:
-        "Efficient domestic logistics and responsive support tailored to the needs of the Indonesian scientific community.",
+        "Efficient domestic logistics and responsive support.",
     },
     {
       icon: <Lock className="w-6 h-6" />,
-      title: "Value",
+      title: "Transparent Value",
       description:
-        "Providing access to premium compounds at competitive local prices without compromising molecular integrity.",
+        "Providing transparent information for every products at competitive local prices without compromising integrity.",
+    },
+    {
+      icon: <Headset className="w-6 h-6" />,
+      title: "Full Support",
+      description:
+        "Comprehensive guidance and personalized support from the start of your journey until you fully reach your goals.",
     },
   ];
 
@@ -65,25 +71,12 @@ export default function OurCompanyPageComponent() {
       {/* --- PHILOSOPHY SECTION --- */}
       <section className="py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-12 gap-16 items-start">
+          <div className="grid lg:grid-cols-12 gap-16 items-stretch">
             <div className="lg:col-span-7 space-y-10">
               <div className="space-y-6">
                 <h2 className="text-4xl font-black tracking-tighter uppercase italic border-l-4 border-accent pl-6">
                   Quality. Service. Value.
                 </h2>
-                <p className="text-lg text-muted-foreground leading-relaxed">
-                  MetaPeptides is your safe, convenient, and private online
-                  source for the highest purity research peptides in Indonesia.
-                  We work hard to bring exceptional value to our customers by
-                  sourcing our products through the most reputable research
-                  chemical companies in the world.
-                </p>
-                <p className="text-lg text-muted-foreground leading-relaxed">
-                  Ordering online is simple and efficient. Our shopping cart is
-                  completely secured using the latest SSL technology, ensuring
-                  your information remains encrypted and 100% discreet
-                  throughout the domestic transit process.
-                </p>
               </div>
 
               <div className="grid sm:grid-cols-2 gap-6">
@@ -104,32 +97,38 @@ export default function OurCompanyPageComponent() {
               </div>
             </div>
 
-            <div className="lg:col-span-5">
-              <Card className="p-10 bg-[#414042] border-none rounded-[3rem] relative overflow-hidden shadow-2xl">
-                <div className="absolute top-0 right-0 p-8 opacity-5">
-                  <Globe className="w-40 h-40 text-white" />
+            <div className="lg:col-span-5 flex flex-col h-full">
+              <Card className="flex-1 p-10 bg-[#414042] border-none rounded-[3rem] relative overflow-hidden shadow-2xl">
+                <div className="absolute top-0 right-0 p-8">
+                  <img
+                    src="/logo.webp"
+                    alt="Logo Watermark"
+                    className="w-80 h-80 object-contain"
+                  />
                 </div>
-                <div className="relative z-10 space-y-8">
-                  <h3 className="text-2xl font-black text-white uppercase italic tracking-tight">
-                    Trusted Resource
+                <div className="relative z-10 space-y-12">
+                  <h3 className="text-xl lg:text-2xl font-black text-white uppercase italic tracking-tight">
+                    Brand Promise
                   </h3>
-                  <p className="text-white/60 text-sm leading-relaxed">
+                  <p className="text-white/70 text-xs lg:text-sm leading-relaxed font-medium">
                     We are proud to be a trusted resource for the Indonesian
-                    scientific community, providing the latest publications to
-                    advance research and development of peptides and proteins.
+                    scientific community, providing high-purity compounds and professional assistance.
+                    When you partner with us, you are never left to navigate your research alone—our expert
+                    team offers comprehensive, personalized guidance and dedicated support every single step
+                    of the way to guarantee you successfully reach your scientific goals.
                   </p>
-                  <ul className="space-y-4">
+                  <ul className="space-y-6">
                     {[
-                      "WHO/GMP Approved Sources",
-                      "ISO 9001:2015 Compliance",
-                      "256-bit SSL Data Encryption",
-                      "Dedicated Local Support",
+                      "Only serve the best",
+                      "1-on-1 Personal Research Guide",
+                      "100% Delivery & Reship Guarantee",
+                      "COA Transparency",
                     ].map((list, i) => (
                       <li
                         key={i}
-                        className="flex items-center gap-3 text-white font-bold text-xs uppercase tracking-widest"
+                        className="flex items-center gap-4 text-white font-bold text-xs uppercase tracking-wider"
                       >
-                        <CheckCircle2 className="w-4 h-4 text-accent" />
+                        <CheckCircle2 className="w-4 h-4 lg:w-5 lg:h-5 text-accent shrink-0" />
                         {list}
                       </li>
                     ))}

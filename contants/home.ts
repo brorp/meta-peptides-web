@@ -1,6 +1,11 @@
-import { Clock, ShieldCheck, Truck } from "lucide-react";
+import { Headset, ShieldCheck, Truck } from "lucide-react";
 
 export const features = [
+  {
+    icon: Headset,
+    title: "Full Support",
+    desc: "Comprehensive guidance and personalized support from the start of your journey until you fully reach your goals.",
+  },
   {
     icon: ShieldCheck,
     title: "Purity Guarantee",
@@ -10,11 +15,6 @@ export const features = [
     icon: Truck,
     title: "Express Domestic Shipping",
     desc: "Discrete same-day dispatch for orders within Indonesia to ensure molecular stability.",
-  },
-  {
-    icon: Clock,
-    title: "Rapid Manual Audit",
-    desc: "Your transfer will be verified and processed by our team within 1-2 hours (WIB).",
   },
 ];
 
