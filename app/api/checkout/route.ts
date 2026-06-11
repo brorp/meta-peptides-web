@@ -6,6 +6,7 @@ import { withAuth } from "@/lib/wrapper-auth-server";
 import { User } from "@supabase/supabase-js";
 import { sendOrderCreatedEmails } from "@/lib/email-service";
 import { discount as memberDiscountRate } from "@/contants/discount";
+import { deductOrderInventory, normalizePaymentType } from "@/lib/inventory";
 
 type CheckoutItemPayload = {
   product_id: string;
@@ -390,12 +391,24 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
         transaction_code: fileName,
         sender_name: orderData.shipping_name,
         status: "pending",
+        payment_type: normalizePaymentType(orderData.payment_type),
       });
 
     if (paymentError) {
       await cleanupFailedOrder(supabaseServer, order.id);
       await supabaseServer.storage.from("transactions").remove([filePath]);
       return errorResponse(`Payment Error: ${paymentError.message}`, 500);
+    }
+
+    try {
+      await deductOrderInventory(order.id, supabaseServer);
+    } catch (inventoryError: any) {
+      await cleanupFailedOrder(supabaseServer, order.id);
+      await supabaseServer.storage.from("transactions").remove([filePath]);
+      return errorResponse(
+        inventoryError.message || "Failed to deduct inventory",
+        400,
+      );
     }
 
     // --- STEP 4: INCREMENT VOUCHER CLAIM (only on successful order) ---

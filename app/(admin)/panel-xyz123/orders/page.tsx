@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Loader2, Eye, ShoppingCart, Plus, Upload } from "lucide-react";
+import { Copy, Search, Loader2, Eye, ShoppingCart, Plus, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
 
@@ -327,7 +327,19 @@ export default function AdminOrdersPage() {
                                             {formatDate(order.created_at)}
                                         </td>
                                         <td className="px-5 py-3">
-                                            <div className="flex items-center justify-end">
+                                            <div className="flex items-center justify-end gap-1">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        router.push(
+                                                            `/panel-xyz123/orders/new?duplicate=${order.id}`,
+                                                        );
+                                                    }}
+                                                    className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                                                    title="Duplicate"
+                                                >
+                                                    <Copy className="w-4 h-4" />
+                                                </button>
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();

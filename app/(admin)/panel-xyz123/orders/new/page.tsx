@@ -48,6 +48,8 @@ const ORDER_SOURCES = [
     },
 ];
 
+const PAYMENT_TYPES = ["Shopee", "QRIS", "Bank Transfer"];
+
 const buildBlankItem = (): ManualOrderItem => ({
     localId: crypto.randomUUID(),
     product_id: "",
@@ -76,13 +78,28 @@ function todayLocalDate() {
     return `${y}-${m}-${d}`;
 }
 
+function toLocalDate(value?: string | null) {
+    if (!value) return todayLocalDate();
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return todayLocalDate();
+
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+}
+
 export default function NewManualOrderPage() {
     const router = useRouter();
+    const [duplicateOrderId, setDuplicateOrderId] = useState<string | null>(null);
     const [products, setProducts] = useState<ProductOption[]>([]);
     const [loadingProducts, setLoadingProducts] = useState(true);
+    const [loadingDuplicate, setLoadingDuplicate] = useState(false);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({
         order_source: "manual_whatsapp",
+        payment_type: "Bank Transfer",
         shipping_name: "",
         customer_username: "",
         shipping_phone: "",
@@ -98,6 +115,10 @@ export default function NewManualOrderPage() {
         order_date: todayLocalDate(),
     });
     const [items, setItems] = useState<ManualOrderItem[]>([buildBlankItem()]);
+
+    useEffect(() => {
+        setDuplicateOrderId(new URLSearchParams(window.location.search).get("duplicate"));
+    }, []);
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -120,6 +141,65 @@ export default function NewManualOrderPage() {
 
         fetchProducts();
     }, []);
+
+    useEffect(() => {
+        if (!duplicateOrderId) return;
+
+        const fetchDuplicateOrder = async () => {
+            setLoadingDuplicate(true);
+            try {
+                const { data } = await axios.get(`/admin/orders/${duplicateOrderId}`);
+                if (!data.success) return;
+
+                const source = data.data.order_source || "manual_whatsapp";
+                const paymentType =
+                    data.data.payments?.[0]?.payment_type ||
+                    (source === "shopee" ? "Shopee" : "Bank Transfer");
+
+                setForm({
+                    order_source: source,
+                    payment_type: PAYMENT_TYPES.includes(paymentType)
+                        ? paymentType
+                        : "Bank Transfer",
+                    shipping_name: data.data.shipping_name || "",
+                    customer_username: data.data.customer_username || "",
+                    shipping_phone: data.data.shipping_phone || "",
+                    shipping_email: data.data.shipping_email || "",
+                    shipping_address: data.data.shipping_address || "",
+                    shipping_regional: data.data.shipping_regional || "",
+                    shipping_zip: data.data.shipping_zip || "",
+                    manual_reference: data.data.manual_reference || "",
+                    status: data.data.status || "processing",
+                    manual_discount_amount: String(
+                        Number(data.data.voucher_discount_amount || 0),
+                    ),
+                    marketplace_fee: String(Number(data.data.marketplace_fee || 0)),
+                    note: data.data.note || "",
+                    order_date: toLocalDate(data.data.created_at),
+                });
+
+                const duplicatedItems = (data.data.order_items || [])
+                    .filter((item: any) => item.product_id)
+                    .map((item: any) => ({
+                        localId: crypto.randomUUID(),
+                        product_id: item.product_id,
+                        quantity: Number(item.quantity || 1),
+                        price_at_purchase: Number(item.price_at_purchase || 0),
+                    }));
+
+                setItems(duplicatedItems.length ? duplicatedItems : [buildBlankItem()]);
+                toast.success("Order copied into the form");
+            } catch (error: any) {
+                toast.error("Failed to duplicate order", {
+                    description: getErrorMessage(error, "Please try again."),
+                });
+            } finally {
+                setLoadingDuplicate(false);
+            }
+        };
+
+        fetchDuplicateOrder();
+    }, [duplicateOrderId]);
 
     const productMap = useMemo(
         () => new Map(products.map((product) => [product.id, product])),
@@ -197,6 +277,7 @@ export default function NewManualOrderPage() {
                 ...form,
                 manual_discount_amount: manualDiscount,
                 marketplace_fee: marketplaceFee,
+                payment_type: form.payment_type,
                 items: payloadItems,
             });
 
@@ -226,10 +307,12 @@ export default function NewManualOrderPage() {
                     </button>
                     <div>
                         <h1 className="text-2xl font-bold text-foreground">
-                            Add Manual Order
+                            {duplicateOrderId ? "Duplicate Order" : "Add Manual Order"}
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            Create a WhatsApp or Shopee order and keep it in the normal order flow.
+                            {duplicateOrderId
+                                ? "Review the copied data, adjust anything needed, then create a new order."
+                                : "Create a WhatsApp or Shopee order and keep it in the normal order flow."}
                         </p>
                     </div>
                 </div>
@@ -244,6 +327,13 @@ export default function NewManualOrderPage() {
                     {selectedSource.label}
                 </div>
             </div>
+
+            {loadingDuplicate && (
+                <div className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2 text-sm text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading copied order data...
+                </div>
+            )}
 
             <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-3">
                 <div className="lg:col-span-2 space-y-6">
@@ -440,12 +530,36 @@ export default function NewManualOrderPage() {
                             </span>
                             <select
                                 value={form.order_source}
-                                onChange={(e) => updateForm("order_source", e.target.value)}
+                                onChange={(e) => {
+                                    const nextSource = e.target.value;
+                                    updateForm("order_source", nextSource);
+                                    if (nextSource === "shopee") {
+                                        updateForm("payment_type", "Shopee");
+                                    } else if (form.payment_type === "Shopee") {
+                                        updateForm("payment_type", "Bank Transfer");
+                                    }
+                                }}
                                 className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
                             >
                                 {ORDER_SOURCES.map((source) => (
                                     <option key={source.value} value={source.value}>
                                         {source.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <label className="space-y-2 block">
+                            <span className="text-xs font-medium text-muted-foreground">
+                                Payment Type
+                            </span>
+                            <select
+                                value={form.payment_type}
+                                onChange={(e) => updateForm("payment_type", e.target.value)}
+                                className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                            >
+                                {PAYMENT_TYPES.map((paymentType) => (
+                                    <option key={paymentType} value={paymentType}>
+                                        {paymentType}
                                     </option>
                                 ))}
                             </select>

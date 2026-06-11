@@ -4,6 +4,7 @@ import {
     isMissingCustomerUsernameColumn,
     withoutCustomerUsername,
 } from "@/lib/order-schema-compat";
+import { deductOrderInventory } from "@/lib/inventory";
 
 const SHOPEE_SOURCE = "shopee";
 const SHOPEE_CHANNEL = "shopee";
@@ -634,10 +635,21 @@ const upsertShopeeOrder = async (
         transaction_code: `SHOPEE-${group.orderNumber}`,
         sender_name: customerName,
         status: "pending",
+        payment_type: "Shopee",
     });
 
     if (paymentError) {
         throw new Error(`Failed to save payment: ${paymentError.message}`);
+    }
+
+    if (!orderId) {
+        throw new Error("Failed to resolve Shopee order ID for inventory deduction.");
+    }
+
+    try {
+        await deductOrderInventory(orderId);
+    } catch (error: any) {
+        throw new Error(error?.message || "Failed to deduct inventory");
     }
 
     return {

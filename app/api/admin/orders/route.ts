@@ -9,6 +9,7 @@ import {
     isMissingCustomerUsernameColumn,
     withoutCustomerUsername,
 } from "@/lib/order-schema-compat";
+import { deductOrderInventory, normalizePaymentType } from "@/lib/inventory";
 
 const ORDER_STATUSES = [
     "pending_review",
@@ -145,6 +146,9 @@ export async function POST(req: NextRequest) {
             Number(body.manual_discount_amount || 0),
         );
         const marketplaceFee = Math.max(0, Number(body.marketplace_fee || 0));
+        const paymentType = normalizePaymentType(
+            body.payment_type || (orderSource === "shopee" ? "Shopee" : "Bank Transfer"),
+        );
         // Optional custom order date (ISO string or YYYY-MM-DD)
         const orderDateRaw = body.order_date ? String(body.order_date).trim() : null;
         const orderDate = orderDateRaw ? new Date(orderDateRaw) : null;
@@ -280,11 +284,22 @@ export async function POST(req: NextRequest) {
             transaction_code: transactionCode,
             sender_name: shippingName,
             status: "pending",
+            payment_type: paymentType,
         });
 
         if (paymentError) {
             await cleanupFailedManualOrder(order.id);
             return errorResponse(paymentError.message, 400);
+        }
+
+        try {
+            await deductOrderInventory(order.id);
+        } catch (inventoryError: any) {
+            await cleanupFailedManualOrder(order.id);
+            return errorResponse(
+                inventoryError.message || "Failed to deduct inventory",
+                400,
+            );
         }
 
         const { data: createdOrder, error: loadError } = await supabaseAdmin

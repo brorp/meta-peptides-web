@@ -7,6 +7,7 @@ import {
   isMissingCustomerUsernameColumn,
   withoutCustomerUsername,
 } from "@/lib/order-schema-compat";
+import { deductOrderInventory, normalizePaymentType } from "@/lib/inventory";
 
 const ORDER_STATUSES = [
   "pending_review",
@@ -134,31 +135,95 @@ export async function PUT(
       }
     }
 
-    if (!Object.keys(updateData).length) {
+    const shouldUpdatePaymentType = body.payment_type !== undefined;
+
+    if (!Object.keys(updateData).length && !shouldUpdatePaymentType) {
       return errorResponse("No order changes were provided", 400);
     }
 
-    let { data: updatedOrder, error: updateError } = await supabaseAdmin
-      .from("orders")
-      .update(updateData)
-      .eq("id", id)
-      .select("id")
-      .single();
-
-    if (updateError && isMissingCustomerUsernameColumn(updateError)) {
-      const retry = await supabaseAdmin
+    if (Object.keys(updateData).length) {
+      let { data: updatedOrder, error: updateError } = await supabaseAdmin
         .from("orders")
-        .update(withoutCustomerUsername(updateData))
+        .update(updateData)
         .eq("id", id)
         .select("id")
         .single();
 
-      updatedOrder = retry.data;
-      updateError = retry.error;
+      if (updateError && isMissingCustomerUsernameColumn(updateError)) {
+        const retry = await supabaseAdmin
+          .from("orders")
+          .update(withoutCustomerUsername(updateData))
+          .eq("id", id)
+          .select("id")
+          .single();
+
+        updatedOrder = retry.data;
+        updateError = retry.error;
+      }
+
+      if (updateError || !updatedOrder) {
+        return errorResponse(updateError?.message || "Failed to update order", 400);
+      }
     }
 
-    if (updateError || !updatedOrder) {
-      return errorResponse(updateError?.message || "Failed to update order", 400);
+    if (shouldUpdatePaymentType) {
+      const paymentType = normalizePaymentType(body.payment_type);
+      const { data: existingPayment, error: paymentLookupError } =
+        await supabaseAdmin
+          .from("payments")
+          .select("id")
+          .eq("order_id", id)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+      if (paymentLookupError) {
+        return errorResponse(paymentLookupError.message, 400);
+      }
+
+      if (existingPayment?.id) {
+        const { error: paymentUpdateError } = await supabaseAdmin
+          .from("payments")
+          .update({ payment_type: paymentType })
+          .eq("id", existingPayment.id);
+
+        if (paymentUpdateError) {
+          return errorResponse(paymentUpdateError.message, 400);
+        }
+      } else {
+        const { error: paymentInsertError } = await supabaseAdmin
+          .from("payments")
+          .insert({
+            order_id: id,
+            receipt_url: "",
+            transaction_code: `PAY-${id.slice(0, 8).toUpperCase()}`,
+            sender_name: currentOrder.shipping_name || "Customer",
+            status: "pending",
+            payment_type: paymentType,
+          });
+
+        if (paymentInsertError) {
+          return errorResponse(paymentInsertError.message, 400);
+        }
+      }
+    }
+
+    if (body.status && body.status !== "cancelled") {
+      try {
+        await deductOrderInventory(id);
+      } catch (inventoryError: any) {
+        if (updateData.status) {
+          await supabaseAdmin
+            .from("orders")
+            .update({ status: previousStatus })
+            .eq("id", id);
+        }
+
+        return errorResponse(
+          inventoryError.message || "Failed to deduct inventory",
+          400,
+        );
+      }
     }
 
     const { data, error } = await supabaseAdmin

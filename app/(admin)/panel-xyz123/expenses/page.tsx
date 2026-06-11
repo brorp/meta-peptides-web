@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import {
+  Copy,
   Edit,
   Loader2,
   Plus,
@@ -76,6 +77,7 @@ export default function AdminExpensesPage() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [form, setForm] = useState<ExpenseFormState>(buildDefaultForm);
 
   const fetchExpenses = async () => {
@@ -104,6 +106,7 @@ export default function AdminExpensesPage() {
 
   const resetForm = () => {
     setEditingId(null);
+    setDuplicatingId(null);
     setForm(buildDefaultForm());
   };
 
@@ -142,6 +145,21 @@ export default function AdminExpensesPage() {
 
   const handleEdit = (expense: ExpenseRecord) => {
     setEditingId(expense.id);
+    setDuplicatingId(null);
+    setForm({
+      title: expense.title || "",
+      category: expense.category || "Operations",
+      amount: String(expense.amount || 0),
+      expense_date: expense.expense_date || todayLocalDate(),
+      vendor: expense.vendor || "",
+      payment_method: expense.payment_method || "",
+      notes: expense.notes || "",
+    });
+  };
+
+  const handleDuplicate = (expense: ExpenseRecord) => {
+    setEditingId(null);
+    setDuplicatingId(expense.id);
     setForm({
       title: expense.title || "",
       category: expense.category || "Operations",
@@ -195,7 +213,11 @@ export default function AdminExpensesPage() {
         <div className="flex items-center gap-2">
           <ReceiptText className="w-5 h-5 text-accent" />
           <h2 className="text-lg font-semibold text-foreground">
-            {editingId ? "Edit Expense" : "Create Expense"}
+            {editingId
+              ? "Edit Expense"
+              : duplicatingId
+                ? "Duplicate Expense"
+                : "Create Expense"}
           </h2>
         </div>
 
@@ -302,7 +324,11 @@ export default function AdminExpensesPage() {
             ) : (
               <Plus className="w-4 h-4" />
             )}
-            {editingId ? "Save Changes" : "Create Expense"}
+            {editingId
+              ? "Save Changes"
+              : duplicatingId
+                ? "Create Copy"
+                : "Create Expense"}
           </button>
 
           {editingId && (
@@ -396,6 +422,14 @@ export default function AdminExpensesPage() {
                           title="Edit"
                         >
                           <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDuplicate(expense)}
+                          className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                          title="Duplicate"
+                        >
+                          <Copy className="w-4 h-4" />
                         </button>
                         <button
                           type="button"

@@ -11,7 +11,6 @@ import {
     Ticket,
     BadgePercent,
     FileText,
-    Handshake,
     LogOut,
     Menu,
     X,
@@ -19,6 +18,7 @@ import {
     QrCode,
     ReceiptText,
     ClipboardList,
+    Warehouse,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
@@ -30,8 +30,8 @@ const ROOT_NAV_ITEMS = [
     { label: "Users", href: "/panel-xyz123/users", icon: Users },
     { label: "Customers", href: "/panel-xyz123/customers", icon: Users },
     { label: "Products", href: "/panel-xyz123/products", icon: Package },
+    { label: "Inventory", href: "/panel-xyz123/inventory", icon: Warehouse },
     { label: "Orders", href: "/panel-xyz123/orders", icon: ShoppingCart },
-    { label: "Resellers", href: "/panel-xyz123/resellers", icon: Handshake },
     { label: "Vouchers", href: "/panel-xyz123/vouchers", icon: BadgePercent },
     { label: "Expenses", href: "/panel-xyz123/expenses", icon: ReceiptText },
     { label: "Preorders", href: "/panel-xyz123/preorders", icon: Ticket },
@@ -43,7 +43,6 @@ const ADMIN_NAV_ITEMS = [
     { label: "Daily Tasks", href: "/panel-xyz123/daily-tasks", icon: ClipboardList },
     { label: "Users", href: "/panel-xyz123/users", icon: Users },
     { label: "Orders", href: "/panel-xyz123/orders", icon: ShoppingCart },
-    { label: "Resellers", href: "/panel-xyz123/resellers", icon: Handshake },
     { label: "Vouchers", href: "/panel-xyz123/vouchers", icon: BadgePercent },
     { label: "Customers", href: "/panel-xyz123/customers", icon: Users },
 ];
@@ -157,8 +156,8 @@ function AdminHeader({
         if (pathname.includes("/users")) return "Users";
         if (pathname.includes("/customers")) return "Customers";
         if (pathname.includes("/products")) return "Products";
+        if (pathname.includes("/inventory")) return "Inventory";
         if (pathname.includes("/orders")) return "Orders";
-        if (pathname.includes("/resellers")) return "Resellers";
         if (pathname.includes("/vouchers")) return "Vouchers";
         if (pathname.includes("/expenses")) return "Expenses";
         if (pathname.includes("/preorders")) return "Preorders";

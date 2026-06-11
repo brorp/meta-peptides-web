@@ -55,7 +55,7 @@ export async function PUT(
             "image_url", "category", "purity", "volume", "formula", "cas",
             "short_desc", "overview", "storage_instruction", "usage_instruction",
             "dosing", "complimentary_product_id", "complimentary_quantity",
-            "is_active",
+            "inventory_type", "is_active",
         ];
 
         for (const field of fields) {
@@ -92,6 +92,13 @@ export async function PUT(
         }
         if (updateData.is_active !== undefined) {
             updateData.is_active = updateData.is_active !== false;
+        }
+        if (updateData.inventory_type !== undefined) {
+            updateData.inventory_type = ["product", "packaging", "supply"].includes(
+                updateData.inventory_type,
+            )
+                ? updateData.inventory_type
+                : "product";
         }
         if (!updateData.complimentary_product_id) {
             updateData.complimentary_quantity = 1;

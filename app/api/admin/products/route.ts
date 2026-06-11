@@ -127,6 +127,9 @@ export async function POST(req: NextRequest) {
                 complimentary_quantity: body.complimentary_product_id
                     ? Math.max(1, parseInt(body.complimentary_quantity) || 1)
                     : 1,
+                inventory_type: ["product", "packaging", "supply"].includes(body.inventory_type)
+                    ? body.inventory_type
+                    : "product",
                 is_active: body.is_active !== false,
             })
             .select()

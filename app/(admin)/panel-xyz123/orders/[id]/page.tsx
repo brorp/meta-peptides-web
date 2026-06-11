@@ -21,6 +21,8 @@ const ORDER_STATUSES = [
     "cancelled",
 ];
 
+const PAYMENT_TYPES = ["Shopee", "QRIS", "Bank Transfer"];
+
 function formatCurrency(value: number) {
     return new Intl.NumberFormat("id-ID", {
         style: "currency",
@@ -103,6 +105,7 @@ export default function AdminOrderDetailPage({
     const [discountAmount, setDiscountAmount] = useState("");
     const [marketplaceFee, setMarketplaceFee] = useState("");
     const [totalPrice, setTotalPrice] = useState("");
+    const [paymentType, setPaymentType] = useState("Bank Transfer");
 
     useEffect(() => {
         const fetchOrder = async () => {
@@ -131,6 +134,10 @@ export default function AdminOrderDetailPage({
                     );
                     setMarketplaceFee(String(Number(data.data.marketplace_fee || 0)));
                     setTotalPrice(String(Number(data.data.total_price || 0)));
+                    setPaymentType(
+                        data.data.payments?.[0]?.payment_type ||
+                        (data.data.order_source === "shopee" ? "Shopee" : "Bank Transfer"),
+                    );
                 }
             } catch {
                 toast.error("Failed to fetch order");
@@ -153,6 +160,7 @@ export default function AdminOrderDetailPage({
                 shipping_address: shippingAddress,
                 shipping_regional: shippingRegional,
                 shipping_zip: shippingZip,
+                payment_type: paymentType,
             };
 
             // Send updated order date
@@ -193,6 +201,10 @@ export default function AdminOrderDetailPage({
                 );
                 setMarketplaceFee(String(Number(data.data.marketplace_fee || 0)));
                 setTotalPrice(String(Number(data.data.total_price || 0)));
+                setPaymentType(
+                    data.data.payments?.[0]?.payment_type ||
+                    (data.data.order_source === "shopee" ? "Shopee" : "Bank Transfer"),
+                );
             } else {
                 toast.error(data.message);
             }
@@ -450,6 +462,12 @@ export default function AdminOrderDetailPage({
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
+                                        <span className="text-muted-foreground">Payment Type</span>
+                                        <span className="text-foreground">
+                                            {payment.payment_type || "Bank Transfer"}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
                                         <span className="text-muted-foreground">Status</span>
                                         <span className="text-foreground capitalize">
                                             {payment.status}
@@ -589,6 +607,23 @@ export default function AdminOrderDetailPage({
                                 {ORDER_STATUSES.map((s) => (
                                     <option key={s} value={s}>
                                         {s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                                Payment Type
+                            </label>
+                            <select
+                                value={paymentType}
+                                onChange={(e) => setPaymentType(e.target.value)}
+                                className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                            >
+                                {PAYMENT_TYPES.map((type) => (
+                                    <option key={type} value={type}>
+                                        {type}
                                     </option>
                                 ))}
                             </select>
