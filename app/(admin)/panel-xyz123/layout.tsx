@@ -15,7 +15,6 @@ import {
     Menu,
     X,
     ChevronRight,
-    QrCode,
     ReceiptText,
     ClipboardList,
     Warehouse,
@@ -36,7 +35,6 @@ const ROOT_NAV_ITEMS = [
     { label: "Expenses", href: "/panel-xyz123/expenses", icon: ReceiptText },
     { label: "Preorders", href: "/panel-xyz123/preorders", icon: Ticket },
     { label: "COAs", href: "/panel-xyz123/coas", icon: FileText },
-    { label: "QR Code", href: "/panel-xyz123/qr-code", icon: QrCode },
 ];
 
 const ADMIN_NAV_ITEMS = [
@@ -162,7 +160,6 @@ function AdminHeader({
         if (pathname.includes("/expenses")) return "Expenses";
         if (pathname.includes("/preorders")) return "Preorders";
         if (pathname.includes("/coas")) return "COAs";
-        if (pathname.includes("/qr-code")) return "QR Code";
         return "Dashboard";
     };
 

@@ -8,7 +8,7 @@ export function FloatingActions() {
   const { getCartCount, setIsCartOpen } = useCartStore();
   const count = getCartCount();
 
-  const whatsappNumber = "15812895785"; // Ganti dengan nomor WA MetaPeptides
+  const whatsappNumber = "6285191378473"; // Ganti dengan nomor WA MetaPeptides
   const message = "Hello MetaPeptides, can I get more info about your products?";
 
   const openWhatsApp = () => {

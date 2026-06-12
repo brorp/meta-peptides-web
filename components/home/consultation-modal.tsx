@@ -8,7 +8,7 @@ import { api as axios } from "@/lib/axios";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const WHATSAPP_NUMBER = "15812895785"; // MetaPeptides WA number
+const WHATSAPP_NUMBER = "85191378473"; // MetaPeptides WA number
 
 const AGE_OPTIONS = [
   { label: "> 21 – 35 years", value: "21-35" },

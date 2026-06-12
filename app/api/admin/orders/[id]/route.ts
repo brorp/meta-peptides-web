@@ -208,16 +208,25 @@ export async function PUT(
       }
     }
 
-    if (body.status && body.status !== "cancelled") {
+    // Stock is deducted at order-creation time (POST /admin/orders).
+    // The only exception is when an order was created with status "pending_review"
+    // and is now being moved out of that state for the first time — in that case
+    // inventory hasn't been touched yet, so we deduct it now.
+    const isFirstActivation =
+      body.status &&
+      body.status !== "cancelled" &&
+      previousStatus === "pending_review" &&
+      body.status !== "pending_review";
+
+    if (isFirstActivation) {
       try {
         await deductOrderInventory(id);
       } catch (inventoryError: any) {
-        if (updateData.status) {
-          await supabaseAdmin
-            .from("orders")
-            .update({ status: previousStatus })
-            .eq("id", id);
-        }
+        // Roll back the status change if inventory deduction fails
+        await supabaseAdmin
+          .from("orders")
+          .update({ status: previousStatus })
+          .eq("id", id);
 
         return errorResponse(
           inventoryError.message || "Failed to deduct inventory",

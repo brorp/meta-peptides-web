@@ -1,5 +1,7 @@
 -- Inventory rows live in products so finished products and packaging share
 -- the same stock and COGS editing flow.
+ALTER TYPE order_status_enum ADD VALUE IF NOT EXISTS 'cancelled';
+
 ALTER TABLE products
 ADD COLUMN IF NOT EXISTS inventory_type text NOT NULL DEFAULT 'product';
 
@@ -109,7 +111,7 @@ BEGIN
     RETURN;
   END IF;
 
-  IF v_order.status = 'cancelled' THEN
+  IF v_order.status::text IN ('cancelled', 'canceled') THEN
     RETURN;
   END IF;
 

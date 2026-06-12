@@ -6,7 +6,7 @@ import {
 const BRAND_COLOR = "#10b981";
 const DARK_BG = "#414042";
 const LIGHT_BG = "#f9fafb";
-const HELP_WHATSAPP_URL = "https://wa.me/15812895785";
+const HELP_WHATSAPP_URL = "https://wa.me/85191378473";
 
 type OrderItem = {
   name: string;

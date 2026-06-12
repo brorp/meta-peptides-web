@@ -229,7 +229,7 @@ export default function HomePageComponent() {
                       Series
                     </p>
                     <p className="text-sm lg:text-xl font-black text-slate-800 tracking-tighter">
-                      RETRATUTIDE
+                      RETA
                     </p>
                   </div>
                   <div className="p-2 lg:p-3 bg-accent text-white rounded-xl lg:rounded-2xl">
