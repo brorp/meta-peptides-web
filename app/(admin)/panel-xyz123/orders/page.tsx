@@ -2,7 +2,31 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Copy, Search, Loader2, Eye, ShoppingCart, Plus, Upload } from "lucide-react";
+import {
+    ArrowDown,
+    ArrowUp,
+    ArrowUpDown,
+    Copy,
+    Crown,
+    Eye,
+    Loader2,
+    PackageSearch,
+    PieChart as PieChartIcon,
+    Plus,
+    Search,
+    ShoppingCart,
+    TrendingUp,
+    Truck,
+    Upload,
+    Users,
+} from "lucide-react";
+import {
+    Cell,
+    Pie,
+    PieChart,
+    ResponsiveContainer,
+    Tooltip,
+} from "recharts";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
 
@@ -15,6 +39,48 @@ const STATUS_TABS = [
 ];
 
 const ORDER_STATUS_OPTIONS = STATUS_TABS.filter((tab) => tab.value);
+const ANALYTICS_RANGES = [
+    { label: "This Month", value: "this_month" },
+    { label: "Today", value: "today" },
+    { label: "This Week", value: "this_week" },
+    { label: "90 Days", value: "90_days" },
+];
+const SOURCE_COLORS = ["#22c55e", "#f97316", "#38bdf8", "#a3e635"];
+
+type SortBy =
+    | "created_at"
+    | "shipping_name"
+    | "total_price"
+    | "status"
+    | "order_source"
+    | "shipping_fee";
+type SortDir = "asc" | "desc";
+type OrdersAnalytics = {
+    orderCount: number;
+    unitsSold: number;
+    totalRevenue: number;
+    averageOrderValue: number;
+    uniqueCustomers: number;
+    totalShipmentFees: number;
+    topSpender: { name: string; total: number; orders: number } | null;
+    bestSeller: {
+        productId: string;
+        name: string;
+        label: string | null;
+        units: number;
+        revenue: number;
+    } | null;
+    bestSellers: Array<{
+        productId: string;
+        name: string;
+        label: string | null;
+        units: number;
+        revenue: number;
+    }>;
+    topSpenders: Array<{ name: string; total: number; orders: number }>;
+    sourceDistribution: Array<{ label: string; value: number; revenue: number }>;
+    shipmentBreakdown: Array<{ label: string; orders: number; fees: number }>;
+};
 
 function formatCurrency(value: number) {
     return new Intl.NumberFormat("id-ID", {
@@ -32,6 +98,69 @@ function formatDate(dateStr: string) {
         hour: "2-digit",
         minute: "2-digit",
     });
+}
+
+function formatNumber(value: number) {
+    return new Intl.NumberFormat("id-ID").format(value || 0);
+}
+
+function AnalyticsMetric({
+    label,
+    value,
+    icon: Icon,
+    tone,
+}: {
+    label: string;
+    value: string;
+    icon: any;
+    tone: string;
+}) {
+    return (
+        <div className="rounded-2xl border border-border bg-card p-4">
+            <div className="flex items-start justify-between gap-3">
+                <div>
+                    <p className="text-xs font-medium text-muted-foreground">
+                        {label}
+                    </p>
+                    <p className="mt-1 text-lg font-bold text-foreground">{value}</p>
+                </div>
+                <div
+                    className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tone}`}
+                >
+                    <Icon className="h-4 w-4" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function SortableHeader({
+    label,
+    field,
+    sortBy,
+    sortDir,
+    onSort,
+}: {
+    label: string;
+    field: SortBy;
+    sortBy: SortBy;
+    sortDir: SortDir;
+    onSort: (field: SortBy) => void;
+}) {
+    const active = sortBy === field;
+    const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
+
+    return (
+        <button
+            type="button"
+            onClick={() => onSort(field)}
+            className={`inline-flex items-center gap-1.5 transition-colors hover:text-foreground ${active ? "text-foreground" : "text-muted-foreground"
+                }`}
+        >
+            {label}
+            <Icon className="h-3.5 w-3.5" />
+        </button>
+    );
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -77,17 +206,29 @@ export default function AdminOrdersPage() {
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadingAnalytics, setLoadingAnalytics] = useState(true);
     const [importing, setImporting] = useState(false);
     const [keyword, setKeyword] = useState("");
     const [status, setStatus] = useState("");
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const [analyticsRange, setAnalyticsRange] = useState("this_month");
+    const [analytics, setAnalytics] = useState<OrdersAnalytics | null>(null);
+    const [sortBy, setSortBy] = useState<SortBy>("created_at");
+    const [sortDir, setSortDir] = useState<SortDir>("desc");
 
     const fetchOrders = async () => {
         setLoading(true);
         try {
             const { data } = await axios.get("/admin/orders", {
-                params: { page, limit: 20, keyword, status },
+                params: {
+                    page,
+                    limit: 20,
+                    keyword,
+                    status,
+                    sort_by: sortBy,
+                    sort_dir: sortDir,
+                },
             });
             if (data.success) {
                 setOrders(data.data || []);
@@ -102,7 +243,36 @@ export default function AdminOrdersPage() {
 
     useEffect(() => {
         fetchOrders();
-    }, [page, keyword, status]);
+    }, [page, keyword, status, sortBy, sortDir]);
+
+    const fetchAnalytics = async () => {
+        setLoadingAnalytics(true);
+        try {
+            const { data } = await axios.get("/admin/orders/analytics", {
+                params: { range: analyticsRange },
+            });
+            if (data.success) setAnalytics(data.data);
+        } catch {
+            toast.error("Failed to fetch order analytics");
+        } finally {
+            setLoadingAnalytics(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchAnalytics();
+    }, [analyticsRange]);
+
+    const handleSort = (field: SortBy) => {
+        setPage(1);
+        if (field === sortBy) {
+            setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+            return;
+        }
+
+        setSortBy(field);
+        setSortDir(field === "created_at" || field === "total_price" ? "desc" : "asc");
+    };
 
     const handleShopeeImport = async (
         event: React.ChangeEvent<HTMLInputElement>,
@@ -127,6 +297,7 @@ export default function AdminOrdersPage() {
 
             setPage(1);
             fetchOrders();
+            fetchAnalytics();
         } catch (error: any) {
             toast.error("Failed to import Shopee XLSX", {
                 description:
@@ -158,6 +329,7 @@ export default function AdminOrdersPage() {
 
             toast.success("Order status updated");
             if (status && status !== nextStatus) fetchOrders();
+            fetchAnalytics();
         } catch (error: any) {
             toast.error("Failed to update order status", {
                 description:
@@ -208,6 +380,215 @@ export default function AdminOrdersPage() {
                 </div>
             </div>
 
+            <section className="rounded-3xl border border-border bg-gradient-to-br from-card via-card to-accent/5 p-5 shadow-sm">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-[0.28em] text-accent">
+                            Order Overview
+                        </p>
+                        <h2 className="mt-1 text-xl font-bold text-foreground">
+                            Sales pulse and customer signals
+                        </h2>
+                        <p className="text-sm text-muted-foreground">
+                            Active orders only: processing and completed.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {ANALYTICS_RANGES.map((range) => (
+                            <button
+                                key={range.value}
+                                type="button"
+                                onClick={() => setAnalyticsRange(range.value)}
+                                className={`rounded-xl border px-3 py-2 text-xs font-medium transition-all ${analyticsRange === range.value
+                                        ? "border-accent/40 bg-accent/10 text-accent"
+                                        : "border-border bg-background text-muted-foreground hover:border-accent/30 hover:text-foreground"
+                                    }`}
+                            >
+                                {range.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {loadingAnalytics ? (
+                    <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                        {[...Array(4)].map((_, index) => (
+                            <div
+                                key={index}
+                                className="h-24 animate-pulse rounded-2xl border border-border bg-background"
+                            />
+                        ))}
+                    </div>
+                ) : (
+                    <div className="mt-5 space-y-4">
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                            <AnalyticsMetric
+                                label="Revenue"
+                                value={formatCurrency(analytics?.totalRevenue || 0)}
+                                icon={TrendingUp}
+                                tone="bg-emerald-500/10 text-emerald-500"
+                            />
+                            <AnalyticsMetric
+                                label="Products Sold"
+                                value={`${formatNumber(analytics?.unitsSold || 0)} units`}
+                                icon={PackageSearch}
+                                tone="bg-sky-500/10 text-sky-500"
+                            />
+                            <AnalyticsMetric
+                                label="Top Spender"
+                                value={
+                                    analytics?.topSpender
+                                        ? `${analytics.topSpender.name} · ${formatCurrency(analytics.topSpender.total)}`
+                                        : "-"
+                                }
+                                icon={Crown}
+                                tone="bg-amber-500/10 text-amber-500"
+                            />
+                            <AnalyticsMetric
+                                label="Shipment Cost"
+                                value={formatCurrency(analytics?.totalShipmentFees || 0)}
+                                icon={Truck}
+                                tone="bg-red-500/10 text-red-500"
+                            />
+                        </div>
+
+                        <div className="grid gap-4 xl:grid-cols-[1fr_1.1fr_1.1fr]">
+                            <div className="rounded-2xl border border-border bg-background p-4">
+                                <div className="mb-3 flex items-center gap-2">
+                                    <PieChartIcon className="h-4 w-4 text-accent" />
+                                    <h3 className="text-sm font-semibold text-foreground">
+                                        Order Source Mix
+                                    </h3>
+                                </div>
+                                {(analytics?.sourceDistribution || []).length > 0 ? (
+                                    <div className="h-52">
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <PieChart>
+                                                <Pie
+                                                    data={analytics?.sourceDistribution || []}
+                                                    dataKey="value"
+                                                    nameKey="label"
+                                                    innerRadius={48}
+                                                    outerRadius={76}
+                                                    paddingAngle={3}
+                                                >
+                                                    {(analytics?.sourceDistribution || []).map(
+                                                        (entry, index) => (
+                                                            <Cell
+                                                                key={entry.label}
+                                                                fill={
+                                                                    SOURCE_COLORS[
+                                                                    index % SOURCE_COLORS.length
+                                                                    ]
+                                                                }
+                                                            />
+                                                        ),
+                                                    )}
+                                                </Pie>
+                                                <Tooltip
+                                                    formatter={(value: number, name: string) => [
+                                                        `${formatNumber(value)} order(s)`,
+                                                        name,
+                                                    ]}
+                                                />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    </div>
+                                ) : (
+                                    <div className="flex h-52 items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">
+                                        No source data yet
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="rounded-2xl border border-border bg-background p-4">
+                                <div className="mb-3 flex items-center justify-between">
+                                    <h3 className="text-sm font-semibold text-foreground">
+                                        Best Sellers
+                                    </h3>
+                                    <span className="text-xs text-muted-foreground">
+                                        by units
+                                    </span>
+                                </div>
+                                <div className="space-y-3">
+                                    {(analytics?.bestSellers || []).slice(0, 4).map((product) => (
+                                        <div
+                                            key={product.productId}
+                                            className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card px-3 py-2"
+                                        >
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-medium text-foreground">
+                                                    {product.name}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {product.label || "-"}
+                                                </p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm font-bold text-foreground">
+                                                    {formatNumber(product.units)}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {formatCurrency(product.revenue)}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {(analytics?.bestSellers || []).length === 0 && (
+                                        <p className="rounded-xl border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
+                                            No product sales yet
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-border bg-background p-4">
+                                <div className="mb-3 flex items-center justify-between">
+                                    <h3 className="text-sm font-semibold text-foreground">
+                                        Customer Highlights
+                                    </h3>
+                                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                        <Users className="h-3.5 w-3.5" />
+                                        {formatNumber(analytics?.uniqueCustomers || 0)} unique
+                                    </span>
+                                </div>
+                                <div className="space-y-3">
+                                    {(analytics?.topSpenders || []).slice(0, 4).map((spender) => (
+                                        <div
+                                            key={spender.name}
+                                            className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-card px-3 py-2"
+                                        >
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-medium text-foreground">
+                                                    {spender.name}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {spender.orders} order(s)
+                                                </p>
+                                            </div>
+                                            <p className="text-sm font-bold text-foreground">
+                                                {formatCurrency(spender.total)}
+                                            </p>
+                                        </div>
+                                    ))}
+                                    {(analytics?.topSpenders || []).length === 0 && (
+                                        <p className="rounded-xl border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
+                                            No spender data yet
+                                        </p>
+                                    )}
+                                    <div className="rounded-xl bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                                        Average order:{" "}
+                                        <span className="font-semibold text-foreground">
+                                            {formatCurrency(analytics?.averageOrderValue || 0)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </section>
+
             {/* Status Tabs */}
             <div className="flex flex-wrap gap-2">
                 {STATUS_TABS.map((tab) => (
@@ -249,25 +630,66 @@ export default function AdminOrdersPage() {
                         <thead>
                             <tr className="border-b border-border text-muted-foreground">
                                 <th className="text-left px-5 py-3 font-medium">Order ID</th>
-                                <th className="text-left px-5 py-3 font-medium">Customer</th>
+                                <th className="text-left px-5 py-3 font-medium">
+                                    <SortableHeader
+                                        label="Customer"
+                                        field="shipping_name"
+                                        sortBy={sortBy}
+                                        sortDir={sortDir}
+                                        onSort={handleSort}
+                                    />
+                                </th>
                                 <th className="text-left px-5 py-3 font-medium">Items</th>
-                                <th className="text-left px-5 py-3 font-medium">Total</th>
-                                <th className="text-left px-5 py-3 font-medium">Status</th>
-                                <th className="text-left px-5 py-3 font-medium">Date</th>
+                                <th className="text-left px-5 py-3 font-medium">
+                                    <SortableHeader
+                                        label="Total"
+                                        field="total_price"
+                                        sortBy={sortBy}
+                                        sortDir={sortDir}
+                                        onSort={handleSort}
+                                    />
+                                </th>
+                                <th className="text-left px-5 py-3 font-medium">
+                                    <SortableHeader
+                                        label="Shipment"
+                                        field="shipping_fee"
+                                        sortBy={sortBy}
+                                        sortDir={sortDir}
+                                        onSort={handleSort}
+                                    />
+                                </th>
+                                <th className="text-left px-5 py-3 font-medium">
+                                    <SortableHeader
+                                        label="Status"
+                                        field="status"
+                                        sortBy={sortBy}
+                                        sortDir={sortDir}
+                                        onSort={handleSort}
+                                    />
+                                </th>
+                                <th className="text-left px-5 py-3 font-medium">
+                                    <SortableHeader
+                                        label="Date"
+                                        field="created_at"
+                                        sortBy={sortBy}
+                                        sortDir={sortDir}
+                                        onSort={handleSort}
+                                    />
+                                </th>
                                 <th className="text-right px-5 py-3 font-medium">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={7} className="px-5 py-12 text-center">
+                                    <td colSpan={8} className="px-5 py-12 text-center">
                                         <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
                                     </td>
                                 </tr>
                             ) : orders.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={7}
+                                        colSpan={8}
                                         className="px-5 py-12 text-center text-muted-foreground"
                                     >
                                         <ShoppingCart className="w-8 h-8 mx-auto mb-2 opacity-30" />
@@ -306,6 +728,19 @@ export default function AdminOrdersPage() {
                                         </td>
                                         <td className="px-5 py-3 text-foreground font-medium">
                                             {formatCurrency(order.total_price)}
+                                        </td>
+                                        <td className="px-5 py-3 text-xs text-muted-foreground">
+                                            {order.order_source === "manual_whatsapp" &&
+                                                Number(order.shipping_fee || 0) > 0 ? (
+                                                <div>
+                                                    <p className="font-medium text-foreground">
+                                                        {formatCurrency(order.shipping_fee)}
+                                                    </p>
+                                                    <p>{order.shipment_type || "Shipment"}</p>
+                                                </div>
+                                            ) : (
+                                                "-"
+                                            )}
                                         </td>
                                         <td className="px-5 py-3">
                                             <select

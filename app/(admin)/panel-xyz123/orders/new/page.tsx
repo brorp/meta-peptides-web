@@ -111,6 +111,8 @@ export default function NewManualOrderPage() {
         status: "processing",
         manual_discount_amount: "0",
         marketplace_fee: "0",
+        shipment_type: "",
+        shipping_fee: "0",
         note: "",
         order_date: todayLocalDate(),
     });
@@ -174,6 +176,8 @@ export default function NewManualOrderPage() {
                         Number(data.data.voucher_discount_amount || 0),
                     ),
                     marketplace_fee: String(Number(data.data.marketplace_fee || 0)),
+                    shipment_type: data.data.shipment_type || "",
+                    shipping_fee: String(Number(data.data.shipping_fee || 0)),
                     note: data.data.note || "",
                     order_date: toLocalDate(data.data.created_at),
                 });
@@ -214,6 +218,7 @@ export default function NewManualOrderPage() {
     );
     const manualDiscount = isShopee ? 0 : Math.max(0, Number(form.manual_discount_amount || 0));
     const marketplaceFee = isShopee ? Math.max(0, Number(form.marketplace_fee || 0)) : 0;
+    const shipmentFee = isShopee ? 0 : Math.max(0, Number(form.shipping_fee || 0));
     const total = Math.max(0, subtotal - manualDiscount - marketplaceFee);
 
     const selectedSource =
@@ -277,6 +282,8 @@ export default function NewManualOrderPage() {
                 ...form,
                 manual_discount_amount: manualDiscount,
                 marketplace_fee: marketplaceFee,
+                shipment_type: isShopee ? null : form.shipment_type,
+                shipping_fee: shipmentFee,
                 payment_type: form.payment_type,
                 items: payloadItems,
             });
@@ -575,6 +582,45 @@ export default function NewManualOrderPage() {
                                 className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
                             />
                         </label>
+                        {!isShopee && (
+                            <div className="space-y-3 rounded-xl border border-green-500/20 bg-green-500/5 p-3">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-green-500">
+                                    WhatsApp Shipment
+                                </p>
+                                <label className="space-y-2 block">
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                        Shipment Type
+                                    </span>
+                                    <input
+                                        value={form.shipment_type}
+                                        onChange={(e) =>
+                                            updateForm("shipment_type", e.target.value)
+                                        }
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                                        placeholder="JNE, J&T, Grab, Gojek, etc."
+                                    />
+                                </label>
+                                <label className="space-y-2 block">
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                        Shipment Fee
+                                    </span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={form.shipping_fee}
+                                        onChange={(e) =>
+                                            updateForm("shipping_fee", e.target.value)
+                                        }
+                                        className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                                        placeholder="Operational cost only"
+                                    />
+                                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                                        If this is above 0, it creates a Shipping expense. It
+                                        does not reduce or change the customer invoice total.
+                                    </p>
+                                </label>
+                            </div>
+                        )}
                         <label className="space-y-2 block">
                             <span className="text-xs font-medium text-muted-foreground">
                                 Initial Status
@@ -666,6 +712,16 @@ export default function NewManualOrderPage() {
                                     <span className="text-muted-foreground">Marketplace Fee</span>
                                     <span className="text-orange-500">
                                         -{formatCurrency(marketplaceFee)}
+                                    </span>
+                                </div>
+                            )}
+                            {!isShopee && shipmentFee > 0 && (
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">
+                                        Shipment Expense
+                                    </span>
+                                    <span className="text-red-500">
+                                        {formatCurrency(shipmentFee)}
                                     </span>
                                 </div>
                             )}

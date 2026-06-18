@@ -10,6 +10,11 @@ import {
     withoutCustomerUsername,
 } from "@/lib/order-schema-compat";
 import { deductOrderInventory, normalizePaymentType } from "@/lib/inventory";
+import {
+    normalizeShipmentFee,
+    normalizeShipmentType,
+    syncShipmentExpenseForOrder,
+} from "@/lib/shipment-expenses";
 
 const ORDER_STATUSES = [
     "pending_review",
@@ -19,6 +24,14 @@ const ORDER_STATUSES = [
 ];
 
 const ORDER_SOURCES = ["manual_whatsapp", "shopee"];
+const ORDER_SORT_FIELDS = [
+    "created_at",
+    "shipping_name",
+    "total_price",
+    "status",
+    "order_source",
+    "shipping_fee",
+];
 
 type ManualOrderItemPayload = {
     product_id: string;
@@ -48,10 +61,22 @@ const normalizeManualOrderItems = (items: any): ManualOrderItemPayload[] => {
 const cleanupFailedManualOrder = async (orderId: string | null) => {
     if (!orderId) return;
 
+    await supabaseAdmin
+        .from("expenses")
+        .delete()
+        .eq("source_type", "shipment_fee")
+        .eq("source_order_id", orderId);
     await supabaseAdmin.from("payments").delete().eq("order_id", orderId);
     await supabaseAdmin.from("order_items").delete().eq("order_id", orderId);
     await supabaseAdmin.from("orders").delete().eq("id", orderId);
 };
+
+const normalizeSort = (sortBy: string | null, sortDir: string | null) => ({
+    sortBy: ORDER_SORT_FIELDS.includes(sortBy || "")
+        ? String(sortBy)
+        : "created_at",
+    ascending: sortDir === "asc",
+});
 
 export async function GET(req: NextRequest) {
     try {
@@ -60,6 +85,10 @@ export async function GET(req: NextRequest) {
         const limit = parseInt(searchParams.get("limit") || "20");
         const status = searchParams.get("status") || "";
         const keyword = searchParams.get("keyword") || "";
+        const { sortBy, ascending } = normalizeSort(
+            searchParams.get("sort_by"),
+            searchParams.get("sort_dir"),
+        );
 
         const from = (page - 1) * limit;
         const to = from + limit - 1;
@@ -81,7 +110,7 @@ export async function GET(req: NextRequest) {
         }
 
         let { data, error, count } = await query
-            .order("created_at", { ascending: false })
+            .order(sortBy, { ascending })
             .range(from, to);
 
         if (error && keyword && isMissingCustomerUsernameColumn(error)) {
@@ -100,7 +129,7 @@ export async function GET(req: NextRequest) {
             );
 
             const fallback = await fallbackQuery
-                .order("created_at", { ascending: false })
+                .order(sortBy, { ascending })
                 .range(from, to);
 
             data = fallback.data;
@@ -146,6 +175,14 @@ export async function POST(req: NextRequest) {
             Number(body.manual_discount_amount || 0),
         );
         const marketplaceFee = Math.max(0, Number(body.marketplace_fee || 0));
+        const shipmentType =
+            orderSource === "manual_whatsapp"
+                ? normalizeShipmentType(body.shipment_type)
+                : null;
+        const shipmentFee =
+            orderSource === "manual_whatsapp"
+                ? normalizeShipmentFee(body.shipping_fee)
+                : 0;
         const paymentType = normalizePaymentType(
             body.payment_type || (orderSource === "shopee" ? "Shopee" : "Bank Transfer"),
         );
@@ -219,6 +256,8 @@ export async function POST(req: NextRequest) {
             total_price: totalPrice,
             subtotal,
             marketplace_fee: orderSource === "shopee" ? marketplaceFee : 0,
+            shipment_type: shipmentType,
+            shipping_fee: shipmentFee,
             shipping_address: shippingAddress,
             shipping_regional: shippingRegional,
             shipping_name: shippingName,
@@ -290,6 +329,23 @@ export async function POST(req: NextRequest) {
         if (paymentError) {
             await cleanupFailedManualOrder(order.id);
             return errorResponse(paymentError.message, 400);
+        }
+
+        try {
+            await syncShipmentExpenseForOrder({
+                orderId: order.id,
+                orderSource,
+                shippingFee: shipmentFee,
+                shipmentType,
+                shippingName,
+                createdAt: orderPayload.created_at || order.created_at,
+            });
+        } catch (shipmentExpenseError: any) {
+            await cleanupFailedManualOrder(order.id);
+            return errorResponse(
+                shipmentExpenseError.message || "Failed to create shipment expense",
+                400,
+            );
         }
 
         try {

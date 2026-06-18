@@ -8,6 +8,10 @@ import {
   withoutCustomerUsername,
 } from "@/lib/order-schema-compat";
 import { deductOrderInventory, normalizePaymentType } from "@/lib/inventory";
+import {
+  normalizeShipmentType,
+  syncShipmentExpenseForOrder,
+} from "@/lib/shipment-expenses";
 
 const ORDER_STATUSES = [
   "pending_review",
@@ -48,7 +52,7 @@ export async function PUT(
     const { data: currentOrder, error: fetchError } = await supabaseAdmin
       .from("orders")
       .select(
-        "id, status, shipping_email, shipping_name, subtotal, total_price, voucher_code, voucher_discount_amount, created_at",
+        "id, status, order_source, shipping_email, shipping_name, subtotal, total_price, voucher_code, voucher_discount_amount, shipment_type, shipping_fee, created_at",
       )
       .eq("id", id)
       .single();
@@ -95,6 +99,10 @@ export async function PUT(
 
     if (body.shipping_zip !== undefined) {
       updateData.shipping_zip = String(body.shipping_zip || "").trim() || null;
+    }
+
+    if (body.shipment_type !== undefined) {
+      updateData.shipment_type = normalizeShipmentType(body.shipment_type);
     }
 
     if (body.customer_username !== undefined) {
@@ -205,6 +213,36 @@ export async function PUT(
         if (paymentInsertError) {
           return errorResponse(paymentInsertError.message, 400);
         }
+      }
+    }
+
+    if (currentOrder.order_source === "manual_whatsapp") {
+      try {
+        await syncShipmentExpenseForOrder({
+          orderId: id,
+          orderSource: currentOrder.order_source,
+          shippingFee:
+            updateData.shipping_fee !== undefined
+              ? Number(updateData.shipping_fee || 0)
+              : Number(currentOrder.shipping_fee || 0),
+          shipmentType:
+            updateData.shipment_type !== undefined
+              ? updateData.shipment_type
+              : currentOrder.shipment_type,
+          shippingName:
+            updateData.shipping_name !== undefined
+              ? updateData.shipping_name
+              : currentOrder.shipping_name,
+          createdAt:
+            updateData.created_at !== undefined
+              ? updateData.created_at
+              : currentOrder.created_at,
+        });
+      } catch (shipmentExpenseError: any) {
+        return errorResponse(
+          shipmentExpenseError.message || "Failed to sync shipment expense",
+          400,
+        );
       }
     }
 
@@ -326,6 +364,11 @@ export async function DELETE(
       return errorResponse("Order not found", 404);
     }
 
+    await supabaseAdmin
+      .from("expenses")
+      .delete()
+      .eq("source_type", "shipment_fee")
+      .eq("source_order_id", id);
     await supabaseAdmin.from("payments").delete().eq("order_id", id);
     await supabaseAdmin.from("order_items").delete().eq("order_id", id);
 

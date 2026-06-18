@@ -105,6 +105,8 @@ export default function AdminOrderDetailPage({
     const [discountAmount, setDiscountAmount] = useState("");
     const [marketplaceFee, setMarketplaceFee] = useState("");
     const [totalPrice, setTotalPrice] = useState("");
+    const [shipmentType, setShipmentType] = useState("");
+    const [shippingFee, setShippingFee] = useState("");
     const [paymentType, setPaymentType] = useState("Bank Transfer");
 
     useEffect(() => {
@@ -134,6 +136,8 @@ export default function AdminOrderDetailPage({
                     );
                     setMarketplaceFee(String(Number(data.data.marketplace_fee || 0)));
                     setTotalPrice(String(Number(data.data.total_price || 0)));
+                    setShipmentType(data.data.shipment_type || "");
+                    setShippingFee(String(Number(data.data.shipping_fee || 0)));
                     setPaymentType(
                         data.data.payments?.[0]?.payment_type ||
                         (data.data.order_source === "shopee" ? "Shopee" : "Bank Transfer"),
@@ -172,6 +176,11 @@ export default function AdminOrderDetailPage({
                 payload.tracking_number = trackingNumber.trim();
             }
 
+            if (order.order_source === "manual_whatsapp") {
+                payload.shipment_type = shipmentType;
+                payload.shipping_fee = Number(shippingFee || 0);
+            }
+
             if (order.order_source === "shopee") {
                 payload.subtotal = Number(subtotal || 0);
                 payload.voucher_discount_amount = Number(discountAmount || 0);
@@ -201,6 +210,8 @@ export default function AdminOrderDetailPage({
                 );
                 setMarketplaceFee(String(Number(data.data.marketplace_fee || 0)));
                 setTotalPrice(String(Number(data.data.total_price || 0)));
+                setShipmentType(data.data.shipment_type || "");
+                setShippingFee(String(Number(data.data.shipping_fee || 0)));
                 setPaymentType(
                     data.data.payments?.[0]?.payment_type ||
                     (data.data.order_source === "shopee" ? "Shopee" : "Bank Transfer"),
@@ -436,6 +447,20 @@ export default function AdminOrderDetailPage({
                                     </span>
                                 </div>
                             )}
+                            {order.order_source === "manual_whatsapp" &&
+                                Number(order.shipping_fee || 0) > 0 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">
+                                            Shipment Expense
+                                            {order.shipment_type
+                                                ? ` (${order.shipment_type})`
+                                                : ""}
+                                        </span>
+                                        <span className="text-red-500">
+                                            {formatCurrency(order.shipping_fee)}
+                                        </span>
+                                    </div>
+                                )}
                             <div className="flex justify-between text-sm font-bold">
                                 <span className="text-foreground">Total</span>
                                 <span className="text-accent">
@@ -628,6 +653,42 @@ export default function AdminOrderDetailPage({
                                 ))}
                             </select>
                         </div>
+
+                        {order.order_source === "manual_whatsapp" && (
+                            <div className="space-y-3 rounded-xl border border-green-500/20 bg-green-500/5 p-3">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-green-500">
+                                    WhatsApp Shipment
+                                </p>
+                                <label className="block space-y-1.5">
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                        Shipment Type
+                                    </span>
+                                    <input
+                                        type="text"
+                                        value={shipmentType}
+                                        onChange={(e) => setShipmentType(e.target.value)}
+                                        placeholder="JNE, J&T, Grab, Gojek, etc."
+                                        className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                                    />
+                                </label>
+                                <label className="block space-y-1.5">
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                        Shipment Fee
+                                    </span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={shippingFee}
+                                        onChange={(e) => setShippingFee(e.target.value)}
+                                        className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                                    />
+                                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                                        Positive fees sync to Expenses as Shipping and do not
+                                        affect invoice total.
+                                    </p>
+                                </label>
+                            </div>
+                        )}
 
                         <div>
                             <label className="block text-xs font-medium text-muted-foreground mb-1.5">
