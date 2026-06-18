@@ -1,9 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+    AlertTriangle,
     ArrowLeft,
+    CheckCircle2,
+    FileUp,
     Loader2,
     MessageCircle,
     Plus,
@@ -26,6 +29,20 @@ type ManualOrderItem = {
     product_id: string;
     quantity: number;
     price_at_purchase: number;
+};
+
+type ParsedShopeePdfItem = {
+    raw_name: string;
+    quantity: number;
+    product_id: string | null;
+    product_name: string | null;
+    price_at_purchase: number;
+};
+
+type PdfImportSummary = {
+    filename: string;
+    matchedItems: number;
+    unmatchedItems: string[];
 };
 
 const ORDER_STATUSES = [
@@ -92,10 +109,14 @@ function toLocalDate(value?: string | null) {
 
 export default function NewManualOrderPage() {
     const router = useRouter();
+    const shopeePdfInputRef = useRef<HTMLInputElement | null>(null);
     const [duplicateOrderId, setDuplicateOrderId] = useState<string | null>(null);
     const [products, setProducts] = useState<ProductOption[]>([]);
     const [loadingProducts, setLoadingProducts] = useState(true);
     const [loadingDuplicate, setLoadingDuplicate] = useState(false);
+    const [importingShopeePdf, setImportingShopeePdf] = useState(false);
+    const [pdfImportSummary, setPdfImportSummary] =
+        useState<PdfImportSummary | null>(null);
     const [saving, setSaving] = useState(false);
     const [form, setForm] = useState({
         order_source: "manual_whatsapp",
@@ -260,6 +281,85 @@ export default function NewManualOrderPage() {
         );
     };
 
+    const handleShopeePdfImport = async (
+        event: React.ChangeEvent<HTMLInputElement>,
+    ) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        if (form.order_source !== "shopee") {
+            toast.error("PDF import is only available for Shopee orders");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+        setImportingShopeePdf(true);
+
+        try {
+            const { data } = await axios.post(
+                "/admin/orders/parse-shopee-label",
+                formData,
+            );
+
+            if (!data.success) {
+                throw new Error(data.message || "Failed to read Shopee PDF");
+            }
+
+            const parsedItems = (data.data.items || []) as ParsedShopeePdfItem[];
+            const matchedItems = parsedItems.filter((item) => item.product_id);
+            const unmatchedItems = parsedItems
+                .filter((item) => !item.product_id)
+                .map((item) => item.raw_name);
+
+            setForm((prev) => ({
+                ...prev,
+                order_source: "shopee",
+                payment_type: "Shopee",
+                shipping_name: data.data.shipping_name || "",
+                shipping_phone: "-",
+                shipping_address: data.data.shipping_address || "",
+                shipping_regional: data.data.shipping_regional || "",
+                manual_reference: data.data.manual_reference || "",
+                order_date: todayLocalDate(),
+            }));
+
+            if (matchedItems.length > 0) {
+                setItems(
+                    matchedItems.map((item) => ({
+                        localId: crypto.randomUUID(),
+                        product_id: item.product_id as string,
+                        quantity: Math.max(1, Number(item.quantity || 1)),
+                        price_at_purchase: Number(item.price_at_purchase || 0),
+                    })),
+                );
+            }
+
+            setPdfImportSummary({
+                filename: file.name,
+                matchedItems: matchedItems.length,
+                unmatchedItems,
+            });
+
+            toast.success("Shopee PDF copied into the form", {
+                description: `${matchedItems.length} product(s) matched. Please review before saving.`,
+            });
+        } catch (error: any) {
+            setPdfImportSummary(null);
+            toast.error("Failed to import Shopee PDF", {
+                description: getErrorMessage(
+                    error,
+                    "Please use the original Shopee shipping label PDF.",
+                ),
+            });
+        } finally {
+            setImportingShopeePdf(false);
+            if (shopeePdfInputRef.current) {
+                shopeePdfInputRef.current.value = "";
+            }
+        }
+    };
+
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
@@ -348,6 +448,66 @@ export default function NewManualOrderPage() {
                         <h2 className="text-sm font-semibold text-foreground">
                             Customer & Shipping
                         </h2>
+                        {isShopee && (
+                            <div className="rounded-2xl border border-dashed border-orange-500/30 bg-orange-500/5 p-4">
+                                <input
+                                    ref={shopeePdfInputRef}
+                                    type="file"
+                                    accept="application/pdf,.pdf"
+                                    onChange={handleShopeePdfImport}
+                                    className="hidden"
+                                />
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <p className="text-sm font-semibold text-foreground">
+                                            Import Shopee Shipping Label
+                                        </p>
+                                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                                            Auto-fills recipient, address, city, Shopee order
+                                            number, today&apos;s date, and matching products.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => shopeePdfInputRef.current?.click()}
+                                        disabled={importingShopeePdf}
+                                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-orange-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-orange-600 disabled:opacity-60"
+                                    >
+                                        {importingShopeePdf ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <FileUp className="h-4 w-4" />
+                                        )}
+                                        {importingShopeePdf ? "Reading PDF..." : "Import PDF"}
+                                    </button>
+                                </div>
+
+                                {pdfImportSummary && (
+                                    <div className="mt-3 space-y-2 border-t border-orange-500/15 pt-3">
+                                        <div className="flex items-center gap-2 text-xs text-green-600">
+                                            <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                            <span>
+                                                {pdfImportSummary.filename}:{" "}
+                                                {pdfImportSummary.matchedItems} product(s) matched
+                                            </span>
+                                        </div>
+                                        {pdfImportSummary.unmatchedItems.length > 0 && (
+                                            <div className="flex items-start gap-2 rounded-xl bg-amber-500/10 p-3 text-xs text-amber-600">
+                                                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                                                <div>
+                                                    <p className="font-semibold">
+                                                        Please select these products manually:
+                                                    </p>
+                                                    <p className="mt-1 leading-relaxed">
+                                                        {pdfImportSummary.unmatchedItems.join(", ")}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         <div className="grid gap-4 md:grid-cols-2">
                             <label className="space-y-2">
                                 <span className="text-xs font-medium text-muted-foreground">
