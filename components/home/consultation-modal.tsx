@@ -8,7 +8,7 @@ import { api as axios } from "@/lib/axios";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const WHATSAPP_NUMBER = "85191378473"; // MetaPeptides WA number
+const WHATSAPP_NUMBER = "6285191378473"; // MetaPeptides WA number
 
 const AGE_OPTIONS = [
   { label: "> 21 – 35 years", value: "21-35" },
@@ -222,21 +222,15 @@ export function ConsultationModal({ open, onOpenChange }: ConsultationModalProps
 
     // Save to Customers DB (best-effort, non-blocking for UX)
     try {
-      await axios.post("/admin/customers", {
-        full_name: form.name.trim(),
-        whatsapp_phone: form.whatsapp.trim(),
-        email: form.email.trim() || null,
+      await axios.post("/consultations", {
+        name: form.name.trim(),
+        whatsapp: form.whatsapp.trim(),
+        email: form.email.trim(),
         domicile: form.domicile,
-        notes: [
-          `Age: ${form.age}`,
-          `Gender: ${form.gender}`,
-          form.goals ? `Goals: ${form.goals}` : null,
-          form.concern ? `Concern: ${form.concern}` : null,
-        ]
-          .filter(Boolean)
-          .join(" | "),
-        lead_source: "manual",
-        current_journey: "new_leads",
+        age: form.age,
+        gender: form.gender,
+        goals: form.goals,
+        concern: form.concern,
       });
     } catch {
       // Silently continue — the WA link is the main flow

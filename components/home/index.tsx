@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -20,7 +19,6 @@ import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { features } from "@/contants/home";
 import { useRouter } from "next/navigation";
-import { ConsultationModal } from "@/components/home/consultation-modal";
 
 
 function Annotation({
@@ -101,7 +99,6 @@ const testimonials = [
 
 export default function HomePageComponent() {
   const router = useRouter();
-  const [isConsultOpen, setIsConsultOpen] = useState(false);
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-accent/30">
       {/* 1. HERO SECTION */}
@@ -151,13 +148,12 @@ export default function HomePageComponent() {
 
                 {/* CTA Buttons */}
                 <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-                  <Button
-                    onClick={() => setIsConsultOpen(true)}
-                    className="h-14 px-8 rounded-2xl bg-slate-900 hover:bg-accent text-white font-bold uppercase tracking-widest text-xs transition-all shadow-xl shadow-slate-200 group w-full sm:w-56"
-                  >
-                    Free Consultation
-                    <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </Button>
+                  <Link href="/free-consultation" className="w-full sm:w-56">
+                    <Button className="h-14 w-full rounded-2xl bg-slate-900 px-8 text-xs font-bold uppercase tracking-widest text-white shadow-xl shadow-slate-200 transition-all hover:bg-accent group">
+                      Free Consultation
+                      <ArrowRight className="ml-2 w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </Button>
+                  </Link>
 
                   <Button
                     variant="outline"
@@ -395,7 +391,6 @@ export default function HomePageComponent() {
           </div>
         </div>
       </section>
-      <ConsultationModal open={isConsultOpen} onOpenChange={setIsConsultOpen} />
     </div>
   );
 }
