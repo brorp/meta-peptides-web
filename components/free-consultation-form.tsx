@@ -50,7 +50,7 @@ const INITIAL_FORM = {
   website: "",
 };
 
-type FormField = keyof typeof INITIAL_FORM | "ageConfirmed" | "disclaimerAgreed";
+type FormField = keyof typeof INITIAL_FORM | "ageConfirmed";
 
 function getErrorMessage(error: any) {
   return (
@@ -66,7 +66,6 @@ export function FreeConsultationForm() {
   const [errors, setErrors] = useState<Partial<Record<FormField, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAgeConfirmed, setIsAgeConfirmed] = useState(false);
-  const [isDisclaimerAgreed, setIsDisclaimerAgreed] = useState(false);
 
   useEffect(() => {
     axios
@@ -98,9 +97,6 @@ export function FreeConsultationForm() {
     }
     if (!isAgeConfirmed) {
       nextErrors.ageConfirmed = "You must confirm you are 21 years or older";
-    }
-    if (!isDisclaimerAgreed) {
-      nextErrors.disclaimerAgreed = "You must agree to the consultation disclaimer";
     }
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
