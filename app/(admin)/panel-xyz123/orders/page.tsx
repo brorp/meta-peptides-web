@@ -62,6 +62,11 @@ type SortBy =
     | "order_source"
     | "shipping_fee";
 type SortDir = "asc" | "desc";
+type DomicileDistribution = {
+    label: string;
+    value: number;
+    revenue: number;
+};
 type OrdersAnalytics = {
     orderCount: number;
     unitsSold: number;
@@ -85,7 +90,7 @@ type OrdersAnalytics = {
         revenue: number;
     }>;
     topSpenders: Array<{ name: string; total: number; orders: number }>;
-    domicileDistribution: Array<{ label: string; value: number; revenue: number }>;
+    domicileDistribution: DomicileDistribution[];
     shipmentBreakdown: Array<{ label: string; orders: number; fees: number }>;
 };
 
@@ -109,6 +114,25 @@ function formatDate(dateStr: string) {
 
 function formatNumber(value: number) {
     return new Intl.NumberFormat("id-ID").format(value || 0);
+}
+
+function summarizeDomiciles(distribution: DomicileDistribution[]) {
+    const topDomiciles = distribution.slice(0, 5);
+    const remaining = distribution.slice(5);
+
+    if (remaining.length === 0) return topDomiciles;
+
+    return [
+        ...topDomiciles,
+        remaining.reduce(
+            (summary, domicile) => ({
+                label: "OTHERS",
+                value: summary.value + domicile.value,
+                revenue: summary.revenue + domicile.revenue,
+            }),
+            { label: "OTHERS", value: 0, revenue: 0 },
+        ),
+    ];
 }
 
 function AnalyticsMetric({
@@ -223,6 +247,13 @@ export default function AdminOrdersPage() {
     const [analytics, setAnalytics] = useState<OrdersAnalytics | null>(null);
     const [sortBy, setSortBy] = useState<SortBy>("created_at");
     const [sortDir, setSortDir] = useState<SortDir>("desc");
+    const domicileChartData = summarizeDomiciles(
+        analytics?.domicileDistribution || [],
+    );
+    const domicileOrderTotal = domicileChartData.reduce(
+        (total, domicile) => total + domicile.value,
+        0,
+    );
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -467,39 +498,82 @@ export default function AdminOrdersPage() {
                                         Orders by Province / Domicile
                                     </h3>
                                 </div>
-                                {(analytics?.domicileDistribution || []).length > 0 ? (
-                                    <div className="h-52">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie
-                                                    data={analytics?.domicileDistribution || []}
-                                                    dataKey="value"
-                                                    nameKey="label"
-                                                    innerRadius={48}
-                                                    outerRadius={76}
-                                                    paddingAngle={3}
+                                {domicileChartData.length > 0 ? (
+                                    <div className="grid h-52 grid-cols-[minmax(108px,0.9fr)_minmax(0,1.1fr)] items-center gap-3">
+                                        <div className="h-40 min-w-0">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <Pie
+                                                        data={domicileChartData}
+                                                        dataKey="value"
+                                                        nameKey="label"
+                                                        innerRadius={34}
+                                                        outerRadius={58}
+                                                        paddingAngle={3}
+                                                    >
+                                                        {domicileChartData.map(
+                                                            (entry, index) => (
+                                                                <Cell
+                                                                    key={entry.label}
+                                                                    fill={
+                                                                        DOMICILE_COLORS[
+                                                                        index %
+                                                                        DOMICILE_COLORS.length
+                                                                        ]
+                                                                    }
+                                                                />
+                                                            ),
+                                                        )}
+                                                    </Pie>
+                                                    <Tooltip
+                                                        formatter={(
+                                                            value: number,
+                                                            name: string,
+                                                        ) => [
+                                                                `${formatNumber(value)} order(s)`,
+                                                                name,
+                                                            ]}
+                                                    />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                        <div className="min-w-0 space-y-2">
+                                            {domicileChartData.map((domicile, index) => (
+                                                <div
+                                                    key={domicile.label}
+                                                    className="flex min-w-0 items-center gap-2 text-[11px]"
                                                 >
-                                                    {(analytics?.domicileDistribution || []).map(
-                                                        (entry, index) => (
-                                                            <Cell
-                                                                key={entry.label}
-                                                                fill={
-                                                                    DOMICILE_COLORS[
-                                                                    index % DOMICILE_COLORS.length
-                                                                    ]
-                                                                }
-                                                            />
-                                                        ),
-                                                    )}
-                                                </Pie>
-                                                <Tooltip
-                                                    formatter={(value: number, name: string) => [
-                                                        `${formatNumber(value)} order(s)`,
-                                                        name,
-                                                    ]}
-                                                />
-                                            </PieChart>
-                                        </ResponsiveContainer>
+                                                    <span
+                                                        className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                                                        style={{
+                                                            backgroundColor:
+                                                                DOMICILE_COLORS[
+                                                                index %
+                                                                DOMICILE_COLORS.length
+                                                                ],
+                                                        }}
+                                                    />
+                                                    <span
+                                                        className="min-w-0 flex-1 truncate text-muted-foreground"
+                                                        title={domicile.label}
+                                                    >
+                                                        {domicile.label}
+                                                    </span>
+                                                    <span className="shrink-0 font-semibold text-foreground">
+                                                        {formatNumber(domicile.value)}
+                                                    </span>
+                                                    <span className="w-8 shrink-0 text-right text-muted-foreground">
+                                                        {domicileOrderTotal > 0
+                                                            ? `${Math.round(
+                                                                (domicile.value /
+                                                                    domicileOrderTotal) *
+                                                                100,
+                                                            )}%`
+                                                            : "0%"}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 ) : (
                                     <div className="flex h-52 items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">
