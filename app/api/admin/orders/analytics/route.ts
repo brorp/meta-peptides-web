@@ -39,10 +39,28 @@ function getDateRange(rangeParam: string | null) {
   };
 }
 
-function sourceLabel(source?: string | null) {
-  if (source === "manual_whatsapp") return "WhatsApp";
-  if (source === "shopee") return "Shopee";
-  return "Checkout";
+function domicileLabel(regional?: string | null) {
+  const parts = String(regional || "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const domicile = parts.at(-1);
+
+  return domicile ? domicile.toUpperCase() : "UNSPECIFIED";
+}
+
+function isExcludedBestSeller(product: { name?: string; label?: string | null }) {
+  const excludedProducts = new Set(["bac water s", "bac water l"]);
+  const normalize = (value?: string | null) =>
+    String(value || "")
+      .trim()
+      .replace(/\s+/g, " ")
+      .toLowerCase();
+
+  return (
+    excludedProducts.has(normalize(product.name)) ||
+    excludedProducts.has(normalize(product.label))
+  );
 }
 
 function customerKey(order: any) {
@@ -71,7 +89,7 @@ export async function GET(req: NextRequest) {
     const { data: orders, error } = await supabaseAdmin
       .from("orders")
       .select(
-        "id, created_at, total_price, subtotal, shipping_name, shipping_phone, shipping_email, customer_username, order_source, shipment_type, shipping_fee, order_items(product_id, quantity, price_at_purchase, products(id, name, label))",
+        "id, created_at, total_price, subtotal, shipping_name, shipping_phone, shipping_email, shipping_regional, customer_username, order_source, shipment_type, shipping_fee, order_items(product_id, quantity, price_at_purchase, products(id, name, label))",
       )
       .in("status", ANALYTICS_ORDER_STATUSES)
       .gte("created_at", dateRange.from)
@@ -87,7 +105,7 @@ export async function GET(req: NextRequest) {
       string,
       { name: string; total: number; orders: number }
     >();
-    const sourceMap = new Map<string, { label: string; value: number; revenue: number }>();
+    const domicileMap = new Map<string, { label: string; value: number; revenue: number }>();
     const shipmentMap = new Map<string, { label: string; orders: number; fees: number }>();
 
     let unitsSold = 0;
@@ -108,15 +126,15 @@ export async function GET(req: NextRequest) {
       spender.orders += 1;
       spenderMap.set(key, spender);
 
-      const source = sourceLabel(order.order_source);
-      const sourceRow = sourceMap.get(source) || {
-        label: source,
+      const domicile = domicileLabel(order.shipping_regional);
+      const domicileRow = domicileMap.get(domicile) || {
+        label: domicile,
         value: 0,
         revenue: 0,
       };
-      sourceRow.value += 1;
-      sourceRow.revenue += orderTotal;
-      sourceMap.set(source, sourceRow);
+      domicileRow.value += 1;
+      domicileRow.revenue += orderTotal;
+      domicileMap.set(domicile, domicileRow);
 
       const shipmentFee = Number(order.shipping_fee || 0);
       if (order.order_source === "manual_whatsapp" && shipmentFee > 0) {
@@ -136,6 +154,8 @@ export async function GET(req: NextRequest) {
         const quantity = Number(item.quantity || 0);
         unitsSold += quantity;
         const product = item.products || {};
+        if (isExcludedBestSeller(product)) continue;
+
         const productId = product.id || item.product_id || "unknown";
         const productRow = productMap.get(productId) || {
           productId,
@@ -173,7 +193,7 @@ export async function GET(req: NextRequest) {
         bestSeller: bestSellers[0] || null,
         bestSellers,
         topSpenders,
-        sourceDistribution: Array.from(sourceMap.values()).sort(
+        domicileDistribution: Array.from(domicileMap.values()).sort(
           (a, b) => b.value - a.value,
         ),
         shipmentBreakdown: Array.from(shipmentMap.values()).sort(

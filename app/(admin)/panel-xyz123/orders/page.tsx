@@ -45,7 +45,14 @@ const ANALYTICS_RANGES = [
     { label: "This Week", value: "this_week" },
     { label: "90 Days", value: "90_days" },
 ];
-const SOURCE_COLORS = ["#22c55e", "#f97316", "#38bdf8", "#a3e635"];
+const DOMICILE_COLORS = [
+    "#22c55e",
+    "#f97316",
+    "#38bdf8",
+    "#a3e635",
+    "#eab308",
+    "#ec4899",
+];
 
 type SortBy =
     | "created_at"
@@ -78,7 +85,7 @@ type OrdersAnalytics = {
         revenue: number;
     }>;
     topSpenders: Array<{ name: string; total: number; orders: number }>;
-    sourceDistribution: Array<{ label: string; value: number; revenue: number }>;
+    domicileDistribution: Array<{ label: string; value: number; revenue: number }>;
     shipmentBreakdown: Array<{ label: string; orders: number; fees: number }>;
 };
 
@@ -457,28 +464,28 @@ export default function AdminOrdersPage() {
                                 <div className="mb-3 flex items-center gap-2">
                                     <PieChartIcon className="h-4 w-4 text-accent" />
                                     <h3 className="text-sm font-semibold text-foreground">
-                                        Order Source Mix
+                                        Orders by Province / Domicile
                                     </h3>
                                 </div>
-                                {(analytics?.sourceDistribution || []).length > 0 ? (
+                                {(analytics?.domicileDistribution || []).length > 0 ? (
                                     <div className="h-52">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <PieChart>
                                                 <Pie
-                                                    data={analytics?.sourceDistribution || []}
+                                                    data={analytics?.domicileDistribution || []}
                                                     dataKey="value"
                                                     nameKey="label"
                                                     innerRadius={48}
                                                     outerRadius={76}
                                                     paddingAngle={3}
                                                 >
-                                                    {(analytics?.sourceDistribution || []).map(
+                                                    {(analytics?.domicileDistribution || []).map(
                                                         (entry, index) => (
                                                             <Cell
                                                                 key={entry.label}
                                                                 fill={
-                                                                    SOURCE_COLORS[
-                                                                    index % SOURCE_COLORS.length
+                                                                    DOMICILE_COLORS[
+                                                                    index % DOMICILE_COLORS.length
                                                                     ]
                                                                 }
                                                             />
@@ -496,7 +503,7 @@ export default function AdminOrdersPage() {
                                     </div>
                                 ) : (
                                     <div className="flex h-52 items-center justify-center rounded-xl border border-dashed border-border text-sm text-muted-foreground">
-                                        No source data yet
+                                        No domicile data yet
                                     </div>
                                 )}
                             </div>
