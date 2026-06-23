@@ -9,10 +9,13 @@ import { useUserStore } from "@/store/useUserStore";
 import { createClientComponentClient } from "@/lib/supabase-client";
 import { PromoModal } from "./promo-modal";
 import OneModal from "./one-modal";
+import { usePathname } from "next/navigation";
 
 export function LayoutClient({ children }: { children: React.ReactNode }) {
   const setUser = useUserStore((state) => state.setUser);
   const clearUser = useUserStore((state) => state.clearUser);
+  const pathname = usePathname();
+  const isFreeConsultation = pathname === "/free-consultation";
 
   useEffect(() => {
     const {
@@ -35,8 +38,8 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
       <Navbar />
       <main>{children}</main>
       <OneModal />
-      <FloatingActions />
-      <Footer />
+      {!isFreeConsultation && <FloatingActions />}
+      {!isFreeConsultation && <Footer />}
       <GlobalCart />
     </>
   );

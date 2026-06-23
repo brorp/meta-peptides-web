@@ -112,7 +112,7 @@ export function Navbar() {
                 />
               </div>
               <span className="text-xl font-bold tracking-tight text-foreground">
-                meta<span className="text-accent">peptides</span>
+                meta<span className="text-accent">wellness</span>
               </span>
             </Link>
 

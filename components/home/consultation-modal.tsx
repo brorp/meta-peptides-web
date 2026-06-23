@@ -310,7 +310,7 @@ export function ConsultationModal({ open, onOpenChange }: ConsultationModalProps
               </div>
             </div>
             <p className="relative text-white/50 text-xs font-medium leading-relaxed">
-              Tell us about yourself and we'll guide you to the right peptide journey.
+              Tell us about yourself and we'll guide you to the right solution.
             </p>
           </div>
 
