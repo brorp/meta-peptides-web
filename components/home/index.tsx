@@ -205,9 +205,9 @@ export default function HomePageComponent() {
                   <div className="absolute w-[60%] h-[60%] bg-accent/20 blur-[80px] rounded-full animate-pulse" />
                   <div className="relative drop-shadow-[0_45px_45px_rgba(0,0,0,0.25)] animate-float z-10">
                     <Image
-                      src="/product/3.webp"
-                      width={400}
-                      height={400}
+                      src="/product/reta.webp"
+                      width={250}
+                      height={250}
                       alt="MetaPeptides Premium Vial"
                       className={cn(
                         "object-contain transition-transform duration-700 ease-out",
@@ -225,7 +225,7 @@ export default function HomePageComponent() {
                       Series
                     </p>
                     <p className="text-sm lg:text-xl font-black text-slate-800 tracking-tighter">
-                      RETA
+                      RT GLP-3
                     </p>
                   </div>
                   <div className="p-2 lg:p-3 bg-accent text-white rounded-xl lg:rounded-2xl">

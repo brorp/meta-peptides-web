@@ -1,19 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
   ArrowRight,
-  BadgeCheck,
   Check,
+  ChevronDown,
   Loader2,
   LockKeyhole,
   MessageCircle,
-  ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+import { useAllIndonesiaCities } from "@/hooks/use-indonesia-regions";
 
 const WHATSAPP_NUMBER = "6285191378473";
 
@@ -26,17 +25,7 @@ const AGE_OPTIONS = [
 
 const GENDER_OPTIONS = ["Male", "Female"];
 
-const DOMICILE_OPTIONS = [
-  "Jabodetabek",
-  "Jawa Barat",
-  "Jawa Tengah",
-  "Jawa Timur",
-  "Sumatera",
-  "Kalimantan",
-  "Sulawesi",
-  "Bali & Nusa Tenggara",
-  "Maluku & Papua",
-];
+
 
 const INITIAL_FORM = {
   name: "",
@@ -45,7 +34,6 @@ const INITIAL_FORM = {
   gender: "",
   email: "",
   domicile: "",
-  goals: "",
   concern: "",
   website: "",
 };
@@ -63,9 +51,50 @@ function getErrorMessage(error: any) {
 export function FreeConsultationForm() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [categories, setCategories] = useState<string[]>([]);
+  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [errors, setErrors] = useState<Partial<Record<FormField, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAgeConfirmed, setIsAgeConfirmed] = useState(false);
+
+  const { allCities, loading: loadingCities } = useAllIndonesiaCities();
+  const [citySearch, setCitySearch] = useState("");
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setCitySearch(form.domicile);
+  }, [form.domicile]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(event.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelectCity = (nama: string, provinsi: string) => {
+    const value = `${provinsi} - ${nama}`;
+    setCitySearch(value);
+    updateForm("domicile", value);
+    setShowSuggestions(false);
+  };
+
+  const filteredCities =
+    citySearch.trim() === ""
+      ? []
+      : allCities
+          .filter(
+            (c) =>
+              c.nama.toLowerCase().includes(citySearch.toLowerCase()) ||
+              c.provinsi.toLowerCase().includes(citySearch.toLowerCase())
+          )
+          .slice(0, 10);
 
   useEffect(() => {
     axios
@@ -91,7 +120,7 @@ export function FreeConsultationForm() {
     }
     if (!form.age) nextErrors.age = "Select your age range";
     if (!form.gender) nextErrors.gender = "Select your gender";
-    if (!form.domicile) nextErrors.domicile = "Select your domicile";
+    if (!form.domicile) nextErrors.domicile = "Select your city";
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
       nextErrors.email = "Enter a valid email";
     }
@@ -112,6 +141,7 @@ export function FreeConsultationForm() {
       const query = new URLSearchParams(window.location.search);
       await axios.post("/consultations", {
         ...form,
+        goals: selectedGoals.join(", "),
         utm_source: query.get("utm_source") || "",
         utm_medium: query.get("utm_medium") || "",
         utm_campaign: query.get("utm_campaign") || "",
@@ -127,7 +157,7 @@ export function FreeConsultationForm() {
       const ageLabel =
         AGE_OPTIONS.find((option) => option.value === form.age)?.label || form.age;
       const message = [
-        `Halo Kak, saya sudah mengisi form Free Consultation pada ${date}.`,
+        `Halo Kak, saya ingin konsultasi mengenai produk`,
         "",
         `Nama: ${form.name.trim()}`,
         `No. WhatsApp: ${form.whatsapp.trim()}`,
@@ -135,10 +165,10 @@ export function FreeConsultationForm() {
         `Gender: ${form.gender}`,
         form.email.trim() ? `Email: ${form.email.trim()}` : null,
         `Domisili: ${form.domicile}`,
-        form.goals ? `Goals: ${form.goals}` : null,
+        selectedGoals.length > 0 ? `Goals: ${selectedGoals.join(", ")}` : null,
         form.concern.trim() ? `Concern: ${form.concern.trim()}` : null,
         "",
-        "Mohon dibantu untuk konsultasinya. Terima kasih.",
+        "Mohon dibantu informasinya, thank you",
       ]
         .filter((line) => line !== null)
         .join("\n");
@@ -300,44 +330,93 @@ export function FreeConsultationForm() {
                 )}
               </label>
 
-              <label>
-                <span className={labelClass}>Domicile *</span>
-                <select
-                  value={form.domicile}
-                  onChange={(event) => updateForm("domicile", event.target.value)}
-                  className={inputClass}
-                >
-                  <option value="">Select domicile</option>
-                  {DOMICILE_OPTIONS.map((domicile) => (
-                    <option key={domicile} value={domicile}>
-                      {domicile}
-                    </option>
-                  ))}
-                </select>
+              <div ref={containerRef} className="relative flex flex-col justify-end">
+                <span className={labelClass}>City / Kota / Kabupaten *</span>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={citySearch}
+                    onChange={(event) => {
+                      const val = event.target.value;
+                      setCitySearch(val);
+                      updateForm("domicile", val);
+                      setShowSuggestions(true);
+                    }}
+                    onFocus={() => setShowSuggestions(true)}
+                    placeholder={loadingCities ? "Loading cities database..." : "e.g. JAKARTA"}
+                    className={inputClass + " pr-10"}
+                  />
+                  {loadingCities ? (
+                    <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-accent" />
+                  ) : (
+                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  )}
+                  {showSuggestions && filteredCities.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
+                      {filteredCities.map((city) => (
+                        <button
+                          key={`${city.provinsi}-${city.nama}`}
+                          type="button"
+                          onClick={() => handleSelectCity(city.nama, city.provinsi)}
+                          className="flex w-full items-center justify-between gap-2 border-b border-slate-50 px-4 py-2.5 text-left transition-colors hover:bg-slate-100/80 last:border-b-0"
+                        >
+                          <span className="truncate text-xs font-bold text-slate-800">
+                            {city.nama}
+                          </span>
+                          <span className="shrink-0 text-[9px] font-black uppercase tracking-wider text-accent">
+                            {city.provinsi}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 {errors.domicile && (
                   <span className="mt-1.5 block text-[10px] font-bold text-red-500">
                     {errors.domicile}
                   </span>
                 )}
-              </label>
+              </div>
             </div>
 
             {categories.length > 0 && (
-              <label className="block">
-                <span className={labelClass}>Primary Goal</span>
-                <select
-                  value={form.goals}
-                  onChange={(event) => updateForm("goals", event.target.value)}
-                  className={inputClass}
-                >
-                  <option value="">Select your goal (optional)</option>
-                  {categories.map((category) => (
-                    <option key={category} value={category}>
-                      {category}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              <fieldset>
+                <legend className={labelClass}>Goals (select all that apply)</legend>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {categories.map((category) => {
+                    const checked = selectedGoals.includes(category);
+                    return (
+                      <button
+                        key={category}
+                        type="button"
+                        onClick={() => {
+                          setSelectedGoals((prev) =>
+                            prev.includes(category)
+                              ? prev.filter((g) => g !== category)
+                              : [...prev, category],
+                          );
+                        }}
+                        className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-[11px] font-semibold transition-all ${
+                          checked
+                            ? "border-slate-900 bg-slate-900 text-white"
+                            : "border-slate-200 bg-slate-50 text-slate-600 hover:border-accent/40 hover:text-accent"
+                        }`}
+                      >
+                        <span
+                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
+                            checked
+                              ? "border-white bg-transparent"
+                              : "border-slate-300 bg-white"
+                          }`}
+                        >
+                          {checked && <Check className="h-2.5 w-2.5 text-white" />}
+                        </span>
+                        {category}
+                      </button>
+                    );
+                  })}
+                </div>
+              </fieldset>
             )}
 
             <label className="block">

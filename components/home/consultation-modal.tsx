@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, ArrowRight, Sparkles, Loader2, User, Phone, Mail, MapPin, Target, MessageSquare } from "lucide-react";
+import { X, ArrowRight, Sparkles, Loader2, User, Phone, Mail, MapPin, Target, MessageSquare, ChevronDown } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { api as axios } from "@/lib/axios";
+import { useIndonesiaRegions } from "@/hooks/use-indonesia-regions";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -22,17 +23,7 @@ const GENDER_OPTIONS = [
   { label: "Female", value: "Female" },
 ];
 
-const DOMICILI_OPTIONS = [
-  "Jabodetabek",
-  "Jawa Barat",
-  "Jawa Tengah",
-  "Jawa Timur",
-  "Sumatera",
-  "Kalimantan",
-  "Sulawesi",
-  "Bali & Nusa Tenggara",
-  "Maluku & Papua",
-];
+
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -184,6 +175,16 @@ export function ConsultationModal({ open, onOpenChange }: ConsultationModalProps
   const [categories, setCategories] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const {
+    provinces,
+    cities,
+    selectedProvinceId,
+    loadingProvinces,
+    loadingCities,
+    selectProvince,
+  } = useIndonesiaRegions();
+  const [selectedCityName, setSelectedCityName] = useState("");
+
   // Fetch categories from API
   useEffect(() => {
     if (!open) return;
@@ -272,7 +273,6 @@ export function ConsultationModal({ open, onOpenChange }: ConsultationModalProps
   };
 
   const goalOptions = categories.map((c) => ({ label: c, value: c }));
-  const domicileOptions = DOMICILI_OPTIONS.map((d) => ({ label: d, value: d }));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -378,18 +378,66 @@ export function ConsultationModal({ open, onOpenChange }: ConsultationModalProps
               />
             </div>
 
-            {/* Domicile */}
+            {/* Domicile - Province + City two-step selector */}
             <div>
-              <FieldLabel required icon={<MapPin className="w-3 h-3" />}>
-                Domicile
-              </FieldLabel>
-              <StyledSelect
-                placeholder="Select your domicile"
-                value={form.domicile}
-                onChange={set("domicile")}
-                options={domicileOptions}
-                error={errors.domicile}
-              />
+              <FieldLabel icon={<MapPin className="w-3 h-3" />} required>Province</FieldLabel>
+              <div className="relative">
+                <select
+                  value={selectedProvinceId}
+                  onChange={(e) => {
+                    selectProvince(e.target.value);
+                    setSelectedCityName("");
+                    set("domicile")("");
+                  }}
+                  disabled={loadingProvinces}
+                  className={`w-full h-11 bg-slate-50 border ${errors.domicile ? "border-red-400 focus:border-red-400 focus:ring-red-100" : "border-slate-200 focus:border-accent focus:ring-accent/10"} rounded-xl px-4 pr-10 text-sm font-medium outline-none focus:ring-4 transition-all appearance-none cursor-pointer ${!selectedProvinceId ? "text-slate-300" : "text-slate-800"}`}
+                >
+                  <option value="" disabled hidden>
+                    {loadingProvinces ? "Loading provinces..." : "Select province"}
+                  </option>
+                  {provinces.map((prov) => (
+                    <option key={prov.id} value={prov.id} className="text-slate-800">
+                      {prov.nama}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              </div>
+            </div>
+
+            <div>
+              <FieldLabel icon={<MapPin className="w-3 h-3" />} required>City / Kota</FieldLabel>
+              <div className="relative">
+                <select
+                  value={selectedCityName}
+                  onChange={(e) => {
+                    setSelectedCityName(e.target.value);
+                    const prov = provinces.find((p) => p.id === selectedProvinceId);
+                    set("domicile")(prov ? `${prov.nama} - ${e.target.value}` : e.target.value);
+                  }}
+                  disabled={!selectedProvinceId || loadingCities}
+                  className={`w-full h-11 bg-slate-50 border ${errors.domicile ? "border-red-400 focus:border-red-400 focus:ring-red-100" : "border-slate-200 focus:border-accent focus:ring-accent/10"} rounded-xl px-4 pr-10 text-sm font-medium outline-none focus:ring-4 transition-all appearance-none cursor-pointer ${!selectedCityName ? "text-slate-300" : "text-slate-800"} disabled:opacity-60`}
+                >
+                  <option value="" disabled hidden>
+                    {!selectedProvinceId
+                      ? "Select province first"
+                      : loadingCities
+                      ? "Loading cities..."
+                      : "Select city"}
+                  </option>
+                  {cities.map((city) => (
+                    <option key={city.id} value={city.nama} className="text-slate-800">
+                      {city.nama}
+                    </option>
+                  ))}
+                </select>
+                {loadingCities ? (
+                  <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-accent" />
+                ) : (
+                  <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                )}
+              </div>
+              {errors.domicile && <p className="mt-1 text-[10px] text-red-500 font-semibold">{errors.domicile}</p>}
             </div>
 
             {/* Goals */}

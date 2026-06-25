@@ -6,6 +6,7 @@ import {
     AlertTriangle,
     ArrowLeft,
     CheckCircle2,
+    ChevronDown,
     FileUp,
     Loader2,
     MessageCircle,
@@ -16,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+import { useIndonesiaRegions } from "@/hooks/use-indonesia-regions";
 
 type ProductOption = {
     id: string;
@@ -138,6 +140,16 @@ export default function NewManualOrderPage() {
         order_date: todayLocalDate(),
     });
     const [items, setItems] = useState<ManualOrderItem[]>([buildBlankItem()]);
+
+    const {
+        provinces,
+        cities,
+        selectedProvinceId,
+        loadingProvinces,
+        loadingCities,
+        selectProvince,
+    } = useIndonesiaRegions();
+    const [selectedCityDisplayName, setSelectedCityDisplayName] = useState("");
 
     useEffect(() => {
         setDuplicateOrderId(new URLSearchParams(window.location.search).get("duplicate"));
@@ -558,14 +570,69 @@ export default function NewManualOrderPage() {
                             </label>
                             <label className="space-y-2">
                                 <span className="text-xs font-medium text-muted-foreground">
+                                    Province
+                                </span>
+                                <div className="relative">
+                                    <select
+                                        value={selectedProvinceId}
+                                        onChange={(e) => {
+                                            selectProvince(e.target.value);
+                                            setSelectedCityDisplayName("");
+                                            updateForm("shipping_regional", "");
+                                        }}
+                                        disabled={loadingProvinces}
+                                        className="w-full appearance-none bg-background border border-border rounded-xl px-4 py-2.5 pr-10 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                                    >
+                                        <option value="">
+                                            {loadingProvinces ? "Loading provinces..." : "Select province"}
+                                        </option>
+                                        {provinces.map((prov) => (
+                                            <option key={prov.id} value={prov.id}>
+                                                {prov.nama}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                </div>
+                            </label>
+                            <label className="space-y-2">
+                                <span className="text-xs font-medium text-muted-foreground">
                                     City / Regional
                                 </span>
-                                <input
-                                    value={form.shipping_regional}
-                                    onChange={(e) => updateForm("shipping_regional", e.target.value)}
-                                    className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
-                                    required
-                                />
+                                <div className="relative">
+                                    <select
+                                        value={selectedCityDisplayName}
+                                        onChange={(e) => {
+                                            setSelectedCityDisplayName(e.target.value);
+                                            const prov = provinces.find((p) => p.id === selectedProvinceId);
+                                            updateForm(
+                                                "shipping_regional",
+                                                prov ? `${prov.nama} - ${e.target.value}` : e.target.value,
+                                            );
+                                        }}
+                                        disabled={!selectedProvinceId || loadingCities}
+                                        className="w-full appearance-none bg-background border border-border rounded-xl px-4 py-2.5 pr-10 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent disabled:opacity-60"
+                                        required
+                                    >
+                                        <option value="">
+                                            {!selectedProvinceId
+                                                ? "Select province first"
+                                                : loadingCities
+                                                ? "Loading cities..."
+                                                : "Select city"}
+                                        </option>
+                                        {cities.map((city) => (
+                                            <option key={city.id} value={city.nama}>
+                                                {city.nama}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {loadingCities ? (
+                                        <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-accent" />
+                                    ) : (
+                                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                    )}
+                                </div>
                             </label>
                             <label className="space-y-2 md:col-span-2">
                                 <span className="text-xs font-medium text-muted-foreground">

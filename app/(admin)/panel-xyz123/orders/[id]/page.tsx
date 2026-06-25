@@ -4,6 +4,7 @@ import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import {
     ArrowLeft,
+    ChevronDown,
     Loader2,
     Save,
     FileText,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+import { useIndonesiaRegions } from "@/hooks/use-indonesia-regions";
 
 const ORDER_STATUSES = [
     "pending_review",
@@ -101,6 +103,16 @@ export default function AdminOrderDetailPage({
     const [shippingAddress, setShippingAddress] = useState("");
     const [shippingRegional, setShippingRegional] = useState("");
     const [shippingZip, setShippingZip] = useState("");
+
+    const {
+        provinces,
+        cities,
+        selectedProvinceId,
+        loadingProvinces,
+        loadingCities,
+        selectProvince,
+    } = useIndonesiaRegions();
+    const [selectedCityDisplayName, setSelectedCityDisplayName] = useState("");
     const [subtotal, setSubtotal] = useState("");
     const [discountAmount, setDiscountAmount] = useState("");
     const [marketplaceFee, setMarketplaceFee] = useState("");
@@ -571,13 +583,72 @@ export default function AdminOrderDetailPage({
                         </label>
                         <label className="block space-y-1.5">
                             <span className="text-xs font-medium text-muted-foreground">
+                                Province
+                            </span>
+                            <div className="relative">
+                                <select
+                                    value={selectedProvinceId}
+                                    onChange={(e) => {
+                                        selectProvince(e.target.value);
+                                        setSelectedCityDisplayName("");
+                                        setShippingRegional("");
+                                    }}
+                                    disabled={loadingProvinces}
+                                    className="w-full appearance-none bg-background border border-border rounded-xl py-2.5 px-3 pr-10 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                                >
+                                    <option value="">
+                                        {loadingProvinces ? "Loading provinces..." : "Select province"}
+                                    </option>
+                                    {provinces.map((prov) => (
+                                        <option key={prov.id} value={prov.id}>
+                                            {prov.nama}
+                                        </option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            </div>
+                        </label>
+                        <label className="block space-y-1.5">
+                            <span className="text-xs font-medium text-muted-foreground">
                                 City / Regional
                             </span>
-                            <input
-                                value={shippingRegional}
-                                onChange={(e) => setShippingRegional(e.target.value)}
-                                className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
-                            />
+                            <div className="relative">
+                                <select
+                                    value={selectedCityDisplayName}
+                                    onChange={(e) => {
+                                        setSelectedCityDisplayName(e.target.value);
+                                        const prov = provinces.find((p) => p.id === selectedProvinceId);
+                                        setShippingRegional(
+                                            prov ? `${prov.nama} - ${e.target.value}` : e.target.value,
+                                        );
+                                    }}
+                                    disabled={!selectedProvinceId || loadingCities}
+                                    className="w-full appearance-none bg-background border border-border rounded-xl py-2.5 px-3 pr-10 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all disabled:opacity-60"
+                                >
+                                    <option value="">
+                                        {!selectedProvinceId
+                                            ? `Current: ${shippingRegional || "—"}`
+                                            : loadingCities
+                                            ? "Loading cities..."
+                                            : "Select city"}
+                                    </option>
+                                    {cities.map((city) => (
+                                        <option key={city.id} value={city.nama}>
+                                            {city.nama}
+                                        </option>
+                                    ))}
+                                </select>
+                                {loadingCities ? (
+                                    <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-accent" />
+                                ) : (
+                                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                )}
+                            </div>
+                            {shippingRegional && !selectedProvinceId && (
+                                <p className="text-[11px] text-muted-foreground mt-1">
+                                    Current value: <span className="font-medium text-foreground">{shippingRegional}</span>. Select a province above to change it.
+                                </p>
+                            )}
                         </label>
                         <label className="block space-y-1.5">
                             <span className="text-xs font-medium text-muted-foreground">
