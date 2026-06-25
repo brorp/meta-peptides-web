@@ -146,7 +146,7 @@ export async function GET(req: NextRequest) {
         .eq("is_active", true)
         .order("created_at", { ascending: false });
 
-      if (error) return errorResponse(error.message, 400);
+      if (error) return errorResponse("Failed to load products", 400);
 
       // Pakai successResponse biasa, jangan paginateResponse karena datanya array utuh
       return successResponse(data, "All products retrieved for sitemap");
@@ -173,7 +173,7 @@ export async function GET(req: NextRequest) {
         { ascending: false },
       );
 
-      if (error) return errorResponse(error.message, 400);
+      if (error) return errorResponse("Failed to load products", 400);
 
       const rankedProducts = await rankProductsByBestSeller(
         supabaseServer,
@@ -209,7 +209,7 @@ export async function GET(req: NextRequest) {
 
       const { data, error, count: queryCount } = await query.range(from, to);
 
-      if (error) return errorResponse(error.message, 400);
+      if (error) return errorResponse("Failed to load products", 400);
 
       products = data || [];
       count = queryCount || 0;
@@ -228,6 +228,6 @@ export async function GET(req: NextRequest) {
       "Products retrieved successfully",
     );
   } catch (err: any) {
-    return errorResponse(err.message || "Internal Server Error", 500);
+    return errorResponse("Failed to load products", 500);
   }
 }

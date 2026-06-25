@@ -49,6 +49,10 @@ const addDays = (value: string | Date, days: number) => {
     date.setDate(date.getDate() + days);
     return date;
 };
+const CUSTOMER_SYNC_SELECT =
+    "id, full_name, username, whatsapp_phone, email, domicile, lead_source, current_journey, first_order_id, last_order_id, closing_at, journey_updated_at, created_at, updated_at";
+const CUSTOMER_TASK_SELECT =
+    `${CUSTOMER_SYNC_SELECT}, last_order:orders!customers_last_order_id_fkey(id, created_at, order_items(quantity, products(name, label, usage_days)))`;
 
 export const normalizeUsername = (value: unknown) => {
     const username = String(value || "")
@@ -100,7 +104,7 @@ export async function syncCustomersFromOrders() {
 
     const { data: customers, error: customersError } = await supabaseAdmin
         .from("customers")
-        .select("*");
+        .select(CUSTOMER_SYNC_SELECT);
 
     if (customersError) throw new Error(customersError.message);
 
@@ -146,7 +150,7 @@ export async function syncCustomersFromOrders() {
                     closing_at: (order as any).created_at,
                     journey_updated_at: (order as any).created_at,
                 })
-                .select()
+                .select(CUSTOMER_SYNC_SELECT)
                 .single();
 
             if (!insertError && inserted) {
@@ -198,7 +202,7 @@ export async function syncCustomersFromOrders() {
             .from("customers")
             .update(updatePayload)
             .eq("id", existing.id)
-            .select()
+            .select(CUSTOMER_SYNC_SELECT)
             .single();
 
         const nextCustomer = updated || { ...existing, ...updatePayload };
@@ -212,9 +216,7 @@ export async function getPendingCustomerTasks() {
 
     const { data: customers, error } = await supabaseAdmin
         .from("customers")
-        .select(
-            "*, last_order:orders!customers_last_order_id_fkey(id, created_at, order_items(quantity, products(name, label, usage_days)))",
-        )
+        .select(CUSTOMER_TASK_SELECT)
         .order("journey_updated_at", { ascending: true });
 
     if (error) throw new Error(error.message);
@@ -291,7 +293,8 @@ export async function getPendingCustomerTasks() {
             }
         }
 
-        const orderItems = customer.last_order?.order_items || [];
+        const lastOrder = (customer as any).last_order;
+        const orderItems = lastOrder?.order_items || [];
         const maxUsageDays = orderItems.reduce((max: number, item: any) => {
             const usageDays = Number(item.products?.usage_days || 0);
             return Math.max(max, usageDays);

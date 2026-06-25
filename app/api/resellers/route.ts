@@ -60,7 +60,7 @@ export async function POST(req: Request) {
         accepted_terms: acceptedTerms,
         status: "new",
       })
-      .select()
+      .select("id, status, created_at")
       .single();
 
     if (error) {
@@ -75,6 +75,6 @@ export async function POST(req: Request) {
     );
   } catch (err: any) {
     console.error("[Reseller] Submission error:", err);
-    return errorResponse(err.message || "Server error", 500);
+    return errorResponse("Failed to save reseller application", 500);
   }
 }

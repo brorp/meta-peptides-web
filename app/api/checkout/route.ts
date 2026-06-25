@@ -187,10 +187,7 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
       .in("id", productIds);
 
     if (productsError) {
-      return errorResponse(
-        `Failed to validate selected products: ${productsError.message}`,
-        500,
-      );
+      return errorResponse("Failed to validate selected products", 500);
     }
 
     if (!availableProducts || availableProducts.length !== productIds.length) {
@@ -285,7 +282,7 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
 
       const { data: voucher, error: voucherError } = await supabaseAdmin
         .from("vouchers")
-        .select("*")
+        .select("id, code, discount_nominal, max_discount_cap, valid_from, valid_until, max_claim_qty, total_claimed, is_active")
         .ilike("code", voucherCode.trim())
         .maybeSingle();
 
@@ -363,7 +360,8 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
 
     if (orderError) {
       await supabaseServer.storage.from("transactions").remove([filePath]);
-      return errorResponse(`Order Error: ${orderError.message}`, 500);
+      console.error("[Checkout] Order insert failed:", orderError);
+      return errorResponse("Failed to create order", 500);
     }
 
     const orderItems = allOrderItems.map((item: CheckoutItemPayload) => ({
@@ -380,7 +378,8 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
     if (itemsError) {
       await cleanupFailedOrder(supabaseServer, order.id);
       await supabaseServer.storage.from("transactions").remove([filePath]);
-      return errorResponse(`Items Error: ${itemsError.message}`, 500);
+      console.error("[Checkout] Order items insert failed:", itemsError);
+      return errorResponse("Failed to create order items", 500);
     }
 
     const { error: paymentError } = await supabaseServer
@@ -397,7 +396,8 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
     if (paymentError) {
       await cleanupFailedOrder(supabaseServer, order.id);
       await supabaseServer.storage.from("transactions").remove([filePath]);
-      return errorResponse(`Payment Error: ${paymentError.message}`, 500);
+      console.error("[Checkout] Payment insert failed:", paymentError);
+      return errorResponse("Failed to create payment record", 500);
     }
 
     try {
@@ -504,6 +504,7 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
       "Order successfully placed.",
     );
   } catch (err: any) {
-    return errorResponse(err.message || "Internal Server Error", 500);
+    console.error("[Checkout] Unexpected error:", err);
+    return errorResponse("Failed to place order", 500);
   }
 });

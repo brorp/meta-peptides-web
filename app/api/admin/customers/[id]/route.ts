@@ -6,17 +6,24 @@ import {
     normalizePhone,
     normalizeUsername,
 } from "@/lib/customer-sync";
+import { requireAdminApiSession } from "@/lib/admin-api";
+
+const ADMIN_CUSTOMER_SELECT =
+    "id, full_name, username, whatsapp_phone, email, domicile, lead_source, current_journey, notes, updated_at, last_order:orders!customers_last_order_id_fkey(id, total_price, order_source, manual_reference)";
 
 export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> },
 ) {
     try {
+        const auth = await requireAdminApiSession();
+        if (auth.response) return auth.response;
+
         const { id } = await params;
 
         const { data, error } = await supabaseAdmin
             .from("customers")
-            .select("*, journey_logs:customer_journey_logs(*), last_order:orders!customers_last_order_id_fkey(id, created_at, total_price)")
+            .select(ADMIN_CUSTOMER_SELECT)
             .eq("id", id)
             .single();
 
@@ -24,7 +31,7 @@ export async function GET(
 
         return successResponse(data, "Customer retrieved");
     } catch (err: any) {
-        return errorResponse(err.message, 500);
+        return errorResponse("Failed to load customer", 500);
     }
 }
 
@@ -33,6 +40,9 @@ export async function PUT(
     { params }: { params: Promise<{ id: string }> },
 ) {
     try {
+        const auth = await requireAdminApiSession();
+        if (auth.response) return auth.response;
+
         const { id } = await params;
         const body = await req.json();
         const updateData: Record<string, any> = {};
@@ -92,7 +102,7 @@ export async function PUT(
             .from("customers")
             .update(updateData)
             .eq("id", id)
-            .select()
+            .select(ADMIN_CUSTOMER_SELECT)
             .single();
 
         if (error) {
@@ -102,12 +112,12 @@ export async function PUT(
                     409,
                 );
             }
-            return errorResponse(error.message, 400);
+            return errorResponse("Failed to update customer", 400);
         }
 
         return successResponse(data, "Customer updated");
     } catch (err: any) {
-        return errorResponse(err.message, 500);
+        return errorResponse("Failed to update customer", 500);
     }
 }
 
@@ -116,13 +126,16 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> },
 ) {
     try {
+        const auth = await requireAdminApiSession();
+        if (auth.response) return auth.response;
+
         const { id } = await params;
         const { error } = await supabaseAdmin.from("customers").delete().eq("id", id);
 
-        if (error) return errorResponse(error.message, 400);
+        if (error) return errorResponse("Failed to delete customer", 400);
 
         return successResponse({ id }, "Customer deleted");
     } catch (err: any) {
-        return errorResponse(err.message, 500);
+        return errorResponse("Failed to delete customer", 500);
     }
 }

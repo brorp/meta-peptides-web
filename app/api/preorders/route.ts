@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
                 product_id,
                 product_name: product?.name || null,
             })
-            .select()
+            .select("id, status, created_at")
             .single();
 
         if (error) {
@@ -48,6 +48,6 @@ export async function POST(req: NextRequest) {
         return successResponse(data, "Preorder berhasil disimpan", 201);
     } catch (err: any) {
         console.error("Preorder API error:", err);
-        return errorResponse(err.message || "Terjadi kesalahan server", 500);
+        return errorResponse("Terjadi kesalahan server", 500);
     }
 }

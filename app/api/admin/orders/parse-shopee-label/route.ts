@@ -6,6 +6,7 @@ import {
   ShopeeLabelProductRecord,
 } from "@/lib/shopee-label-pdf";
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { requireAdminApiSession } from "@/lib/admin-api";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,9 @@ const MAX_PDF_SIZE = 5 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAdminApiSession();
+    if (auth.response) return auth.response;
+
     const formData = await req.formData();
     const file = formData.get("file");
 
@@ -38,10 +42,7 @@ export async function POST(req: NextRequest) {
       .eq("is_active", true);
 
     if (productsError) {
-      return errorResponse(
-        `Failed to match PDF products: ${productsError.message}`,
-        400,
-      );
+      return errorResponse("Failed to match PDF products", 400);
     }
 
     const matchedItems = parsed.items.map((item) => {
@@ -71,9 +72,6 @@ export async function POST(req: NextRequest) {
       "Shopee label parsed",
     );
   } catch (err: any) {
-    return errorResponse(
-      err.message || "Failed to read the Shopee shipping label PDF.",
-      400,
-    );
+    return errorResponse("Failed to read the Shopee shipping label PDF.", 400);
   }
 }

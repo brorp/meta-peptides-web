@@ -12,6 +12,7 @@ import {
   normalizeShipmentType,
   syncShipmentExpenseForOrder,
 } from "@/lib/shipment-expenses";
+import { requireAdminApiSession } from "@/lib/admin-api";
 
 const ORDER_STATUSES = [
   "pending_review",
@@ -19,17 +20,22 @@ const ORDER_STATUSES = [
   "completed",
   "cancelled",
 ];
+const ADMIN_ORDER_DETAIL_SELECT =
+  "id, status, created_at, total_price, subtotal, voucher_code, voucher_discount_amount, marketplace_fee, shipping_name, shipping_phone, shipping_email, shipping_address, shipping_regional, shipping_zip, customer_username, note, tracking_number, order_source, manual_channel, manual_reference, shipping_fee, shipment_type, order_items(id, product_id, quantity, price_at_purchase, products(name, label, volume, image_url, slug)), payments(id, transaction_code, payment_type, status, receipt_url)";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const auth = await requireAdminApiSession();
+    if (auth.response) return auth.response;
+
     const { id } = await params;
 
     const { data, error } = await supabaseAdmin
       .from("orders")
-      .select("*, order_items(*, products(name, label, volume, image_url, slug)), payments(*)")
+      .select(ADMIN_ORDER_DETAIL_SELECT)
       .eq("id", id)
       .single();
 
@@ -37,7 +43,7 @@ export async function GET(
 
     return successResponse(data, "Order retrieved");
   } catch (err: any) {
-    return errorResponse(err.message, 500);
+    return errorResponse("Failed to load order", 500);
   }
 }
 
@@ -46,6 +52,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const auth = await requireAdminApiSession();
+    if (auth.response) return auth.response;
+
     const { id } = await params;
     const body = await req.json();
 
@@ -170,7 +179,7 @@ export async function PUT(
       }
 
       if (updateError || !updatedOrder) {
-        return errorResponse(updateError?.message || "Failed to update order", 400);
+        return errorResponse("Failed to update order", 400);
       }
     }
 
@@ -186,7 +195,7 @@ export async function PUT(
           .maybeSingle();
 
       if (paymentLookupError) {
-        return errorResponse(paymentLookupError.message, 400);
+        return errorResponse("Failed to update payment type", 400);
       }
 
       if (existingPayment?.id) {
@@ -196,7 +205,7 @@ export async function PUT(
           .eq("id", existingPayment.id);
 
         if (paymentUpdateError) {
-          return errorResponse(paymentUpdateError.message, 400);
+          return errorResponse("Failed to update payment type", 400);
         }
       } else {
         const { error: paymentInsertError } = await supabaseAdmin
@@ -211,7 +220,7 @@ export async function PUT(
           });
 
         if (paymentInsertError) {
-          return errorResponse(paymentInsertError.message, 400);
+          return errorResponse("Failed to update payment type", 400);
         }
       }
     }
@@ -275,7 +284,7 @@ export async function PUT(
 
     const { data, error } = await supabaseAdmin
       .from("orders")
-      .select("*, order_items(*, products(name, label, volume, image_url, slug)), payments(*)")
+      .select(ADMIN_ORDER_DETAIL_SELECT)
       .eq("id", id)
       .single();
 
@@ -343,7 +352,7 @@ export async function PUT(
 
     return successResponse(data, "Order updated");
   } catch (err: any) {
-    return errorResponse(err.message, 500);
+    return errorResponse("Failed to update order", 500);
   }
 }
 
@@ -352,6 +361,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const auth = await requireAdminApiSession();
+    if (auth.response) return auth.response;
+
     const { id } = await params;
 
     const { data: order, error: fetchError } = await supabaseAdmin
@@ -374,10 +386,10 @@ export async function DELETE(
 
     const { error } = await supabaseAdmin.from("orders").delete().eq("id", id);
 
-    if (error) return errorResponse(error.message, 400);
+    if (error) return errorResponse("Failed to delete order", 400);
 
     return successResponse(null, "Order deleted");
   } catch (err: any) {
-    return errorResponse(err.message, 500);
+    return errorResponse("Failed to delete order", 500);
   }
 }

@@ -7,6 +7,10 @@ import {
     normalizeUsername,
     syncCustomersFromOrders,
 } from "@/lib/customer-sync";
+import { requireAdminApiSession } from "@/lib/admin-api";
+
+const ADMIN_CUSTOMER_SELECT =
+    "id, full_name, username, whatsapp_phone, email, domicile, lead_source, current_journey, notes, updated_at, last_order:orders!customers_last_order_id_fkey(id, total_price, order_source, manual_reference)";
 
 const normalizeCustomerPayload = (body: any) => {
     const fullName = String(body.full_name || "").trim();
@@ -46,6 +50,9 @@ const normalizeCustomerPayload = (body: any) => {
 
 export async function GET(req: NextRequest) {
     try {
+        const auth = await requireAdminApiSession();
+        if (auth.response) return auth.response;
+
         await syncCustomersFromOrders();
 
         const { searchParams } = new URL(req.url);
@@ -59,7 +66,7 @@ export async function GET(req: NextRequest) {
 
         let query = supabaseAdmin
             .from("customers")
-            .select("*, last_order:orders!customers_last_order_id_fkey(id, created_at, total_price, order_source, manual_reference)", {
+            .select(ADMIN_CUSTOMER_SELECT, {
                 count: "exact",
             });
 
@@ -77,7 +84,7 @@ export async function GET(req: NextRequest) {
             .order("updated_at", { ascending: false })
             .range(from, to);
 
-        if (error) return errorResponse(error.message, 400);
+        if (error) return errorResponse("Failed to load customers", 400);
 
         return paginateResponse(
             data || [],
@@ -87,19 +94,22 @@ export async function GET(req: NextRequest) {
             "Customers retrieved",
         );
     } catch (err: any) {
-        return errorResponse(err.message, 500);
+        return errorResponse("Failed to load customers", 500);
     }
 }
 
 export async function POST(req: NextRequest) {
     try {
+        const auth = await requireAdminApiSession();
+        if (auth.response) return auth.response;
+
         const normalized = normalizeCustomerPayload(await req.json());
         if (normalized.error) return errorResponse(normalized.error, 400);
 
         const { data, error } = await supabaseAdmin
             .from("customers")
             .insert(normalized.data)
-            .select()
+            .select(ADMIN_CUSTOMER_SELECT)
             .single();
 
         if (error) {
@@ -109,11 +119,11 @@ export async function POST(req: NextRequest) {
                     409,
                 );
             }
-            return errorResponse(error.message, 400);
+            return errorResponse("Failed to create customer", 400);
         }
 
         return successResponse(data, "Customer created", 201);
     } catch (err: any) {
-        return errorResponse(err.message, 500);
+        return errorResponse("Failed to create customer", 500);
     }
 }

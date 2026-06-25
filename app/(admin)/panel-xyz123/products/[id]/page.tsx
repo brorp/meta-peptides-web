@@ -30,6 +30,8 @@ const TEXTAREA_FIELDS = [
     { key: "dosing", label: "Dosing" },
 ];
 
+type AdminRole = "root" | "admin";
+
 export default function EditProductPage({
     params,
 }: {
@@ -43,7 +45,13 @@ export default function EditProductPage({
     const [uploading, setUploading] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [productOptions, setProductOptions] = useState<any[]>([]);
+    const [role, setRole] = useState<AdminRole | null>(null);
     const [form, setForm] = useState<Record<string, any>>({});
+    const isStaffAdmin = role === "admin";
+    const canViewCostOfGoods = role === "root";
+    const visibleProductFields = PRODUCT_FIELDS.filter(
+        (field) => canViewCostOfGoods || field.key !== "cost_of_goods",
+    );
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -63,6 +71,19 @@ export default function EditProductPage({
         };
         fetchProduct();
     }, [id]);
+
+    useEffect(() => {
+        const fetchAdminRole = async () => {
+            try {
+                const { data } = await axios.get("/admin/auth/me");
+                setRole(data.data?.role || null);
+            } catch {
+                setRole(null);
+            }
+        };
+
+        fetchAdminRole();
+    }, []);
 
     useEffect(() => {
         const fetchProductOptions = async () => {
@@ -137,7 +158,10 @@ export default function EditProductPage({
         e.preventDefault();
         setSaving(true);
         try {
-            const { data } = await axios.put(`/admin/products/${id}`, form);
+            const payload = { ...form };
+            if (isStaffAdmin) delete payload.cost_of_goods;
+
+            const { data } = await axios.put(`/admin/products/${id}`, payload);
             if (data.success) {
                 toast.success("Product updated");
                 router.push("/panel-xyz123/products");
@@ -239,7 +263,7 @@ export default function EditProductPage({
                     </h2>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {PRODUCT_FIELDS.map((field) => (
+                        {visibleProductFields.map((field) => (
                             <div key={field.key}>
                                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                                     {field.label}

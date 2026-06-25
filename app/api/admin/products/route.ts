@@ -5,9 +5,23 @@ import {
     errorResponse,
     successResponse,
 } from "@/lib/api-response";
+import { getAdminSessionFromCookies } from "@/lib/admin-auth";
+
+function hideCostOfGoodsForStaffAdmin(product: any, role: string | null) {
+    if (role !== "admin") return product;
+
+    const { cost_of_goods, ...safeProduct } = product;
+    return safeProduct;
+}
+
+const ADMIN_PRODUCT_SELECT =
+    "id, name, label, slug, price, cost_of_goods, original_price, stock, usage_days, image_url, category, purity, volume, formula, cas, short_desc, overview, storage_instruction, usage_instruction, dosing, complimentary_product_id, complimentary_quantity, inventory_type, is_active, created_at, updated_at";
 
 export async function GET(req: NextRequest) {
     try {
+        const role = await getAdminSessionFromCookies();
+        if (!role) return errorResponse("Unauthorized", 401);
+
         const { searchParams } = new URL(req.url);
         const page = parseInt(searchParams.get("page") || "1");
         const limit = parseInt(searchParams.get("limit") || "20");
@@ -19,7 +33,7 @@ export async function GET(req: NextRequest) {
 
         let query = supabaseAdmin
             .from("products")
-            .select("*", { count: "exact" });
+            .select(ADMIN_PRODUCT_SELECT, { count: "exact" });
 
         if (keyword) {
             query = query.or(`name.ilike.%${keyword}%,label.ilike.%${keyword}%`);
@@ -33,7 +47,7 @@ export async function GET(req: NextRequest) {
             .order("created_at", { ascending: false })
             .range(from, to);
 
-        if (error) return errorResponse(error.message, 400);
+        if (error) return errorResponse("Failed to load products", 400);
 
         const products = data || [];
         const complimentaryProductIds = Array.from(
@@ -52,7 +66,7 @@ export async function GET(req: NextRequest) {
                     .select("id, name")
                     .in("id", complimentaryProductIds);
 
-            if (complimentaryError) return errorResponse(complimentaryError.message, 400);
+            if (complimentaryError) return errorResponse("Failed to load products", 400);
 
             complimentaryProductMap = new Map(
                 (complimentaryProducts || []).map((product: any) => [
@@ -62,13 +76,18 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        const enrichedProducts = products.map((product: any) => ({
-            ...product,
-            complimentary_product_name: product.complimentary_product_id
-                ? complimentaryProductMap.get(product.complimentary_product_id) || null
-                : null,
-            complimentary_quantity: Number(product.complimentary_quantity || 1),
-        }));
+        const enrichedProducts = products.map((product: any) =>
+            hideCostOfGoodsForStaffAdmin(
+                {
+                    ...product,
+                    complimentary_product_name: product.complimentary_product_id
+                        ? complimentaryProductMap.get(product.complimentary_product_id) || null
+                        : null,
+                    complimentary_quantity: Number(product.complimentary_quantity || 1),
+                },
+                role,
+            ),
+        );
 
         return paginateResponse(
             enrichedProducts,
@@ -78,12 +97,15 @@ export async function GET(req: NextRequest) {
             "Products retrieved",
         );
     } catch (err: any) {
-        return errorResponse(err.message, 500);
+        return errorResponse("Failed to load products", 500);
     }
 }
 
 export async function POST(req: NextRequest) {
     try {
+        const role = await getAdminSessionFromCookies();
+        if (!role) return errorResponse("Unauthorized", 401);
+
         const body = await req.json();
 
         // Auto-generate slug
@@ -93,7 +115,8 @@ export async function POST(req: NextRequest) {
                 .toLowerCase()
                 .replace(/[^a-z0-9]+/g, "-")
                 .replace(/(^-|-$)/g, "");
-        const costOfGoods = Number(body.cost_of_goods || 0);
+        const costOfGoods =
+            role === "admin" ? 0 : Number(body.cost_of_goods || 0);
 
         if (!Number.isFinite(costOfGoods) || costOfGoods < 0) {
             return errorResponse("COGS must be a valid non-negative number", 400);
@@ -132,13 +155,17 @@ export async function POST(req: NextRequest) {
                     : "product",
                 is_active: body.is_active !== false,
             })
-            .select()
+            .select(ADMIN_PRODUCT_SELECT)
             .single();
 
-        if (error) return errorResponse(error.message, 400);
+        if (error) return errorResponse("Failed to create product", 400);
 
-        return successResponse(data, "Product created", 201);
+        return successResponse(
+            hideCostOfGoodsForStaffAdmin(data, role),
+            "Product created",
+            201,
+        );
     } catch (err: any) {
-        return errorResponse(err.message, 500);
+        return errorResponse("Failed to create product", 500);
     }
 }

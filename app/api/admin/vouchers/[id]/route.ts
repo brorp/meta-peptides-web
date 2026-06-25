@@ -1,17 +1,24 @@
 import { NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { successResponse, errorResponse } from "@/lib/api-response";
+import { requireAdminApiSession } from "@/lib/admin-api";
+
+const ADMIN_VOUCHER_SELECT =
+  "id, code, discount_nominal, max_discount_cap, valid_from, valid_until, max_claim_qty, total_claimed, is_active, created_at, updated_at";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const auth = await requireAdminApiSession();
+    if (auth.response) return auth.response;
+
     const { id } = await params;
 
     const { data, error } = await supabaseAdmin
       .from("vouchers")
-      .select("*")
+      .select(ADMIN_VOUCHER_SELECT)
       .eq("id", id)
       .single();
 
@@ -19,7 +26,7 @@ export async function GET(
 
     return successResponse(data, "Voucher retrieved");
   } catch (err: any) {
-    return errorResponse(err.message, 500);
+    return errorResponse("Failed to load voucher", 500);
   }
 }
 
@@ -28,6 +35,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const auth = await requireAdminApiSession();
+    if (auth.response) return auth.response;
+
     const { id } = await params;
     const body = await req.json();
 
@@ -106,14 +116,14 @@ export async function PUT(
       .from("vouchers")
       .update(updateData)
       .eq("id", id)
-      .select()
+      .select(ADMIN_VOUCHER_SELECT)
       .single();
 
-    if (error) return errorResponse(error.message, 400);
+    if (error) return errorResponse("Failed to update voucher", 400);
 
     return successResponse(data, "Voucher updated");
   } catch (err: any) {
-    return errorResponse(err.message, 500);
+    return errorResponse("Failed to update voucher", 500);
   }
 }
 
@@ -122,14 +132,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const auth = await requireAdminApiSession();
+    if (auth.response) return auth.response;
+
     const { id } = await params;
 
     const { error } = await supabaseAdmin.from("vouchers").delete().eq("id", id);
 
-    if (error) return errorResponse(error.message, 400);
+    if (error) return errorResponse("Failed to delete voucher", 400);
 
     return successResponse({ id }, "Voucher deleted");
   } catch (err: any) {
-    return errorResponse(err.message, 500);
+    return errorResponse("Failed to delete voucher", 500);
   }
 }

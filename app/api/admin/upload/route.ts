@@ -1,11 +1,15 @@
 import { NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { successResponse, errorResponse } from "@/lib/api-response";
+import { requireAdminApiSession } from "@/lib/admin-api";
 
 const BUCKET_NAME = "products";
 
 export async function POST(req: NextRequest) {
     try {
+        const auth = await requireAdminApiSession();
+        if (auth.response) return auth.response;
+
         const formData = await req.formData();
         const file = formData.get("file") as File | null;
         const previousUrl = formData.get("previousUrl") as string | null;
@@ -58,7 +62,7 @@ export async function POST(req: NextRequest) {
             });
 
         if (uploadError) {
-            return errorResponse(`Upload failed: ${uploadError.message}`, 500);
+            return errorResponse("Upload failed", 500);
         }
 
         // Get public URL
@@ -71,6 +75,6 @@ export async function POST(req: NextRequest) {
             "Image uploaded successfully",
         );
     } catch (err: any) {
-        return errorResponse(err.message, 500);
+        return errorResponse("Upload failed", 500);
     }
 }

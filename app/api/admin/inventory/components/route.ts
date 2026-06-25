@@ -1,6 +1,10 @@
 import { NextRequest } from "next/server";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { requireAdminApiSession } from "@/lib/admin-api";
+
+const ADMIN_INVENTORY_COMPONENT_SELECT =
+  "id, product_id, component_product_id, quantity_per_unit, created_at, updated_at";
 
 const normalizeComponents = (components: any) => {
   if (!Array.isArray(components)) return [];
@@ -15,21 +19,27 @@ const normalizeComponents = (components: any) => {
 
 export async function GET() {
   try {
+    const auth = await requireAdminApiSession(["root"]);
+    if (auth.response) return auth.response;
+
     const { data, error } = await supabaseAdmin
       .from("product_inventory_components")
-      .select("*")
+      .select(ADMIN_INVENTORY_COMPONENT_SELECT)
       .order("created_at", { ascending: true });
 
-    if (error) return errorResponse(error.message, 400);
+    if (error) return errorResponse("Failed to load inventory components", 400);
 
     return successResponse(data || [], "Inventory components retrieved");
   } catch (err: any) {
-    return errorResponse(err.message || "Internal Server Error", 500);
+    return errorResponse("Failed to load inventory components", 500);
   }
 }
 
 export async function PUT(req: NextRequest) {
   try {
+    const auth = await requireAdminApiSession(["root"]);
+    if (auth.response) return auth.response;
+
     const body = await req.json();
     const productId = String(body.product_id || "");
 
@@ -44,7 +54,7 @@ export async function PUT(req: NextRequest) {
       .delete()
       .eq("product_id", productId);
 
-    if (deleteError) return errorResponse(deleteError.message, 400);
+    if (deleteError) return errorResponse("Failed to update inventory components", 400);
 
     if (components.length) {
       const { error: insertError } = await supabaseAdmin
@@ -57,19 +67,19 @@ export async function PUT(req: NextRequest) {
           })),
         );
 
-      if (insertError) return errorResponse(insertError.message, 400);
+      if (insertError) return errorResponse("Failed to update inventory components", 400);
     }
 
     const { data, error } = await supabaseAdmin
       .from("product_inventory_components")
-      .select("*")
+      .select(ADMIN_INVENTORY_COMPONENT_SELECT)
       .eq("product_id", productId)
       .order("created_at", { ascending: true });
 
-    if (error) return errorResponse(error.message, 400);
+    if (error) return errorResponse("Failed to update inventory components", 400);
 
     return successResponse(data || [], "Inventory components updated");
   } catch (err: any) {
-    return errorResponse(err.message || "Internal Server Error", 500);
+    return errorResponse("Failed to update inventory components", 500);
   }
 }

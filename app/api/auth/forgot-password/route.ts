@@ -117,6 +117,10 @@ export async function POST(req: NextRequest) {
 
     return successResponse({ email }, GENERIC_SUCCESS_MESSAGE);
   } catch (err: any) {
-    return errorResponse(err.message || "Internal Server Error", 500);
+    console.error("[Auth] Forgot password error:", err);
+    return errorResponse(
+      "Unable to prepare a password reset email right now. Please try again.",
+      500,
+    );
   }
 }

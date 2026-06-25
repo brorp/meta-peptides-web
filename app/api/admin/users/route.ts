@@ -1,9 +1,9 @@
 import { NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { paginateResponse, errorResponse } from "@/lib/api-response";
+import { requireAdminApiSession } from "@/lib/admin-api";
 
 const mergeAuthUserWithProfile = (authUser: any, profile?: any) => ({
-    ...(profile || {}),
     id: authUser.id,
     email: authUser.email || profile?.email || null,
     full_name:
@@ -19,6 +19,9 @@ const mergeAuthUserWithProfile = (authUser: any, profile?: any) => ({
 
 export async function GET(req: NextRequest) {
     try {
+        const auth = await requireAdminApiSession();
+        if (auth.response) return auth.response;
+
         const { searchParams } = new URL(req.url);
         const page = parseInt(searchParams.get("page") || "1");
         const limit = parseInt(searchParams.get("limit") || "20");
@@ -42,10 +45,10 @@ export async function GET(req: NextRequest) {
         if (userIds.length > 0) {
             const { data: profiles, error: profilesError } = await supabaseAdmin
                 .from("profiles")
-                .select("*")
+                .select("id, email, full_name, phone, role, created_at")
                 .in("id", userIds);
 
-            if (profilesError) return errorResponse(profilesError.message, 400);
+            if (profilesError) return errorResponse("Failed to load user profiles", 400);
 
             profileMap = new Map(
                 (profiles || []).map((profile: any) => [profile.id, profile]),
@@ -87,6 +90,6 @@ export async function GET(req: NextRequest) {
             "Users retrieved",
         );
     } catch (err: any) {
-        return errorResponse(err.message, 500);
+        return errorResponse("Failed to load users", 500);
     }
 }

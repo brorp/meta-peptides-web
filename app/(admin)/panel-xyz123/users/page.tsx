@@ -30,6 +30,16 @@ export default function AdminUsersPage() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [deleting, setDeleting] = useState<string | null>(null);
+    const [role, setRole] = useState<"root" | "admin" | null>(null);
+
+    const fetchAdminRole = async () => {
+        try {
+            const { data } = await axios.get("/admin/auth/me");
+            setRole(data.data?.role || null);
+        } catch {
+            setRole(null);
+        }
+    };
 
     const fetchUsers = async () => {
         setLoading(true);
@@ -47,6 +57,10 @@ export default function AdminUsersPage() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        fetchAdminRole();
+    }, []);
 
     useEffect(() => {
         fetchUsers();
@@ -145,14 +159,16 @@ export default function AdminUsersPage() {
                                                 >
                                                     <Eye className="w-4 h-4" />
                                                 </button>
-                                                <button
-                                                    onClick={() => handleDelete(user.id)}
-                                                    disabled={deleting === user.id}
-                                                    className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
+                                                {role === "root" && (
+                                                    <button
+                                                        onClick={() => handleDelete(user.id)}
+                                                        disabled={deleting === user.id}
+                                                        className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-50"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

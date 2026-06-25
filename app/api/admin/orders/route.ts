@@ -15,6 +15,7 @@ import {
     normalizeShipmentType,
     syncShipmentExpenseForOrder,
 } from "@/lib/shipment-expenses";
+import { requireAdminApiSession } from "@/lib/admin-api";
 
 const ORDER_STATUSES = [
     "pending_review",
@@ -32,6 +33,10 @@ const ORDER_SORT_FIELDS = [
     "order_source",
     "shipping_fee",
 ];
+const ADMIN_ORDER_LIST_SELECT =
+    "id, status, created_at, total_price, subtotal, voucher_discount_amount, marketplace_fee, shipping_name, shipping_email, customer_username, order_source, manual_reference, shipping_fee, shipment_type, order_items(id, quantity, price_at_purchase, products(name, image_url))";
+const ADMIN_ORDER_DETAIL_SELECT =
+    "id, status, created_at, total_price, subtotal, voucher_code, voucher_discount_amount, marketplace_fee, shipping_name, shipping_phone, shipping_email, shipping_address, shipping_regional, shipping_zip, customer_username, note, tracking_number, order_source, manual_channel, manual_reference, shipping_fee, shipment_type, order_items(id, product_id, quantity, price_at_purchase, products(name, label, volume, image_url, slug)), payments(id, transaction_code, payment_type, status, receipt_url)";
 const UUID_PATTERN =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -107,6 +112,9 @@ const buildOrderSearchFilter = (
 
 export async function GET(req: NextRequest) {
     try {
+        const auth = await requireAdminApiSession();
+        if (auth.response) return auth.response;
+
         const { searchParams } = new URL(req.url);
         const page = parseInt(searchParams.get("page") || "1");
         const limit = parseInt(searchParams.get("limit") || "20");
@@ -122,7 +130,7 @@ export async function GET(req: NextRequest) {
 
         let query = supabaseAdmin
             .from("orders")
-            .select("*, order_items(*, products(name, image_url)), payments(*)", {
+            .select(ADMIN_ORDER_LIST_SELECT, {
                 count: "exact",
             });
 
@@ -144,7 +152,7 @@ export async function GET(req: NextRequest) {
         if (error && keyword && isMissingCustomerUsernameColumn(error)) {
             let fallbackQuery = supabaseAdmin
                 .from("orders")
-                .select("*, order_items(*, products(name, image_url)), payments(*)", {
+                .select(ADMIN_ORDER_LIST_SELECT, {
                     count: "exact",
                 });
 
@@ -166,7 +174,7 @@ export async function GET(req: NextRequest) {
             count = fallback.count;
         }
 
-        if (error) return errorResponse(error.message, 400);
+        if (error) return errorResponse("Failed to load orders", 400);
 
         return paginateResponse(
             data,
@@ -176,12 +184,15 @@ export async function GET(req: NextRequest) {
             "Orders retrieved",
         );
     } catch (err: any) {
-        return errorResponse(err.message, 500);
+        return errorResponse("Failed to load orders", 500);
     }
 }
 
 export async function POST(req: NextRequest) {
     try {
+        const auth = await requireAdminApiSession();
+        if (auth.response) return auth.response;
+
         const body = await req.json();
         const shippingName = String(body.shipping_name || "").trim();
         const shippingPhone = String(body.shipping_phone || "").trim();
@@ -242,10 +253,7 @@ export async function POST(req: NextRequest) {
             .in("id", productIds);
 
         if (productsError) {
-            return errorResponse(
-                `Failed to validate products: ${productsError.message}`,
-                500,
-            );
+            return errorResponse("Failed to validate selected products", 500);
         }
 
         if (!products || products.length !== productIds.length) {
@@ -325,7 +333,7 @@ export async function POST(req: NextRequest) {
             orderError = retry.error;
         }
 
-        if (orderError) return errorResponse(orderError.message, 400);
+        if (orderError) return errorResponse("Failed to create manual order", 400);
 
         const { error: itemsError } = await supabaseAdmin
             .from("order_items")
@@ -343,7 +351,7 @@ export async function POST(req: NextRequest) {
 
         if (itemsError) {
             await cleanupFailedManualOrder(order.id);
-            return errorResponse(itemsError.message, 400);
+            return errorResponse("Failed to create order items", 400);
         }
 
         const { error: paymentError } = await supabaseAdmin.from("payments").insert({
@@ -357,7 +365,7 @@ export async function POST(req: NextRequest) {
 
         if (paymentError) {
             await cleanupFailedManualOrder(order.id);
-            return errorResponse(paymentError.message, 400);
+            return errorResponse("Failed to create payment record", 400);
         }
 
         try {
@@ -389,16 +397,25 @@ export async function POST(req: NextRequest) {
 
         const { data: createdOrder, error: loadError } = await supabaseAdmin
             .from("orders")
-            .select("*, order_items(*, products(name, image_url)), payments(*)")
+            .select(ADMIN_ORDER_DETAIL_SELECT)
             .eq("id", order.id)
             .single();
 
         if (loadError || !createdOrder) {
-            return successResponse(order, "Manual order created", 201);
+            return successResponse(
+                {
+                    id: order.id,
+                    status: order.status,
+                    created_at: order.created_at,
+                    total_price: order.total_price,
+                },
+                "Manual order created",
+                201,
+            );
         }
 
         return successResponse(createdOrder, "Manual order created", 201);
     } catch (err: any) {
-        return errorResponse(err.message || "Failed to create manual order", 500);
+        return errorResponse("Failed to create manual order", 500);
     }
 }

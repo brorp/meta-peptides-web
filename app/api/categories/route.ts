@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
       .eq("is_active", true)
       .not("category", "is", null);
 
-    if (error) return errorResponse(error.message, 400);
+    if (error) return errorResponse("Failed to load categories", 400);
 
     const uniqueCategories = new Set<string>();
     data?.forEach((item: any) => {
@@ -27,6 +27,6 @@ export async function GET(req: NextRequest) {
       "Categories retrieved successfully",
     );
   } catch (err: any) {
-    return errorResponse(err.message || "Internal Server Error", 500);
+    return errorResponse("Failed to load categories", 500);
   }
 }

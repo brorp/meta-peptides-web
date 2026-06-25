@@ -1,9 +1,16 @@
 import { NextRequest } from "next/server";
 import { errorResponse, paginateResponse } from "@/lib/api-response";
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { requireAdminApiSession } from "@/lib/admin-api";
+
+const ADMIN_RESELLER_SELECT =
+  "id, full_name, email, whatsapp_number, occupation, business_name, business_type, city, country, social_link, estimated_monthly_orders, notes, admin_notes, accepted_terms, status, created_at, updated_at";
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requireAdminApiSession(["root"]);
+    if (auth.response) return auth.response;
+
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
@@ -15,7 +22,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabaseAdmin
       .from("reseller_applications")
-      .select("*", { count: "exact" });
+      .select(ADMIN_RESELLER_SELECT, { count: "exact" });
 
     if (keyword) {
       query = query.or(
@@ -31,7 +38,7 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: false })
       .range(from, to);
 
-    if (error) return errorResponse(error.message, 400);
+    if (error) return errorResponse("Failed to load reseller applications", 400);
 
     return paginateResponse(
       data,
@@ -41,6 +48,6 @@ export async function GET(req: NextRequest) {
       "Reseller applications retrieved",
     );
   } catch (err: any) {
-    return errorResponse(err.message, 500);
+    return errorResponse("Failed to load reseller applications", 500);
   }
 }

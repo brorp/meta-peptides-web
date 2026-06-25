@@ -34,11 +34,25 @@ export default function AdminUserDetailPage({
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [adminRole, setAdminRole] = useState<"root" | "admin" | null>(null);
     const [form, setForm] = useState({
         full_name: "",
         phone: "",
         role: "customer",
     });
+
+    useEffect(() => {
+        const fetchAdminRole = async () => {
+            try {
+                const { data } = await axios.get("/admin/auth/me");
+                setAdminRole(data.data?.role || null);
+            } catch {
+                setAdminRole(null);
+            }
+        };
+
+        fetchAdminRole();
+    }, []);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -64,7 +78,14 @@ export default function AdminUserDetailPage({
     const handleSave = async () => {
         setSaving(true);
         try {
-            const { data } = await axios.put(`/admin/users/${id}`, form);
+            const payload =
+                adminRole === "root"
+                    ? form
+                    : {
+                          full_name: form.full_name,
+                          phone: form.phone,
+                      };
+            const { data } = await axios.put(`/admin/users/${id}`, payload);
             if (data.success) {
                 toast.success("User updated");
                 setUser({ ...user, ...form });
@@ -138,19 +159,21 @@ export default function AdminUserDetailPage({
                             className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
                         />
                     </div>
-                    <div>
-                        <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                            Role
-                        </label>
-                        <select
-                            value={form.role}
-                            onChange={(e) => setForm({ ...form, role: e.target.value })}
-                            className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
-                        >
-                            <option value="customer">Customer</option>
-                            <option value="admin">Admin</option>
-                        </select>
-                    </div>
+                    {adminRole === "root" && (
+                        <div>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                                Role
+                            </label>
+                            <select
+                                value={form.role}
+                                onChange={(e) => setForm({ ...form, role: e.target.value })}
+                                className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                            >
+                                <option value="customer">Customer</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                    )}
                     <div>
                         <label className="block text-xs font-medium text-muted-foreground mb-1.5">
                             User ID

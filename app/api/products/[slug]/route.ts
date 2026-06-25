@@ -29,7 +29,7 @@ export async function GET(
       if ((error as any)?.code === "PGRST116" || !data) {
         return errorResponse("Bio-sample not found in database", 404);
       }
-      return errorResponse((error as any)?.message || "Unknown error", 400);
+      return errorResponse("Failed to load product details", 400);
     }
 
     let complimentaryProductName: string | null = null;
@@ -56,6 +56,6 @@ export async function GET(
       "Product details retrieved",
     );
   } catch (err: any) {
-    return errorResponse(err.message || "Internal Server Error", 500);
+    return errorResponse("Failed to load product details", 500);
   }
 }

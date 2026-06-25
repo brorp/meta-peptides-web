@@ -1,17 +1,31 @@
 import { NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { successResponse, errorResponse } from "@/lib/api-response";
+import { getAdminSessionFromCookies } from "@/lib/admin-auth";
+
+function hideCostOfGoodsForStaffAdmin(product: any, role: string | null) {
+    if (role !== "admin") return product;
+
+    const { cost_of_goods, ...safeProduct } = product;
+    return safeProduct;
+}
+
+const ADMIN_PRODUCT_SELECT =
+    "id, name, label, slug, price, cost_of_goods, original_price, stock, usage_days, image_url, category, purity, volume, formula, cas, short_desc, overview, storage_instruction, usage_instruction, dosing, complimentary_product_id, complimentary_quantity, inventory_type, is_active, created_at, updated_at";
 
 export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> },
 ) {
     try {
+        const role = await getAdminSessionFromCookies();
+        if (!role) return errorResponse("Unauthorized", 401);
+
         const { id } = await params;
 
         const { data, error } = await supabaseAdmin
             .from("products")
-            .select("*")
+            .select(ADMIN_PRODUCT_SELECT)
             .eq("id", id)
             .single();
 
@@ -29,15 +43,18 @@ export async function GET(
         }
 
         return successResponse(
-            {
-                ...data,
-                complimentary_product_name: complimentaryProductName,
-                complimentary_quantity: Number(data.complimentary_quantity || 1),
-            },
+            hideCostOfGoodsForStaffAdmin(
+                {
+                    ...data,
+                    complimentary_product_name: complimentaryProductName,
+                    complimentary_quantity: Number(data.complimentary_quantity || 1),
+                },
+                role,
+            ),
             "Product retrieved",
         );
     } catch (err: any) {
-        return errorResponse(err.message, 500);
+        return errorResponse("Failed to load product", 500);
     }
 }
 
@@ -46,17 +63,23 @@ export async function PUT(
     { params }: { params: Promise<{ id: string }> },
 ) {
     try {
+        const role = await getAdminSessionFromCookies();
+        if (!role) return errorResponse("Unauthorized", 401);
+
         const { id } = await params;
         const body = await req.json();
 
         const updateData: any = {};
         const fields = [
-            "name", "label", "slug", "price", "cost_of_goods", "original_price", "stock", "usage_days",
+            "name", "label", "slug", "price", "original_price", "stock", "usage_days",
             "image_url", "category", "purity", "volume", "formula", "cas",
             "short_desc", "overview", "storage_instruction", "usage_instruction",
             "dosing", "complimentary_product_id", "complimentary_quantity",
             "inventory_type", "is_active",
         ];
+        if (role !== "admin") {
+            fields.push("cost_of_goods");
+        }
 
         for (const field of fields) {
             if (body[field] !== undefined) {
@@ -108,10 +131,10 @@ export async function PUT(
             .from("products")
             .update(updateData)
             .eq("id", id)
-            .select()
+            .select(ADMIN_PRODUCT_SELECT)
             .single();
 
-        if (error) return errorResponse(error.message, 400);
+        if (error) return errorResponse("Failed to update product", 400);
 
         if (updateData.cost_of_goods !== undefined) {
             await supabaseAdmin
@@ -121,9 +144,12 @@ export async function PUT(
                 .eq("cogs_at_purchase", 0);
         }
 
-        return successResponse(data, "Product updated");
+        return successResponse(
+            hideCostOfGoodsForStaffAdmin(data, role),
+            "Product updated",
+        );
     } catch (err: any) {
-        return errorResponse(err.message, 500);
+        return errorResponse("Failed to update product", 500);
     }
 }
 
@@ -132,6 +158,9 @@ export async function DELETE(
     { params }: { params: Promise<{ id: string }> },
 ) {
     try {
+        const role = await getAdminSessionFromCookies();
+        if (!role) return errorResponse("Unauthorized", 401);
+
         const { id } = await params;
 
         const { error } = await supabaseAdmin
@@ -139,10 +168,10 @@ export async function DELETE(
             .delete()
             .eq("id", id);
 
-        if (error) return errorResponse(error.message, 400);
+        if (error) return errorResponse("Failed to delete product", 400);
 
         return successResponse(null, "Product deleted");
     } catch (err: any) {
-        return errorResponse(err.message, 500);
+        return errorResponse("Failed to delete product", 500);
     }
 }

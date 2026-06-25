@@ -1,12 +1,12 @@
 import { NextRequest } from "next/server";
 import { errorResponse, paginateResponse } from "@/lib/api-response";
-import { getAdminSessionFromCookies } from "@/lib/admin-auth";
+import { requireAdminApiSession } from "@/lib/admin-api";
 import { supabaseAdmin } from "@/lib/supabase-server";
 
 export async function GET(req: NextRequest) {
     try {
-        const role = await getAdminSessionFromCookies();
-        if (role !== "root") return errorResponse("Forbidden", 403);
+        const auth = await requireAdminApiSession(["root"]);
+        if (auth.response) return auth.response;
 
         const { searchParams } = new URL(req.url);
         const page = parseInt(searchParams.get("page") || "1");
@@ -16,13 +16,14 @@ export async function GET(req: NextRequest) {
 
         const { data, error, count } = await supabaseAdmin
             .from("customer_journey_logs")
-            .select("*, customer:customers(full_name, username, whatsapp_phone)", {
-                count: "exact",
-            })
+            .select(
+                "id, customer_id, from_journey, to_journey, task_type, evidence_url, order_id, notes, performed_by_role, created_at, customer:customers(full_name, username, whatsapp_phone)",
+                { count: "exact" },
+            )
             .order("created_at", { ascending: false })
             .range(from, to);
 
-        if (error) return errorResponse(error.message, 400);
+        if (error) return errorResponse("Failed to load daily task logs", 400);
 
         return paginateResponse(
             data || [],
@@ -32,6 +33,6 @@ export async function GET(req: NextRequest) {
             "Daily task logs retrieved",
         );
     } catch (err: any) {
-        return errorResponse(err.message, 500);
+        return errorResponse("Failed to load daily task logs", 500);
     }
 }

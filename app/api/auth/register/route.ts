@@ -26,7 +26,10 @@ export async function POST(req: NextRequest) {
         email_confirm: true,
       });
 
-    if (authError) return errorResponse(authError.message, 400);
+    if (authError) {
+      console.error("[Auth] Registration create user failed:", authError);
+      return errorResponse("Registration failed. Please try again.", 400);
+    }
 
     const user = data.user;
 
@@ -77,6 +80,7 @@ export async function POST(req: NextRequest) {
       201,
     );
   } catch (err: any) {
-    return errorResponse(err.message || "Internal Server Error", 500);
+    console.error("[Auth] Registration error:", err);
+    return errorResponse("Registration failed. Please try again.", 500);
   }
 }

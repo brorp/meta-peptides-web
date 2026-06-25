@@ -1,6 +1,10 @@
 import { NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { errorResponse, successResponse } from "@/lib/api-response";
+import { requireAdminApiSession } from "@/lib/admin-api";
+
+const ADMIN_EXPENSE_SELECT =
+  "id, title, category, amount, expense_date, vendor, payment_method, notes, created_at, updated_at";
 
 const normalizeExpenseUpdate = (body: any) => {
   const updateData: Record<string, any> = {};
@@ -50,11 +54,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const auth = await requireAdminApiSession(["root"]);
+    if (auth.response) return auth.response;
+
     const { id } = await params;
 
     const { data, error } = await supabaseAdmin
       .from("expenses")
-      .select("*")
+      .select(ADMIN_EXPENSE_SELECT)
       .eq("id", id)
       .single();
 
@@ -62,7 +69,7 @@ export async function GET(
 
     return successResponse(data, "Expense retrieved");
   } catch (err: any) {
-    return errorResponse(err.message, 500);
+    return errorResponse("Failed to load expense", 500);
   }
 }
 
@@ -71,6 +78,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const auth = await requireAdminApiSession(["root"]);
+    if (auth.response) return auth.response;
+
     const { id } = await params;
     const normalized = normalizeExpenseUpdate(await req.json());
 
@@ -83,14 +93,14 @@ export async function PUT(
       .from("expenses")
       .update(normalized.data)
       .eq("id", id)
-      .select()
+      .select(ADMIN_EXPENSE_SELECT)
       .single();
 
-    if (error) return errorResponse(error.message, 400);
+    if (error) return errorResponse("Failed to update expense", 400);
 
     return successResponse(data, "Expense updated");
   } catch (err: any) {
-    return errorResponse(err.message, 500);
+    return errorResponse("Failed to update expense", 500);
   }
 }
 
@@ -99,14 +109,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const auth = await requireAdminApiSession(["root"]);
+    if (auth.response) return auth.response;
+
     const { id } = await params;
 
     const { error } = await supabaseAdmin.from("expenses").delete().eq("id", id);
 
-    if (error) return errorResponse(error.message, 400);
+    if (error) return errorResponse("Failed to delete expense", 400);
 
     return successResponse({ id }, "Expense deleted");
   } catch (err: any) {
-    return errorResponse(err.message, 500);
+    return errorResponse("Failed to delete expense", 500);
   }
 }

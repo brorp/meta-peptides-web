@@ -4,9 +4,16 @@ import {
     paginateResponse,
     errorResponse,
 } from "@/lib/api-response";
+import { requireAdminApiSession } from "@/lib/admin-api";
+
+const ADMIN_PREORDER_SELECT =
+    "id, name, domisili, shopee_username, whatsapp_number, product_id, product_name, status, created_at, products(name)";
 
 export async function GET(req: NextRequest) {
     try {
+        const auth = await requireAdminApiSession(["root"]);
+        if (auth.response) return auth.response;
+
         const { searchParams } = new URL(req.url);
         const page = parseInt(searchParams.get("page") || "1");
         const limit = parseInt(searchParams.get("limit") || "20");
@@ -18,7 +25,7 @@ export async function GET(req: NextRequest) {
 
         let query = supabaseAdmin
             .from("shopee_preorders")
-            .select("*, products(name)", { count: "exact" });
+            .select(ADMIN_PREORDER_SELECT, { count: "exact" });
 
         if (keyword) {
             query = query.or(`name.ilike.%${keyword}%,shopee_username.ilike.%${keyword}%,whatsapp_number.ilike.%${keyword}%`);
@@ -32,7 +39,7 @@ export async function GET(req: NextRequest) {
             .order("created_at", { ascending: false })
             .range(from, to);
 
-        if (error) return errorResponse(error.message, 400);
+        if (error) return errorResponse("Failed to load preorders", 400);
 
         return paginateResponse(
             data,
@@ -42,6 +49,6 @@ export async function GET(req: NextRequest) {
             "Preorders retrieved",
         );
     } catch (err: any) {
-        return errorResponse(err.message, 500);
+        return errorResponse("Failed to load preorders", 500);
     }
 }

@@ -61,12 +61,17 @@ export async function POST(req: NextRequest) {
 
     return successResponse(
       {
-        user: data.user,
+        user: {
+          id: data.user.id,
+          email: data.user.email || null,
+          is_anonymous: data.user.is_anonymous,
+        },
         provider: getProviderLabel(data.user, "anonymous"),
       },
       "Continuing as guest.",
     );
   } catch (err: any) {
-    return errorResponse(err.message || "Internal Server Error", 500);
+    console.error("[Auth] Guest session error:", err);
+    return errorResponse("Unable to continue as guest right now.", 500);
   }
 }

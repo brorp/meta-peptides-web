@@ -17,7 +17,7 @@ export async function GET() {
 
     const { data: profile } = await supabaseServer
       .from("profiles")
-      .select("*")
+      .select("id, email, full_name, phone, role, created_at")
       .eq("id", user.id)
       .single();
 
@@ -30,6 +30,6 @@ export async function GET() {
       "User data retrieved successfully",
     );
   } catch (err: any) {
-    return errorResponse(err.message || "Internal Server Error", 500);
+    return errorResponse("Failed to load user data", 500);
   }
 }

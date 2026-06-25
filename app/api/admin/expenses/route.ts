@@ -5,6 +5,10 @@ import {
   paginateResponse,
   successResponse,
 } from "@/lib/api-response";
+import { requireAdminApiSession } from "@/lib/admin-api";
+
+const ADMIN_EXPENSE_SELECT =
+  "id, title, category, amount, expense_date, vendor, payment_method, notes, created_at, updated_at";
 
 const normalizeExpensePayload = (body: any) => {
   const title = String(body.title || "").trim();
@@ -36,6 +40,9 @@ const normalizeExpensePayload = (body: any) => {
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requireAdminApiSession(["root"]);
+    if (auth.response) return auth.response;
+
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
@@ -49,7 +56,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabaseAdmin
       .from("expenses")
-      .select("*", { count: "exact" });
+      .select(ADMIN_EXPENSE_SELECT, { count: "exact" });
 
     if (keyword) {
       query = query.or(
@@ -66,7 +73,7 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: false })
       .range(from, to);
 
-    if (error) return errorResponse(error.message, 400);
+    if (error) return errorResponse("Failed to load expenses", 400);
 
     return paginateResponse(
       data || [],
@@ -76,25 +83,28 @@ export async function GET(req: NextRequest) {
       "Expenses retrieved",
     );
   } catch (err: any) {
-    return errorResponse(err.message, 500);
+    return errorResponse("Failed to load expenses", 500);
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAdminApiSession(["root"]);
+    if (auth.response) return auth.response;
+
     const normalized = normalizeExpensePayload(await req.json());
     if (normalized.error) return errorResponse(normalized.error, 400);
 
     const { data, error } = await supabaseAdmin
       .from("expenses")
       .insert(normalized.data)
-      .select()
+      .select(ADMIN_EXPENSE_SELECT)
       .single();
 
-    if (error) return errorResponse(error.message, 400);
+    if (error) return errorResponse("Failed to create expense", 400);
 
     return successResponse(data, "Expense created", 201);
   } catch (err: any) {
-    return errorResponse(err.message, 500);
+    return errorResponse("Failed to create expense", 500);
   }
 }

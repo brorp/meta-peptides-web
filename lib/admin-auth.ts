@@ -3,8 +3,14 @@ import { cookies } from "next/headers";
 import crypto from "crypto";
 
 const COOKIE_NAME = "admin-session";
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
+
+if (!ADMIN_JWT_SECRET && process.env.NODE_ENV === "production") {
+    throw new Error("ADMIN_JWT_SECRET is required in production");
+}
+
 const JWT_SECRET = new TextEncoder().encode(
-    process.env.ADMIN_JWT_SECRET || "fallback-secret-change-me",
+    ADMIN_JWT_SECRET || "development-admin-secret-change-me",
 );
 
 export type AdminRole = "root" | "admin";

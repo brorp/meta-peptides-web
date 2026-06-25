@@ -31,7 +31,7 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
     // Look up voucher (case-insensitive)
     const { data: voucher, error: voucherError } = await supabaseAdmin
       .from("vouchers")
-      .select("*")
+      .select("id, code, discount_nominal, max_discount_cap, valid_from, valid_until, max_claim_qty, total_claimed, is_active")
       .ilike("code", code.trim())
       .maybeSingle();
 
@@ -103,6 +103,6 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
       "Voucher is valid",
     );
   } catch (err: any) {
-    return errorResponse(err.message || "Internal Server Error", 500);
+    return errorResponse("Failed to validate voucher", 500);
   }
 });

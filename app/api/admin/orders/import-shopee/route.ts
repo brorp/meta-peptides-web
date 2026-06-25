@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { importShopeeOrders } from "@/lib/shopee-import";
+import { requireAdminApiSession } from "@/lib/admin-api";
 
 export const runtime = "nodejs";
 
@@ -9,6 +10,9 @@ const parseBoolean = (value: FormDataEntryValue | string | null) =>
 
 export async function POST(req: NextRequest) {
     try {
+        const auth = await requireAdminApiSession();
+        if (auth.response) return auth.response;
+
         const { searchParams } = new URL(req.url);
         const formData = await req.formData();
         const file = formData.get("file");
@@ -43,6 +47,6 @@ export async function POST(req: NextRequest) {
             dryRun ? "Shopee import dry run completed" : "Shopee orders imported",
         );
     } catch (err: any) {
-        return errorResponse(err.message || "Failed to import Shopee orders", 500);
+        return errorResponse("Failed to import Shopee orders", 500);
     }
 }

@@ -16,7 +16,12 @@ export async function GET(req: NextRequest) {
   try {
     let query = supabase.from("lab_tests").select(
       `
-        *,
+        id,
+        product_id,
+        purity_level,
+        test_date,
+        report_url,
+        report_images,
         product:products (
           name,
           image_url,
@@ -43,6 +48,6 @@ export async function GET(req: NextRequest) {
       "Products retrieved successfully",
     );
   } catch (err: any) {
-    return errorResponse(err.message, 500);
+    return errorResponse("Failed to load lab tests", 500);
   }
 }

@@ -5,9 +5,16 @@ import {
   errorResponse,
   successResponse,
 } from "@/lib/api-response";
+import { requireAdminApiSession } from "@/lib/admin-api";
+
+const ADMIN_VOUCHER_SELECT =
+  "id, code, discount_nominal, max_discount_cap, valid_from, valid_until, max_claim_qty, total_claimed, is_active, created_at, updated_at";
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requireAdminApiSession();
+    if (auth.response) return auth.response;
+
     const { searchParams } = new URL(req.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "20");
@@ -18,7 +25,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabaseAdmin
       .from("vouchers")
-      .select("*", { count: "exact" });
+      .select(ADMIN_VOUCHER_SELECT, { count: "exact" });
 
     if (keyword) {
       query = query.ilike("code", `%${keyword}%`);
@@ -28,7 +35,7 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: false })
       .range(from, to);
 
-    if (error) return errorResponse(error.message, 400);
+    if (error) return errorResponse("Failed to load vouchers", 400);
 
     return paginateResponse(
       data,
@@ -38,12 +45,15 @@ export async function GET(req: NextRequest) {
       "Vouchers retrieved",
     );
   } catch (err: any) {
-    return errorResponse(err.message, 500);
+    return errorResponse("Failed to load vouchers", 500);
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAdminApiSession();
+    if (auth.response) return auth.response;
+
     const body = await req.json();
 
     const {
@@ -108,13 +118,13 @@ export async function POST(req: NextRequest) {
         max_claim_qty: maxClaimQty,
         is_active: is_active !== false,
       })
-      .select()
+      .select(ADMIN_VOUCHER_SELECT)
       .single();
 
-    if (error) return errorResponse(error.message, 400);
+    if (error) return errorResponse("Failed to create voucher", 400);
 
     return successResponse(data, "Voucher created", 201);
   } catch (err: any) {
-    return errorResponse(err.message, 500);
+    return errorResponse("Failed to create voucher", 500);
   }
 }

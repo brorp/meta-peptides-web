@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { errorResponse, successResponse } from "@/lib/api-response";
-import { getAdminSessionFromCookies } from "@/lib/admin-auth";
+import { requireAdminApiSession } from "@/lib/admin-api";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import {
     getPendingCustomerTasks,
@@ -9,6 +9,9 @@ import {
 
 export async function GET() {
     try {
+        const auth = await requireAdminApiSession(["root"]);
+        if (auth.response) return auth.response;
+
         const tasks = await getPendingCustomerTasks();
         return successResponse(
             {
@@ -18,14 +21,15 @@ export async function GET() {
             "Daily tasks retrieved",
         );
     } catch (err: any) {
-        return errorResponse(err.message, 500);
+        return errorResponse("Failed to load daily tasks", 500);
     }
 }
 
 export async function POST(req: NextRequest) {
     try {
-        const role = await getAdminSessionFromCookies();
-        if (!role) return errorResponse("Unauthorized", 401);
+        const auth = await requireAdminApiSession(["root"]);
+        if (auth.response) return auth.response;
+        const role = auth.role;
 
         const body = await req.json();
         const customerId = String(body.customer_id || "").trim();
@@ -49,7 +53,7 @@ export async function POST(req: NextRequest) {
 
         const { data: customer, error: customerError } = await supabaseAdmin
             .from("customers")
-            .select("*")
+            .select("id, full_name, username, whatsapp_phone, email, domicile, current_journey, first_order_id")
             .eq("id", customerId)
             .single();
 
@@ -90,10 +94,10 @@ export async function POST(req: NextRequest) {
             .from("customers")
             .update(updateData)
             .eq("id", customerId)
-            .select()
+            .select("id, full_name, username, whatsapp_phone, email, domicile, current_journey, first_order_id, last_order_id, journey_updated_at, updated_at")
             .single();
 
-        if (updateError) return errorResponse(updateError.message, 400);
+        if (updateError) return errorResponse("Failed to update daily task", 400);
 
         const { error: logError } = await supabaseAdmin
             .from("customer_journey_logs")
@@ -108,10 +112,10 @@ export async function POST(req: NextRequest) {
                 performed_by_role: role,
             });
 
-        if (logError) return errorResponse(logError.message, 400);
+        if (logError) return errorResponse("Failed to record daily task", 400);
 
         return successResponse(updatedCustomer, "Daily task completed");
     } catch (err: any) {
-        return errorResponse(err.message, 500);
+        return errorResponse("Failed to complete daily task", 500);
     }
 }

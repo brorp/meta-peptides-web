@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { requireAdminApiSession } from "@/lib/admin-api";
 
 const ANALYTICS_ORDER_STATUSES = ["processing", "completed"];
 const RANGE_OPTIONS = ["today", "this_week", "this_month", "90_days"] as const;
@@ -139,6 +140,9 @@ function getGrossOrderAmount(order: any) {
 
 export async function GET(req: NextRequest) {
   try {
+    const auth = await requireAdminApiSession();
+    if (auth.response) return auth.response;
+
     const { searchParams } = new URL(req.url);
     const dateRange = getDateRange(searchParams.get("range"));
 
@@ -151,7 +155,7 @@ export async function GET(req: NextRequest) {
       .gte("created_at", dateRange.from)
       .lte("created_at", dateRange.to);
 
-    if (error) return errorResponse(error.message, 400);
+    if (error) return errorResponse("Failed to load order analytics", 400);
 
     const productMap = new Map<
       string,
@@ -259,6 +263,6 @@ export async function GET(req: NextRequest) {
       "Order analytics retrieved",
     );
   } catch (err: any) {
-    return errorResponse(err.message || "Failed to load order analytics", 500);
+    return errorResponse("Failed to load order analytics", 500);
   }
 }

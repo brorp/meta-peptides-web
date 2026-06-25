@@ -4,12 +4,19 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import React from "react";
 import { renderInvoicePdfBuffer } from "@/lib/pdf/generate-invoice";
 import { PackingSlipDocument } from "@/lib/pdf/generate-packing-slip";
+import { requireAdminApiSession } from "@/lib/admin-api";
+
+const ADMIN_ORDER_PDF_SELECT =
+    "id, status, created_at, total_price, subtotal, voucher_code, voucher_discount_amount, marketplace_fee, shipping_name, shipping_phone, shipping_email, shipping_address, shipping_regional, shipping_zip, customer_username, note, tracking_number, order_source, manual_reference, shipping_fee, shipment_type, order_items(id, product_id, quantity, price_at_purchase, products(name, label, volume, image_url, slug)), payments(id, transaction_code, payment_type, status)";
 
 export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> },
 ) {
     try {
+        const auth = await requireAdminApiSession();
+        if (auth.response) return auth.response;
+
         const { id } = await params;
         const { searchParams } = new URL(req.url);
         const type = searchParams.get("type");
@@ -24,7 +31,7 @@ export async function GET(
         // Fetch order with items and payments
         const { data: order, error } = await supabaseAdmin
             .from("orders")
-            .select("*, order_items(*, products(name, label, volume, image_url, slug)), payments(*)")
+            .select(ADMIN_ORDER_PDF_SELECT)
             .eq("id", id)
             .single();
 
@@ -56,7 +63,7 @@ export async function GET(
     } catch (err: any) {
         console.error("PDF generation error:", err);
         return NextResponse.json(
-            { success: false, message: err.message || "Failed to generate PDF" },
+            { success: false, message: "Failed to generate PDF" },
             { status: 500 },
         );
     }

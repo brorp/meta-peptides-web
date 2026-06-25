@@ -2,8 +2,14 @@ import { createServerClient } from "@supabase/ssr";
 import { jwtVerify } from "jose";
 import { NextResponse, type NextRequest } from "next/server";
 
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
+
+if (!ADMIN_JWT_SECRET && process.env.NODE_ENV === "production") {
+  throw new Error("ADMIN_JWT_SECRET is required in production");
+}
+
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.ADMIN_JWT_SECRET || "fallback-secret-change-me",
+  ADMIN_JWT_SECRET || "development-admin-secret-change-me",
 );
 
 type AdminRole = "root" | "admin";

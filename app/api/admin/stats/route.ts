@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { requireAdminApiSession } from "@/lib/admin-api";
 
 const FINANCIAL_ORDER_STATUSES = ["completed", "processing"];
 
 export async function GET() {
     try {
+        const auth = await requireAdminApiSession(["root"]);
+        if (auth.response) return auth.response;
+
         // Total users
         const { data: authUsersData, error: authUsersError } =
             await supabaseAdmin.auth.admin.listUsers({
@@ -21,12 +25,12 @@ export async function GET() {
         // Total products
         const { count: totalProducts } = await supabaseAdmin
             .from("products")
-            .select("*", { count: "exact", head: true });
+            .select("id", { count: "exact", head: true });
 
         // Total orders
         const { count: totalOrders } = await supabaseAdmin
             .from("orders")
-            .select("*", { count: "exact", head: true });
+            .select("id", { count: "exact", head: true });
 
         // Financial report uses active/paid order statuses only.
         const { data: revenueData, error: revenueError } = await supabaseAdmin
@@ -153,13 +157,13 @@ export async function GET() {
         // Pending orders
         const { count: pendingOrders } = await supabaseAdmin
             .from("orders")
-            .select("*", { count: "exact", head: true })
+            .select("id", { count: "exact", head: true })
             .eq("status", "pending_review");
 
         // Recent orders
         const { data: recentOrders } = await supabaseAdmin
             .from("orders")
-            .select("*, order_items(*, products(name, image_url))")
+            .select("id, shipping_name, total_price, status, created_at")
             .order("created_at", { ascending: false })
             .limit(5);
 
@@ -188,7 +192,7 @@ export async function GET() {
         });
     } catch (err: any) {
         return NextResponse.json(
-            { success: false, message: err.message || "Internal Server Error" },
+            { success: false, message: "Failed to load dashboard stats" },
             { status: 500 },
         );
     }

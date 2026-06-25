@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
       .eq("whatsapp_phone", whatsappPhone)
       .maybeSingle();
 
-    if (existingError) return errorResponse(existingError.message, 400);
+    if (existingError) return errorResponse("Failed to submit consultation", 400);
 
     if (existing) {
       const { data, error } = await supabaseAdmin
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
         .select("id")
         .single();
 
-      if (error) return errorResponse(error.message, 400);
+      if (error) return errorResponse("Failed to submit consultation", 400);
       return successResponse(data, "Consultation lead updated");
     }
 
@@ -96,10 +96,10 @@ export async function POST(req: NextRequest) {
       .select("id")
       .single();
 
-    if (error) return errorResponse(error.message, 400);
+    if (error) return errorResponse("Failed to submit consultation", 400);
 
     return successResponse(data, "Consultation lead created", 201);
   } catch (err: any) {
-    return errorResponse(err.message || "Failed to submit consultation", 500);
+    return errorResponse("Failed to submit consultation", 500);
   }
 }
