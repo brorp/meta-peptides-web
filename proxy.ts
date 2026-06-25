@@ -8,23 +8,23 @@ const JWT_SECRET = new TextEncoder().encode(
 
 type AdminRole = "root" | "admin";
 
-const SALES_ADMIN_PANEL_PREFIXES = [
-  "/panel-xyz123/daily-tasks",
-  "/panel-xyz123/users",
+const STAFF_ADMIN_DEFAULT_PATH = "/panel-xyz123/orders";
+
+const STAFF_ADMIN_PANEL_PREFIXES = [
   "/panel-xyz123/orders",
-  "/panel-xyz123/resellers",
-  "/panel-xyz123/vouchers",
   "/panel-xyz123/customers",
+  "/panel-xyz123/users",
+  "/panel-xyz123/products",
+  "/panel-xyz123/vouchers",
 ];
 
-const SALES_ADMIN_API_PREFIXES = [
+const STAFF_ADMIN_API_PREFIXES = [
   "/api/admin/auth",
-  "/api/admin/daily-tasks",
-  "/api/admin/users",
   "/api/admin/orders",
-  "/api/admin/resellers",
-  "/api/admin/vouchers",
   "/api/admin/customers",
+  "/api/admin/users",
+  "/api/admin/products",
+  "/api/admin/vouchers",
   "/api/admin/upload",
 ];
 
@@ -39,7 +39,7 @@ async function verifyAdminToken(token: string): Promise<AdminRole | null> {
   }
 }
 
-const isAllowedForSalesAdmin = (pathname: string, prefixes: string[]) =>
+const isAllowedForStaffAdmin = (pathname: string, prefixes: string[]) =>
   prefixes.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
@@ -58,13 +58,13 @@ export async function proxy(request: NextRequest) {
     if (role === "admin") {
       if (pathname === "/panel-xyz123") {
         return NextResponse.redirect(
-          new URL("/panel-xyz123/daily-tasks", request.url),
+          new URL(STAFF_ADMIN_DEFAULT_PATH, request.url),
         );
       }
 
-      if (!isAllowedForSalesAdmin(pathname, SALES_ADMIN_PANEL_PREFIXES)) {
+      if (!isAllowedForStaffAdmin(pathname, STAFF_ADMIN_PANEL_PREFIXES)) {
         return NextResponse.redirect(
-          new URL("/panel-xyz123/daily-tasks", request.url),
+          new URL(STAFF_ADMIN_DEFAULT_PATH, request.url),
         );
       }
     }
@@ -79,7 +79,7 @@ export async function proxy(request: NextRequest) {
     if (role) {
       return NextResponse.redirect(
         new URL(
-          role === "admin" ? "/panel-xyz123/daily-tasks" : "/panel-xyz123",
+          role === "admin" ? STAFF_ADMIN_DEFAULT_PATH : "/panel-xyz123",
           request.url,
         ),
       );
@@ -100,7 +100,7 @@ export async function proxy(request: NextRequest) {
 
     if (
       role === "admin" &&
-      !isAllowedForSalesAdmin(pathname, SALES_ADMIN_API_PREFIXES)
+      !isAllowedForStaffAdmin(pathname, STAFF_ADMIN_API_PREFIXES)
     ) {
       return NextResponse.json(
         { success: false, message: "Forbidden" },

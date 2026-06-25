@@ -40,12 +40,31 @@ const INITIAL_FORM = {
 
 type FormField = keyof typeof INITIAL_FORM | "ageConfirmed";
 
+declare global {
+  interface Window {
+    fbq?: (...args: any[]) => void;
+  }
+}
+
 function getErrorMessage(error: any) {
   return (
     error?.response?.data?.message ||
     error?.message ||
     "Please review your details and try again."
   );
+}
+
+function trackFreeConsultationLead() {
+  if (typeof window === "undefined" || typeof window.fbq !== "function") {
+    return false;
+  }
+
+  window.fbq("track", "Lead", {
+    content_name: "Free Consultation",
+    content_category: "Consultation",
+  });
+
+  return true;
 }
 
 export function FreeConsultationForm() {
@@ -173,9 +192,19 @@ export function FreeConsultationForm() {
         .filter((line) => line !== null)
         .join("\n");
 
-      window.location.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+      const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
         message,
       )}`;
+      const trackedLead = trackFreeConsultationLead();
+
+      if (trackedLead) {
+        window.setTimeout(() => {
+          window.location.href = whatsappUrl;
+        }, 150);
+        return;
+      }
+
+      window.location.href = whatsappUrl;
     } catch (error: any) {
       toast.error("Could not submit your consultation", {
         description: getErrorMessage(error),

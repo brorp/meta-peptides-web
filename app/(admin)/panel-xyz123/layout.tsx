@@ -16,7 +16,6 @@ import {
     X,
     ChevronRight,
     ReceiptText,
-    ClipboardList,
     Warehouse,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -38,23 +37,21 @@ const ROOT_NAV_ITEMS = [
 ];
 
 const ADMIN_NAV_ITEMS = [
-    { label: "Daily Tasks", href: "/panel-xyz123/daily-tasks", icon: ClipboardList },
-    { label: "Users", href: "/panel-xyz123/users", icon: Users },
     { label: "Orders", href: "/panel-xyz123/orders", icon: ShoppingCart },
-    { label: "Vouchers", href: "/panel-xyz123/vouchers", icon: BadgePercent },
     { label: "Customers", href: "/panel-xyz123/customers", icon: Users },
+    { label: "Users", href: "/panel-xyz123/users", icon: Users },
+    { label: "Products", href: "/panel-xyz123/products", icon: Package },
+    { label: "Vouchers", href: "/panel-xyz123/vouchers", icon: BadgePercent },
 ];
 
 function AdminSidebar({
     collapsed,
     onToggle,
     role,
-    dailyTaskCount,
 }: {
     collapsed: boolean;
     onToggle: () => void;
     role: AdminRole | null;
-    dailyTaskCount: number;
 }) {
     const pathname = usePathname();
     const router = useRouter();
@@ -110,13 +107,6 @@ function AdminSidebar({
                         >
                             <item.icon className={`w-4 h-4 shrink-0 ${isActive ? "text-accent" : ""}`} />
                             {!collapsed && <span>{item.label}</span>}
-                            {!collapsed &&
-                                item.href === "/panel-xyz123/daily-tasks" &&
-                                dailyTaskCount > 0 && (
-                                    <span className="ml-auto rounded-full bg-destructive px-2 py-0.5 text-[10px] font-bold text-destructive-foreground">
-                                        {dailyTaskCount}
-                                    </span>
-                                )}
                             {!collapsed && isActive && (
                                 <ChevronRight className="w-3 h-3 ml-auto text-accent" />
                             )}
@@ -221,7 +211,6 @@ export default function AdminLayout({
 }) {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [role, setRole] = useState<AdminRole | null>(null);
-    const [dailyTaskCount, setDailyTaskCount] = useState(0);
 
     useEffect(() => {
         const fetchAdminContext = async () => {
@@ -229,11 +218,6 @@ export default function AdminLayout({
                 const { data } = await axios.get("/admin/auth/me");
                 const nextRole = data.data?.role || null;
                 setRole(nextRole);
-
-                if (nextRole === "admin") {
-                    const taskResponse = await axios.get("/admin/daily-tasks");
-                    setDailyTaskCount(Number(taskResponse.data?.data?.count || 0));
-                }
             } catch {
                 setRole(null);
             }
@@ -257,7 +241,6 @@ export default function AdminLayout({
                     collapsed={sidebarCollapsed}
                     onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
                     role={role}
-                    dailyTaskCount={dailyTaskCount}
                 />
 
                 <div className="flex-1 flex flex-col min-w-0">

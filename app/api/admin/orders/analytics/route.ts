@@ -4,6 +4,16 @@ import { supabaseAdmin } from "@/lib/supabase-server";
 
 const ANALYTICS_ORDER_STATUSES = ["processing", "completed"];
 const RANGE_OPTIONS = ["today", "this_week", "this_month", "90_days"] as const;
+const PLACEHOLDER_CUSTOMER_VALUES = new Set([
+  "-",
+  "--",
+  "n/a",
+  "na",
+  "none",
+  "null",
+  "undefined",
+  "unknown",
+]);
 
 function startOfDay(date: Date) {
   const next = new Date(date);
@@ -63,22 +73,68 @@ function isExcludedBestSeller(product: { name?: string; label?: string | null })
   );
 }
 
-function customerKey(order: any) {
-  return String(
-    order.customer_username ||
-      order.shipping_email ||
-      order.shipping_phone ||
-      order.shipping_name ||
-      order.id,
-  )
+function normalizeCustomerValue(value?: string | null) {
+  const normalized = String(value || "")
     .trim()
-    .toLowerCase();
+    .replace(/\s+/g, " ");
+  if (!normalized) return "";
+
+  const lowered = normalized.toLowerCase();
+  if (PLACEHOLDER_CUSTOMER_VALUES.has(lowered) || /^-+$/.test(normalized)) {
+    return "";
+  }
+
+  return normalized;
+}
+
+function normalizeCustomerPhone(value?: string | null) {
+  const normalized = normalizeCustomerValue(value);
+  const digits = normalized.replace(/\D/g, "");
+
+  return digits.length >= 6 ? digits : "";
+}
+
+function customerKey(order: any) {
+  const username = normalizeCustomerValue(order.customer_username);
+  if (username) return `username:${username.toLowerCase()}`;
+
+  const email = normalizeCustomerValue(order.shipping_email);
+  if (email) return `email:${email.toLowerCase()}`;
+
+  const phone = normalizeCustomerPhone(order.shipping_phone);
+  if (phone) return `phone:${phone}`;
+
+  const name = normalizeCustomerValue(order.shipping_name);
+  if (name) return `name:${name.toLowerCase()}`;
+
+  return `order:${order.id}`;
 }
 
 function customerLabel(order: any) {
-  const handle = String(order.customer_username || "").trim();
+  const handle = normalizeCustomerValue(order.customer_username);
   if (handle) return `@${handle}`;
-  return order.shipping_name || order.shipping_email || order.shipping_phone || "Customer";
+
+  return (
+    normalizeCustomerValue(order.shipping_name) ||
+    normalizeCustomerValue(order.shipping_email) ||
+    normalizeCustomerValue(order.shipping_phone) ||
+    "Customer"
+  );
+}
+
+function getGrossOrderAmount(order: any) {
+  const subtotal = Number(order.subtotal || 0);
+  if (Number.isFinite(subtotal) && subtotal > 0) return subtotal;
+
+  const itemGross = ((order as any).order_items || []).reduce(
+    (sum: number, item: any) =>
+      sum + Number(item.quantity || 0) * Number(item.price_at_purchase || 0),
+    0,
+  );
+
+  if (itemGross > 0) return itemGross;
+
+  return Number(order.total_price || 0);
 }
 
 export async function GET(req: NextRequest) {
@@ -113,7 +169,7 @@ export async function GET(req: NextRequest) {
     let totalShipmentFees = 0;
 
     for (const order of orders || []) {
-      const orderTotal = Number(order.total_price || 0);
+      const orderTotal = getGrossOrderAmount(order);
       totalRevenue += orderTotal;
 
       const key = customerKey(order);

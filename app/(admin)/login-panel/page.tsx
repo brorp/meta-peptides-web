@@ -25,7 +25,7 @@ export default function LoginPanelPage() {
                 toast.success("Access granted");
                 router.push(
                     data.data?.role === "admin"
-                        ? "/panel-xyz123/daily-tasks"
+                        ? "/panel-xyz123/orders"
                         : "/panel-xyz123",
                 );
                 router.refresh();

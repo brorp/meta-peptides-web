@@ -11,9 +11,17 @@ import {
     PackageX,
     Eye,
     EyeOff,
+    Save,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+
+type QuickEditField = "price" | "stock";
+type QuickEditValues = {
+    price: string;
+    stock: string;
+};
+type EditingCells = Record<string, Partial<Record<QuickEditField, boolean>>>;
 
 function formatCurrency(value: number) {
     return new Intl.NumberFormat("id-ID", {
@@ -23,28 +31,63 @@ function formatCurrency(value: number) {
     }).format(value);
 }
 
+function formatCurrencyPreview(value: string) {
+    const numericValue = Number(value || 0);
+    return Number.isFinite(numericValue)
+        ? formatCurrency(numericValue)
+        : "Invalid price";
+}
+
+function makeQuickEditValues(product: any): QuickEditValues {
+    return {
+        price: String(Number(product.price || 0)),
+        stock: String(Number(product.stock || 0)),
+    };
+}
+
+function getStockTone(value: number | string) {
+    const stock = Number(value || 0);
+
+    if (stock <= 0) return "text-destructive";
+    if (stock <= 5) return "text-yellow-500";
+
+    return "text-green-500";
+}
+
 export default function AdminProductsPage() {
     const router = useRouter();
     const [products, setProducts] = useState<any[]>([]);
+    const [quickEdits, setQuickEdits] = useState<Record<string, QuickEditValues>>({});
+    const [editingCells, setEditingCells] = useState<EditingCells>({});
+    const [savingQuickEditKey, setSavingQuickEditKey] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [keyword, setKeyword] = useState("");
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
 
-    const fetchProducts = async () => {
-        setLoading(true);
+    const fetchProducts = async (showLoading = true) => {
+        if (showLoading) setLoading(true);
         try {
             const { data } = await axios.get("/admin/products", {
                 params: { page, limit: 20, keyword },
             });
             if (data.success) {
-                setProducts(data.data || []);
+                const nextProducts = data.data || [];
+                setProducts(nextProducts);
+                setQuickEdits(
+                    Object.fromEntries(
+                        nextProducts.map((product: any) => [
+                            product.id,
+                            makeQuickEditValues(product),
+                        ]),
+                    ),
+                );
                 setTotalPages(data.pagination?.total_pages || 1);
             }
         } catch {
             toast.error("Failed to fetch products");
         } finally {
-            setLoading(false);
+            if (showLoading) setLoading(false);
         }
     };
 
@@ -72,6 +115,94 @@ export default function AdminProductsPage() {
             fetchProducts();
         } catch {
             toast.error("Failed to update product");
+        }
+    };
+
+    const getQuickEditValues = (product: any) =>
+        quickEdits[product.id] || makeQuickEditValues(product);
+
+    const getQuickEditKey = (product: any, field: QuickEditField) =>
+        `${product.id}:${field}`;
+
+    const isEditingField = (product: any, field: QuickEditField) =>
+        editingCells[product.id]?.[field] === true;
+
+    const updateQuickEdit = (
+        product: any,
+        field: QuickEditField,
+        value: string,
+    ) => {
+        setQuickEdits((current) => ({
+            ...current,
+            [product.id]: {
+                ...(current[product.id] || makeQuickEditValues(product)),
+                [field]: value,
+            },
+        }));
+    };
+
+    const openQuickEdit = (product: any, field: QuickEditField) => {
+        setQuickEdits((current) => ({
+            ...current,
+            [product.id]: current[product.id] || makeQuickEditValues(product),
+        }));
+        setEditingCells((current) => ({
+            ...current,
+            [product.id]: {
+                ...current[product.id],
+                [field]: true,
+            },
+        }));
+    };
+
+    const closeQuickEdit = (product: any, field: QuickEditField) => {
+        setEditingCells((current) => ({
+            ...current,
+            [product.id]: {
+                ...current[product.id],
+                [field]: false,
+            },
+        }));
+    };
+
+    const saveQuickEdit = async (product: any, field: QuickEditField) => {
+        const edits = getQuickEditValues(product);
+        const value = edits[field];
+        const numericValue = Number(value);
+
+        if (
+            field === "price" &&
+            (value.trim() === "" ||
+                !Number.isFinite(numericValue) ||
+                numericValue < 0)
+        ) {
+            toast.error("Price must be a valid non-negative number");
+            return;
+        }
+
+        if (
+            field === "stock" &&
+            (value.trim() === "" ||
+                !Number.isFinite(numericValue) ||
+                numericValue < 0 ||
+                !Number.isInteger(numericValue))
+        ) {
+            toast.error("Stock must be a valid whole number");
+            return;
+        }
+
+        setSavingQuickEditKey(getQuickEditKey(product, field));
+        try {
+            await axios.put(`/admin/products/${product.id}`, {
+                [field]: numericValue,
+            });
+            toast.success(`${field === "price" ? "Price" : "Stock"} updated`);
+            await fetchProducts(false);
+            closeQuickEdit(product, field);
+        } catch {
+            toast.error("Failed to update product");
+        } finally {
+            setSavingQuickEditKey(null);
         }
     };
 
@@ -112,7 +243,6 @@ export default function AdminProductsPage() {
                                 <th className="text-left px-5 py-3 font-medium">Product</th>
                                 <th className="text-left px-5 py-3 font-medium">Category</th>
                                 <th className="text-left px-5 py-3 font-medium">Price</th>
-                                <th className="text-left px-5 py-3 font-medium">COGS</th>
                                 <th className="text-left px-5 py-3 font-medium">Usage</th>
                                 <th className="text-left px-5 py-3 font-medium">Free Item</th>
                                 <th className="text-left px-5 py-3 font-medium">Stock</th>
@@ -123,14 +253,14 @@ export default function AdminProductsPage() {
                         <tbody>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={9} className="px-5 py-12 text-center">
+                                    <td colSpan={8} className="px-5 py-12 text-center">
                                         <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
                                     </td>
                                 </tr>
                             ) : products.length === 0 ? (
                                 <tr>
                                     <td
-                                        colSpan={9}
+                                        colSpan={8}
                                         className="px-5 py-12 text-center text-muted-foreground"
                                     >
                                         <PackageX className="w-8 h-8 mx-auto mb-2 opacity-30" />
@@ -169,11 +299,58 @@ export default function AdminProductsPage() {
                                         <td className="px-5 py-3 text-muted-foreground">
                                             {product.category || "-"}
                                         </td>
-                                        <td className="px-5 py-3 text-foreground font-medium">
-                                            {formatCurrency(product.price)}
-                                        </td>
-                                        <td className="px-5 py-3 text-muted-foreground">
-                                            {formatCurrency(product.cost_of_goods || 0)}
+                                        <td className="px-5 py-3">
+                                            {isEditingField(product, "price") ? (
+                                                <div className="flex items-center gap-2">
+                                                    <div className="space-y-1">
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            inputMode="decimal"
+                                                            value={getQuickEditValues(product).price}
+                                                            onChange={(e) =>
+                                                                updateQuickEdit(product, "price", e.target.value)
+                                                            }
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === "Enter") saveQuickEdit(product, "price");
+                                                            }}
+                                                            className="w-32 rounded-lg border border-border bg-background px-2 py-1.5 text-sm font-medium text-foreground outline-none transition-all focus:border-accent focus:ring-2 focus:ring-accent/20"
+                                                        />
+                                                        <p className="text-[11px] text-muted-foreground">
+                                                            {formatCurrencyPreview(
+                                                                getQuickEditValues(product).price,
+                                                            )}
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => saveQuickEdit(product, "price")}
+                                                        disabled={
+                                                            savingQuickEditKey === getQuickEditKey(product, "price")
+                                                        }
+                                                        className="p-2 rounded-lg hover:bg-accent/10 text-muted-foreground hover:text-accent transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                                        title="Save price"
+                                                    >
+                                                        {savingQuickEditKey === getQuickEditKey(product, "price") ? (
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                        ) : (
+                                                            <Save className="w-4 h-4" />
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-medium text-foreground">
+                                                        {formatCurrency(product.price)}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => openQuickEdit(product, "price")}
+                                                        className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                                                        title="Edit price"
+                                                    >
+                                                        <Edit className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="px-5 py-3 text-muted-foreground">
                                             {product.usage_days || 0} days
@@ -193,16 +370,51 @@ export default function AdminProductsPage() {
                                             )}
                                         </td>
                                         <td className="px-5 py-3">
-                                            <span
-                                                className={`font-medium ${product.stock <= 0
-                                                        ? "text-destructive"
-                                                        : product.stock <= 5
-                                                            ? "text-yellow-500"
-                                                            : "text-green-500"
-                                                    }`}
-                                            >
-                                                {product.stock}
-                                            </span>
+                                            {isEditingField(product, "stock") ? (
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="1"
+                                                        inputMode="numeric"
+                                                        value={getQuickEditValues(product).stock}
+                                                        onChange={(e) =>
+                                                            updateQuickEdit(product, "stock", e.target.value)
+                                                        }
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === "Enter") saveQuickEdit(product, "stock");
+                                                        }}
+                                                        className={`w-20 rounded-lg border border-border bg-background px-2 py-1.5 text-sm font-medium outline-none transition-all focus:border-accent focus:ring-2 focus:ring-accent/20 ${getStockTone(getQuickEditValues(product).stock)}`}
+                                                    />
+                                                    <button
+                                                        onClick={() => saveQuickEdit(product, "stock")}
+                                                        disabled={
+                                                            savingQuickEditKey === getQuickEditKey(product, "stock")
+                                                        }
+                                                        className="p-2 rounded-lg hover:bg-accent/10 text-muted-foreground hover:text-accent transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                                        title="Save stock"
+                                                    >
+                                                        {savingQuickEditKey === getQuickEditKey(product, "stock") ? (
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                        ) : (
+                                                            <Save className="w-4 h-4" />
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2">
+                                                    <span className={`font-medium ${getStockTone(product.stock)}`}>
+                                                        {product.stock}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => openQuickEdit(product, "stock")}
+                                                        className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                                                        title="Edit stock"
+                                                    >
+                                                        <Edit className="w-3.5 h-3.5" />
+                                                    </button>
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="px-5 py-3">
                                             <span

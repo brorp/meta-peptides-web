@@ -32,6 +32,8 @@ const ORDER_SORT_FIELDS = [
     "order_source",
     "shipping_fee",
 ];
+const UUID_PATTERN =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type ManualOrderItemPayload = {
     product_id: string;
@@ -78,6 +80,31 @@ const normalizeSort = (sortBy: string | null, sortDir: string | null) => ({
     ascending: sortDir === "asc",
 });
 
+const buildOrderSearchFilter = (
+    rawKeyword: string,
+    { includeCustomerUsername }: { includeCustomerUsername: boolean },
+) => {
+    const keyword = rawKeyword.trim().replace(/[,()]/g, " ").trim();
+    if (!keyword) return "";
+
+    const textFilters = [
+        `shipping_name.ilike.%${keyword}%`,
+        `shipping_email.ilike.%${keyword}%`,
+        `shipping_phone.ilike.%${keyword}%`,
+        `manual_reference.ilike.%${keyword}%`,
+    ];
+
+    if (includeCustomerUsername) {
+        textFilters.push(`customer_username.ilike.%${keyword}%`);
+    }
+
+    if (UUID_PATTERN.test(rawKeyword.trim())) {
+        textFilters.push(`id.eq.${rawKeyword.trim()}`);
+    }
+
+    return textFilters.join(",");
+};
+
 export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);
@@ -104,9 +131,10 @@ export async function GET(req: NextRequest) {
         }
 
         if (keyword) {
-            query = query.or(
-                `shipping_name.ilike.%${keyword}%,shipping_email.ilike.%${keyword}%,customer_username.ilike.%${keyword}%,manual_reference.ilike.%${keyword}%,id.ilike.%${keyword}%`,
-            );
+            const searchFilter = buildOrderSearchFilter(keyword, {
+                includeCustomerUsername: true,
+            });
+            if (searchFilter) query = query.or(searchFilter);
         }
 
         let { data, error, count } = await query
@@ -124,9 +152,10 @@ export async function GET(req: NextRequest) {
                 fallbackQuery = fallbackQuery.eq("status", status);
             }
 
-            fallbackQuery = fallbackQuery.or(
-                `shipping_name.ilike.%${keyword}%,shipping_email.ilike.%${keyword}%,manual_reference.ilike.%${keyword}%,id.ilike.%${keyword}%`,
-            );
+            const fallbackSearchFilter = buildOrderSearchFilter(keyword, {
+                includeCustomerUsername: false,
+            });
+            if (fallbackSearchFilter) fallbackQuery = fallbackQuery.or(fallbackSearchFilter);
 
             const fallback = await fallbackQuery
                 .order(sortBy, { ascending })

@@ -116,6 +116,10 @@ function formatNumber(value: number) {
     return new Intl.NumberFormat("id-ID").format(value || 0);
 }
 
+function getErrorMessage(error: any, fallback: string) {
+    return error?.response?.data?.message || error?.message || fallback;
+}
+
 function summarizeDomiciles(distribution: DomicileDistribution[]) {
     const topDomiciles = distribution.slice(0, 5);
     const remaining = distribution.slice(5);
@@ -272,8 +276,10 @@ export default function AdminOrdersPage() {
                 setOrders(data.data || []);
                 setTotalPages(data.pagination?.total_pages || 1);
             }
-        } catch {
-            toast.error("Failed to fetch orders");
+        } catch (error: any) {
+            toast.error("Failed to fetch orders", {
+                description: getErrorMessage(error, "Please try again."),
+            });
         } finally {
             setLoading(false);
         }

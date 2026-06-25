@@ -11,8 +11,9 @@ export type AdminRole = "root" | "admin";
 
 export async function validateAccessCode(code: string): Promise<AdminRole | null> {
     const expectedCode = process.env.ADMIN_ACCESS_CODE;
-    const salesAdminCode =
-        process.env.ADMIN_SALES_ACCESS_CODE || "adminmeta123";
+    const staffAdminCode =
+        process.env.ADMIN_STAFF_ACCESS_CODE ||
+        process.env.ADMIN_SALES_ACCESS_CODE;
 
     const matchesCode = (candidate: string, expected?: string | null) => {
         if (!expected) return false;
@@ -26,7 +27,7 @@ export async function validateAccessCode(code: string): Promise<AdminRole | null
     };
 
     if (matchesCode(code, expectedCode)) return "root";
-    if (matchesCode(code, salesAdminCode)) return "admin";
+    if (matchesCode(code, staffAdminCode)) return "admin";
 
     return null;
 }
