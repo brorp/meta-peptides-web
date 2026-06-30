@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
     ArrowDown,
@@ -17,7 +17,6 @@ import {
     ShoppingCart,
     TrendingUp,
     Truck,
-    Upload,
     Users,
 } from "lucide-react";
 import {
@@ -44,6 +43,7 @@ const ANALYTICS_RANGES = [
     { label: "Today", value: "today" },
     { label: "This Week", value: "this_week" },
     { label: "90 Days", value: "90_days" },
+    { label: "Custom", value: "custom" },
 ];
 const DOMICILE_COLORS = [
     "#22c55e",
@@ -53,6 +53,7 @@ const DOMICILE_COLORS = [
     "#eab308",
     "#ec4899",
 ];
+const BUSINESS_TIME_ZONE = "Asia/Jakarta";
 
 type SortBy =
     | "created_at"
@@ -114,6 +115,22 @@ function formatDate(dateStr: string) {
 
 function formatNumber(value: number) {
     return new Intl.NumberFormat("id-ID").format(value || 0);
+}
+
+function formatDateInput(date: Date) {
+    const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: BUSINESS_TIME_ZONE,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+    }).formatToParts(date);
+    const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+
+    return `${values.year}-${values.month}-${values.day}`;
+}
+
+function getMonthStartInput() {
+    return `${formatDateInput(new Date()).slice(0, 8)}01`;
 }
 
 function getErrorMessage(error: any, fallback: string) {
@@ -238,19 +255,26 @@ function SourceBadge({ source }: { source?: string }) {
 
 export default function AdminOrdersPage() {
     const router = useRouter();
-    const fileInputRef = useRef<HTMLInputElement | null>(null);
     const [orders, setOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [loadingAnalytics, setLoadingAnalytics] = useState(true);
-    const [importing, setImporting] = useState(false);
     const [keyword, setKeyword] = useState("");
     const [status, setStatus] = useState("");
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [analyticsRange, setAnalyticsRange] = useState("this_month");
+    const [customDateFrom, setCustomDateFrom] = useState(getMonthStartInput);
+    const [customDateTo, setCustomDateTo] = useState(() =>
+        formatDateInput(new Date()),
+    );
     const [analytics, setAnalytics] = useState<OrdersAnalytics | null>(null);
     const [sortBy, setSortBy] = useState<SortBy>("created_at");
     const [sortDir, setSortDir] = useState<SortDir>("desc");
+    const customDateRangeInvalid =
+        analyticsRange === "custom" &&
+        Boolean(customDateFrom) &&
+        Boolean(customDateTo) &&
+        customDateFrom > customDateTo;
     const domicileChartData = summarizeDomiciles(
         analytics?.domicileDistribution || [],
     );
@@ -291,13 +315,29 @@ export default function AdminOrdersPage() {
 
     const fetchAnalytics = async () => {
         setLoadingAnalytics(true);
+        if (analyticsRange === "custom") {
+            if (!customDateFrom || !customDateTo || customDateRangeInvalid) {
+                setAnalytics(null);
+                setLoadingAnalytics(false);
+                return;
+            }
+        }
+
         try {
+            const params: Record<string, string> = { range: analyticsRange };
+            if (analyticsRange === "custom") {
+                params.date_from = customDateFrom;
+                params.date_to = customDateTo;
+            }
+
             const { data } = await axios.get("/admin/orders/analytics", {
-                params: { range: analyticsRange },
+                params,
             });
             if (data.success) setAnalytics(data.data);
-        } catch {
-            toast.error("Failed to fetch order analytics");
+        } catch (error: any) {
+            toast.error("Failed to fetch order analytics", {
+                description: getErrorMessage(error, "Please try again."),
+            });
         } finally {
             setLoadingAnalytics(false);
         }
@@ -305,7 +345,7 @@ export default function AdminOrdersPage() {
 
     useEffect(() => {
         fetchAnalytics();
-    }, [analyticsRange]);
+    }, [analyticsRange, customDateFrom, customDateTo]);
 
     const handleSort = (field: SortBy) => {
         setPage(1);
@@ -316,43 +356,6 @@ export default function AdminOrdersPage() {
 
         setSortBy(field);
         setSortDir(field === "created_at" || field === "total_price" ? "desc" : "asc");
-    };
-
-    const handleShopeeImport = async (
-        event: React.ChangeEvent<HTMLInputElement>,
-    ) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
-
-        const formData = new FormData();
-        formData.append("file", file);
-
-        setImporting(true);
-        try {
-            const { data } = await axios.post("/admin/orders/import-shopee", formData);
-            const result = data.data;
-            const importedCount =
-                Number(result?.created || 0) + Number(result?.updated || 0);
-            const errorCount = Number(result?.errors?.length || 0);
-
-            toast.success("Shopee XLSX imported", {
-                description: `${importedCount} order(s) synced. ${errorCount} error(s).`,
-            });
-
-            setPage(1);
-            fetchOrders();
-            fetchAnalytics();
-        } catch (error: any) {
-            toast.error("Failed to import Shopee XLSX", {
-                description:
-                    error?.message ||
-                    error?.error?.errors?.[0]?.message ||
-                    "Please check the file and try again.",
-            });
-        } finally {
-            setImporting(false);
-            if (fileInputRef.current) fileInputRef.current.value = "";
-        }
     };
 
     const updateOrderStatus = async (orderId: string, nextStatus: string) => {
@@ -395,25 +398,6 @@ export default function AdminOrdersPage() {
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                    <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept=".xlsx,.xls"
-                        onChange={handleShopeeImport}
-                        className="hidden"
-                    />
-                    <button
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={importing}
-                        className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-60"
-                    >
-                        {importing ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                            <Upload className="w-4 h-4" />
-                        )}
-                        Import Shopee XLSX
-                    </button>
                     <button
                         onClick={() => router.push("/panel-xyz123/orders/new")}
                         className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
@@ -434,7 +418,8 @@ export default function AdminOrdersPage() {
                             Sales pulse and customer signals
                         </h2>
                         <p className="text-sm text-muted-foreground">
-                            Active orders only: processing and completed.
+                            Active orders only: processing and completed. Revenue
+                            sums order total amount in the selected date range.
                         </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -453,6 +438,41 @@ export default function AdminOrdersPage() {
                         ))}
                     </div>
                 </div>
+
+                {analyticsRange === "custom" && (
+                    <div className="mt-4 grid gap-3 rounded-2xl border border-border/70 bg-background/70 p-4 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                        <label className="space-y-1.5 text-xs font-medium text-muted-foreground">
+                            From
+                            <input
+                                type="date"
+                                value={customDateFrom}
+                                max={customDateTo || undefined}
+                                onChange={(event) => setCustomDateFrom(event.target.value)}
+                                className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition-all focus:border-accent focus:ring-2 focus:ring-accent/20"
+                            />
+                        </label>
+                        <label className="space-y-1.5 text-xs font-medium text-muted-foreground">
+                            To
+                            <input
+                                type="date"
+                                value={customDateTo}
+                                min={customDateFrom || undefined}
+                                onChange={(event) => setCustomDateTo(event.target.value)}
+                                className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition-all focus:border-accent focus:ring-2 focus:ring-accent/20"
+                            />
+                        </label>
+                        <p
+                            className={`text-xs ${customDateRangeInvalid
+                                    ? "text-red-500"
+                                    : "text-muted-foreground"
+                                }`}
+                        >
+                            {customDateRangeInvalid
+                                ? "Start date must be before end date."
+                                : "Dates use the Indonesia business day."}
+                        </p>
+                    </div>
+                )}
 
                 {loadingAnalytics ? (
                     <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">

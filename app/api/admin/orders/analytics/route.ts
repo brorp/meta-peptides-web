@@ -4,7 +4,9 @@ import { supabaseAdmin } from "@/lib/supabase-server";
 import { requireAdminApiSession } from "@/lib/admin-api";
 
 const ANALYTICS_ORDER_STATUSES = ["processing", "completed"];
-const RANGE_OPTIONS = ["today", "this_week", "this_month", "90_days"] as const;
+const RANGE_OPTIONS = ["today", "this_week", "this_month", "90_days", "custom"] as const;
+const BUSINESS_TIME_ZONE = "Asia/Jakarta";
+const BUSINESS_TIME_ZONE_OFFSET = "+07:00";
 const PLACEHOLDER_CUSTOMER_VALUES = new Set([
   "-",
   "--",
@@ -16,36 +18,122 @@ const PLACEHOLDER_CUSTOMER_VALUES = new Set([
   "unknown",
 ]);
 
-function startOfDay(date: Date) {
-  const next = new Date(date);
-  next.setHours(0, 0, 0, 0);
-  return next;
+function getBusinessDateInput(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
-function getDateRange(rangeParam: string | null) {
+function parseDateInputParts(value?: string | null) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+
+  const [year, month, day] = value.split("-").map(Number);
+  const calendarDate = new Date(Date.UTC(year, month - 1, day));
+  if (
+    calendarDate.getUTCFullYear() !== year ||
+    calendarDate.getUTCMonth() !== month - 1 ||
+    calendarDate.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return { year, month, day };
+}
+
+function shiftDateInput(value: string, days: number) {
+  const parts = parseDateInputParts(value);
+  if (!parts) return value;
+
+  const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+  date.setUTCDate(date.getUTCDate() + days);
+
+  return [
+    date.getUTCFullYear(),
+    String(date.getUTCMonth() + 1).padStart(2, "0"),
+    String(date.getUTCDate()).padStart(2, "0"),
+  ].join("-");
+}
+
+function startOfBusinessDate(value: string) {
+  return new Date(`${value}T00:00:00.000${BUSINESS_TIME_ZONE_OFFSET}`);
+}
+
+function endOfBusinessDate(value: string) {
+  return new Date(`${value}T23:59:59.999${BUSINESS_TIME_ZONE_OFFSET}`);
+}
+
+function getDateRange(
+  rangeParam: string | null,
+  dateFromParam: string | null,
+  dateToParam: string | null,
+) {
   const range = RANGE_OPTIONS.includes(rangeParam as any)
     ? (rangeParam as (typeof RANGE_OPTIONS)[number])
     : "this_month";
   const now = new Date();
-  let from = startOfDay(now);
+  const todayInput = getBusinessDateInput(now);
+  let fromInput = todayInput;
+
+  if (range === "custom") {
+    const fromParts = parseDateInputParts(dateFromParam);
+    const toParts = parseDateInputParts(dateToParam);
+
+    if (!fromParts || !toParts || !dateFromParam || !dateToParam) {
+      return { error: "Custom date range requires valid date_from and date_to" };
+    }
+
+    const fromDate = startOfBusinessDate(dateFromParam);
+    const toDate = endOfBusinessDate(dateToParam);
+
+    if (fromDate.getTime() > toDate.getTime()) {
+      return { error: "Custom date range start must be before end date" };
+    }
+
+    return {
+      range,
+      from: fromDate.toISOString(),
+      to: toDate.toISOString(),
+    };
+  }
 
   if (range === "this_week") {
-    const day = from.getDay();
+    const todayParts = parseDateInputParts(todayInput);
+    const todayCalendarDate = new Date(
+      Date.UTC(
+        todayParts?.year || now.getUTCFullYear(),
+        (todayParts?.month || now.getUTCMonth() + 1) - 1,
+        todayParts?.day || now.getUTCDate(),
+      ),
+    );
+    const day = todayCalendarDate.getUTCDay();
     const diff = day === 0 ? 6 : day - 1;
-    from.setDate(from.getDate() - diff);
+    fromInput = shiftDateInput(todayInput, -diff);
   }
 
   if (range === "this_month") {
-    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    const todayParts = parseDateInputParts(todayInput);
+    if (todayParts) {
+      fromInput = [
+        todayParts.year,
+        String(todayParts.month).padStart(2, "0"),
+        "01",
+      ].join("-");
+    }
   }
 
   if (range === "90_days") {
-    from.setDate(from.getDate() - 89);
+    fromInput = shiftDateInput(todayInput, -89);
   }
 
   return {
     range,
-    from: from.toISOString(),
+    from: startOfBusinessDate(fromInput).toISOString(),
     to: now.toISOString(),
   };
 }
@@ -123,19 +211,9 @@ function customerLabel(order: any) {
   );
 }
 
-function getGrossOrderAmount(order: any) {
-  const subtotal = Number(order.subtotal || 0);
-  if (Number.isFinite(subtotal) && subtotal > 0) return subtotal;
-
-  const itemGross = ((order as any).order_items || []).reduce(
-    (sum: number, item: any) =>
-      sum + Number(item.quantity || 0) * Number(item.price_at_purchase || 0),
-    0,
-  );
-
-  if (itemGross > 0) return itemGross;
-
-  return Number(order.total_price || 0);
+function getOrderRevenue(order: any) {
+  const totalPrice = Number(order.total_price || 0);
+  return Number.isFinite(totalPrice) ? totalPrice : 0;
 }
 
 export async function GET(req: NextRequest) {
@@ -144,7 +222,12 @@ export async function GET(req: NextRequest) {
     if (auth.response) return auth.response;
 
     const { searchParams } = new URL(req.url);
-    const dateRange = getDateRange(searchParams.get("range"));
+    const dateRange = getDateRange(
+      searchParams.get("range"),
+      searchParams.get("date_from"),
+      searchParams.get("date_to"),
+    );
+    if ("error" in dateRange) return errorResponse(dateRange.error, 400);
 
     const { data: orders, error } = await supabaseAdmin
       .from("orders")
@@ -173,7 +256,7 @@ export async function GET(req: NextRequest) {
     let totalShipmentFees = 0;
 
     for (const order of orders || []) {
-      const orderTotal = getGrossOrderAmount(order);
+      const orderTotal = getOrderRevenue(order);
       totalRevenue += orderTotal;
 
       const key = customerKey(order);

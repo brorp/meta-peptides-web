@@ -120,6 +120,7 @@ export default function AdminOrderDetailPage({
     const [shipmentType, setShipmentType] = useState("");
     const [shippingFee, setShippingFee] = useState("");
     const [paymentType, setPaymentType] = useState("Bank Transfer");
+    const trackingNumberSupported = order?._schema?.tracking_number !== false;
 
     useEffect(() => {
         const fetchOrder = async () => {
@@ -134,7 +135,11 @@ export default function AdminOrderDetailPage({
                     const mo = String(raw.getMonth() + 1).padStart(2, "0");
                     const d = String(raw.getDate()).padStart(2, "0");
                     setOrderDate(`${y}-${mo}-${d}`);
-                    setTrackingNumber(data.data.tracking_number || "");
+                    setTrackingNumber(
+                        data.data._schema?.tracking_number === false
+                            ? ""
+                            : data.data.tracking_number || "",
+                    );
                     setShippingName(data.data.shipping_name || "");
                     setCustomerUsername(data.data.customer_username || "");
                     setShippingPhone(data.data.shipping_phone || "");
@@ -184,7 +189,7 @@ export default function AdminOrderDetailPage({
                 payload.created_at = new Date(orderDate).toISOString();
             }
 
-            if (trackingNumber.trim().length > 0) {
+            if (trackingNumberSupported && trackingNumber.trim().length > 0) {
                 payload.tracking_number = trackingNumber.trim();
             }
 
@@ -227,6 +232,11 @@ export default function AdminOrderDetailPage({
                 setPaymentType(
                     data.data.payments?.[0]?.payment_type ||
                     (data.data.order_source === "shopee" ? "Shopee" : "Bank Transfer"),
+                );
+                setTrackingNumber(
+                    data.data._schema?.tracking_number === false
+                        ? ""
+                        : data.data.tracking_number || "",
                 );
             } else {
                 toast.error(data.message);
@@ -761,18 +771,20 @@ export default function AdminOrderDetailPage({
                             </div>
                         )}
 
-                        <div>
-                            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                                Tracking Number
-                            </label>
-                            <input
-                                type="text"
-                                value={trackingNumber}
-                                onChange={(e) => setTrackingNumber(e.target.value)}
-                                placeholder="e.g., JNE1234567890"
-                                className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
-                            />
-                        </div>
+                        {trackingNumberSupported && (
+                            <div>
+                                <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                                    Tracking Number
+                                </label>
+                                <input
+                                    type="text"
+                                    value={trackingNumber}
+                                    onChange={(e) => setTrackingNumber(e.target.value)}
+                                    placeholder="e.g., JNE1234567890"
+                                    className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                                />
+                            </div>
+                        )}
 
                         {order.order_source === "shopee" && (
                             <div className="space-y-3 rounded-xl border border-orange-500/20 bg-orange-500/5 p-3">

@@ -5,9 +5,15 @@ import React from "react";
 import { renderInvoicePdfBuffer } from "@/lib/pdf/generate-invoice";
 import { PackingSlipDocument } from "@/lib/pdf/generate-packing-slip";
 import { requireAdminApiSession } from "@/lib/admin-api";
+import {
+    isMissingTrackingNumberColumn,
+    withoutTrackingNumberSelect,
+} from "@/lib/order-schema-compat";
 
 const ADMIN_ORDER_PDF_SELECT =
     "id, status, created_at, total_price, subtotal, voucher_code, voucher_discount_amount, marketplace_fee, shipping_name, shipping_phone, shipping_email, shipping_address, shipping_regional, shipping_zip, customer_username, note, tracking_number, order_source, manual_reference, shipping_fee, shipment_type, order_items(id, product_id, quantity, price_at_purchase, products(name, label, volume, image_url, slug)), payments(id, transaction_code, payment_type, status)";
+const ADMIN_ORDER_PDF_SELECT_WITHOUT_TRACKING =
+    withoutTrackingNumberSelect(ADMIN_ORDER_PDF_SELECT);
 
 export async function GET(
     req: NextRequest,
@@ -29,11 +35,22 @@ export async function GET(
         }
 
         // Fetch order with items and payments
-        const { data: order, error } = await supabaseAdmin
+        let { data: order, error } = await supabaseAdmin
             .from("orders")
             .select(ADMIN_ORDER_PDF_SELECT)
             .eq("id", id)
             .single();
+
+        if (error && isMissingTrackingNumberColumn(error)) {
+            const fallback = await supabaseAdmin
+                .from("orders")
+                .select(ADMIN_ORDER_PDF_SELECT_WITHOUT_TRACKING)
+                .eq("id", id)
+                .single();
+
+            order = fallback.data as any;
+            error = fallback.error;
+        }
 
         if (error || !order) {
             return NextResponse.json(

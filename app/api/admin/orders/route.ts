@@ -7,7 +7,9 @@ import {
 } from "@/lib/api-response";
 import {
     isMissingCustomerUsernameColumn,
+    isMissingTrackingNumberColumn,
     withoutCustomerUsername,
+    withoutTrackingNumberSelect,
 } from "@/lib/order-schema-compat";
 import { deductOrderInventory, normalizePaymentType } from "@/lib/inventory";
 import {
@@ -37,6 +39,8 @@ const ADMIN_ORDER_LIST_SELECT =
     "id, status, created_at, total_price, subtotal, voucher_discount_amount, marketplace_fee, shipping_name, shipping_email, customer_username, order_source, manual_reference, shipping_fee, shipment_type, order_items(id, quantity, price_at_purchase, products(name, image_url))";
 const ADMIN_ORDER_DETAIL_SELECT =
     "id, status, created_at, total_price, subtotal, voucher_code, voucher_discount_amount, marketplace_fee, shipping_name, shipping_phone, shipping_email, shipping_address, shipping_regional, shipping_zip, customer_username, note, tracking_number, order_source, manual_channel, manual_reference, shipping_fee, shipment_type, order_items(id, product_id, quantity, price_at_purchase, products(name, label, volume, image_url, slug)), payments(id, transaction_code, payment_type, status, receipt_url)";
+const ADMIN_ORDER_DETAIL_SELECT_WITHOUT_TRACKING =
+    withoutTrackingNumberSelect(ADMIN_ORDER_DETAIL_SELECT);
 const UUID_PATTERN =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -108,6 +112,44 @@ const buildOrderSearchFilter = (
     }
 
     return textFilters.join(",");
+};
+
+const withOrderSchema = (order: any, trackingNumberSupported: boolean) =>
+    order
+        ? {
+            ...order,
+            _schema: {
+                tracking_number: trackingNumberSupported,
+            },
+        }
+        : order;
+
+const loadAdminOrderDetail = async (id: string) => {
+    let { data, error } = await supabaseAdmin
+        .from("orders")
+        .select(ADMIN_ORDER_DETAIL_SELECT)
+        .eq("id", id)
+        .single();
+
+    if (error && isMissingTrackingNumberColumn(error)) {
+        const fallback = await supabaseAdmin
+            .from("orders")
+            .select(ADMIN_ORDER_DETAIL_SELECT_WITHOUT_TRACKING)
+            .eq("id", id)
+            .single();
+
+        data = fallback.data as any;
+        error = fallback.error;
+        return {
+            data: withOrderSchema(data, false),
+            error,
+        };
+    }
+
+    return {
+        data: withOrderSchema(data, true),
+        error,
+    };
 };
 
 export async function GET(req: NextRequest) {
@@ -395,11 +437,8 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const { data: createdOrder, error: loadError } = await supabaseAdmin
-            .from("orders")
-            .select(ADMIN_ORDER_DETAIL_SELECT)
-            .eq("id", order.id)
-            .single();
+        const { data: createdOrder, error: loadError } =
+            await loadAdminOrderDetail(order.id);
 
         if (loadError || !createdOrder) {
             return successResponse(
