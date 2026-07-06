@@ -126,6 +126,11 @@ export default function AdminOrderDetailPage({
     const [shippingFee, setShippingFee] = useState("");
     const [paymentType, setPaymentType] = useState("Bank Transfer");
     const trackingNumberSupported = order?._schema?.tracking_number !== false;
+    const canSyncShipmentExpense = Boolean(order && order.order_source !== "shopee");
+    const shipmentExpenseLabel =
+        order?.order_source === "manual_whatsapp"
+            ? "WhatsApp Shipment"
+            : "Website Shipment";
     const selectedProvinceName =
         provinces.find((province) => province.id === selectedProvinceId)?.nama || "";
     const shouldUseManualCityInput =
@@ -201,7 +206,7 @@ export default function AdminOrderDetailPage({
                 payload.tracking_number = trackingNumber.trim();
             }
 
-            if (order.order_source === "manual_whatsapp") {
+            if (order.order_source !== "shopee") {
                 payload.shipment_type = shipmentType;
                 payload.shipping_fee = Number(shippingFee || 0);
             }
@@ -477,7 +482,7 @@ export default function AdminOrderDetailPage({
                                     </span>
                                 </div>
                             )}
-                            {order.order_source === "manual_whatsapp" &&
+                            {canSyncShipmentExpense &&
                                 Number(order.shipping_fee || 0) > 0 && (
                                     <div className="flex justify-between text-sm">
                                         <span className="text-muted-foreground">
@@ -756,10 +761,10 @@ export default function AdminOrderDetailPage({
                             </select>
                         </div>
 
-                        {order.order_source === "manual_whatsapp" && (
+                        {canSyncShipmentExpense && (
                             <div className="space-y-3 rounded-xl border border-green-500/20 bg-green-500/5 p-3">
                                 <p className="text-xs font-semibold uppercase tracking-wider text-green-500">
-                                    WhatsApp Shipment
+                                    {shipmentExpenseLabel}
                                 </p>
                                 <label className="block space-y-1.5">
                                     <span className="text-xs font-medium text-muted-foreground">

@@ -287,34 +287,32 @@ export async function PUT(
       }
     }
 
-    if (currentOrder.order_source === "manual_whatsapp") {
-      try {
-        await syncShipmentExpenseForOrder({
-          orderId: id,
-          orderSource: currentOrder.order_source,
-          shippingFee:
-            updateData.shipping_fee !== undefined
-              ? Number(updateData.shipping_fee || 0)
-              : Number(currentOrder.shipping_fee || 0),
-          shipmentType:
-            updateData.shipment_type !== undefined
-              ? updateData.shipment_type
-              : currentOrder.shipment_type,
-          shippingName:
-            updateData.shipping_name !== undefined
-              ? updateData.shipping_name
-              : currentOrder.shipping_name,
-          createdAt:
-            updateData.created_at !== undefined
-              ? updateData.created_at
-              : currentOrder.created_at,
-        });
-      } catch (shipmentExpenseError: any) {
-        return errorResponse(
-          shipmentExpenseError.message || "Failed to sync shipment expense",
-          400,
-        );
-      }
+    try {
+      await syncShipmentExpenseForOrder({
+        orderId: id,
+        orderSource: currentOrder.order_source,
+        shippingFee:
+          updateData.shipping_fee !== undefined
+            ? Number(updateData.shipping_fee || 0)
+            : Number(currentOrder.shipping_fee || 0),
+        shipmentType:
+          updateData.shipment_type !== undefined
+            ? updateData.shipment_type
+            : currentOrder.shipment_type,
+        shippingName:
+          updateData.shipping_name !== undefined
+            ? updateData.shipping_name
+            : currentOrder.shipping_name,
+        createdAt:
+          updateData.created_at !== undefined
+            ? updateData.created_at
+            : currentOrder.created_at,
+      });
+    } catch (shipmentExpenseError: any) {
+      return errorResponse(
+        shipmentExpenseError.message || "Failed to sync shipment expense",
+        400,
+      );
     }
 
     // Stock is deducted at order-creation time (POST /admin/orders).

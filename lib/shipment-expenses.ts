@@ -12,6 +12,14 @@ export function normalizeShipmentFee(value: unknown) {
   return Number.isFinite(fee) && fee > 0 ? fee : 0;
 }
 
+function shouldSyncShipmentExpense(orderSource?: string | null) {
+  return orderSource !== "shopee";
+}
+
+function orderSourceLabel(orderSource?: string | null) {
+  return orderSource === "manual_whatsapp" ? "WhatsApp manual" : "website";
+}
+
 function getExpenseDate(createdAt?: string | null) {
   const date = createdAt ? new Date(createdAt) : new Date();
   if (Number.isNaN(date.getTime())) {
@@ -36,10 +44,11 @@ export async function syncShipmentExpenseForOrder({
   shippingName?: string | null;
   createdAt?: string | null;
 }) {
-  if (orderSource !== "manual_whatsapp") return;
+  if (!shouldSyncShipmentExpense(orderSource)) return;
 
   const normalizedFee = normalizeShipmentFee(shippingFee);
   const normalizedShipmentType = normalizeShipmentType(shipmentType);
+  const sourceLabel = orderSourceLabel(orderSource);
 
   if (normalizedFee <= 0) {
     const { error } = await supabaseAdmin
@@ -53,13 +62,13 @@ export async function syncShipmentExpenseForOrder({
   }
 
   const expensePayload = {
-    title: `Shipment fee - ${String(shippingName || "WhatsApp order").trim()}`,
+    title: `Shipment fee - ${String(shippingName || `${sourceLabel} order`).trim()}`,
     category: SHIPMENT_EXPENSE_CATEGORY,
     amount: normalizedFee,
     expense_date: getExpenseDate(createdAt),
     vendor: normalizedShipmentType,
     payment_method: null,
-    notes: `Auto-created from WhatsApp manual order ${orderId.slice(0, 8).toUpperCase()}. This cost is not included in the invoice total.`,
+    notes: `Auto-created from ${sourceLabel} order ${orderId.slice(0, 8).toUpperCase()}. This cost is not included in the invoice total.`,
     source_type: SHIPMENT_EXPENSE_SOURCE,
     source_order_id: orderId,
   };

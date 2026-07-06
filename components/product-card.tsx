@@ -18,6 +18,8 @@ export function ProductCard({
   onClick?: () => void;
 }) {
   const addToCart = useCartStore((state) => state.addToCart);
+  const stockCount = Number(product.stock || 0);
+  const isSoldOut = stockCount <= 0;
 
   return (
     <Card
@@ -76,13 +78,21 @@ export function ProductCard({
         {/* Stock Bar Indicator */}
         <div className="mt-auto">
           <div className="flex justify-between items-center mb-1.5">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500">
-              Available
+            <span
+              className={cn(
+                "text-[10px] font-bold uppercase tracking-widest",
+                isSoldOut ? "text-red-500" : "text-emerald-500",
+              )}
+            >
+              {isSoldOut ? "Sold out" : "Available"}
             </span>
           </div>
           <div className="h-1 w-full bg-muted rounded-full overflow-hidden mb-5">
             <div
-              className="h-full transition-all duration-1000 bg-emerald-500"
+              className={cn(
+                "h-full transition-all duration-1000",
+                isSoldOut ? "bg-red-500" : "bg-emerald-500",
+              )}
               style={{ width: "100%" }}
             />
           </div>
@@ -90,11 +100,14 @@ export function ProductCard({
           <Button
             onClick={(e) => {
               e.stopPropagation();
+              if (isSoldOut) return;
+
               addToCart(product);
               toast.success("Added to Cart", {
                 description: `${product.name} is now in your shopping bag.`,
               });
             }}
+            disabled={isSoldOut}
             className={cn(
               "w-full rounded-2xl py-4 h-auto font-bold transition-all duration-300",
               "bg-foreground text-background hover:bg-accent hover:text-white hover:scale-[1.02] active:scale-95",
@@ -102,7 +115,7 @@ export function ProductCard({
             )}
           >
             <ShoppingCart className="w-4 h-4 mr-2" />
-            Add to Cart
+            {isSoldOut ? "Sold Out" : "Add to Cart"}
           </Button>
         </div>
       </div>
