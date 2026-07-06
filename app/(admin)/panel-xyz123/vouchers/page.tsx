@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   BadgePercent,
   Edit,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
 
 type VoucherRecord = {
   id: string;
@@ -83,38 +84,22 @@ const getErrorMessage = (error: any, fallback: string) =>
   error?.message || error?.error || fallback;
 
 export default function AdminVouchersPage() {
-  const [vouchers, setVouchers] = useState<VoucherRecord[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<VoucherFormState>(buildDefaultForm);
-
-  const fetchVouchers = async () => {
-    setLoading(true);
-    try {
-      const { data } = await axios.get("/admin/vouchers", {
-        params: { page, limit: 20, keyword },
-      });
-
-      if (data.success) {
-        setVouchers(data.data || []);
-        setTotalPages(data.pagination?.total_pages || 1);
-      }
-    } catch (error: any) {
-      toast.error("Failed to fetch vouchers", {
-        description: getErrorMessage(error, "Please try again."),
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchVouchers();
-  }, [page, keyword]);
+  const {
+    data: vouchersResponse,
+    isLoading: loading,
+    refetch: refetchVouchers,
+  } = useApiQuery<any>(
+    ["admin-vouchers", page, keyword],
+    "/admin/vouchers",
+    { params: { page, limit: 20, keyword } },
+  );
+  const vouchers: VoucherRecord[] = vouchersResponse?.data || [];
+  const totalPages = vouchersResponse?.pagination?.total_pages || 1;
 
   const resetForm = () => {
     setEditingId(null);
@@ -145,7 +130,7 @@ export default function AdminVouchersPage() {
       }
 
       resetForm();
-      fetchVouchers();
+      refetchVouchers();
     } catch (error: any) {
       toast.error(editingId ? "Failed to update voucher" : "Failed to create voucher", {
         description: getErrorMessage(error, "Please review the voucher data."),
@@ -179,7 +164,7 @@ export default function AdminVouchersPage() {
         resetForm();
       }
 
-      fetchVouchers();
+      refetchVouchers();
     } catch (error: any) {
       toast.error("Failed to delete voucher", {
         description: getErrorMessage(error, "Please try again."),

@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { DollarSign, Package, ShoppingCart, Users, Clock, Tag, Store } from "lucide-react";
-import { api as axios } from "@/lib/axios";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
 
 type Stats = {
     totalUsers: number;
@@ -100,22 +99,13 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function AdminDashboardPage() {
-    const [stats, setStats] = useState<Stats | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const { data } = await axios.get("/admin/stats");
-                if (data.success) setStats(data.data);
-            } catch (err) {
-                console.error("Failed to fetch stats", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchStats();
-    }, []);
+    const { data: statsResponse, isLoading: loading } = useApiQuery<{
+        success: boolean;
+        data: Stats;
+    }>(["admin-stats"], "/admin/stats", undefined, {
+        staleTime: 60 * 1000,
+    });
+    const stats = statsResponse?.data || null;
 
     if (loading) {
         return (

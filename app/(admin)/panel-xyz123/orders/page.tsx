@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
     ArrowDown,
@@ -28,6 +28,8 @@ import {
 } from "recharts";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
+import { useQueryClient } from "@tanstack/react-query";
 
 const STATUS_TABS = [
     { label: "All", value: "" },
@@ -255,19 +257,15 @@ function SourceBadge({ source }: { source?: string }) {
 
 export default function AdminOrdersPage() {
     const router = useRouter();
-    const [orders, setOrders] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [loadingAnalytics, setLoadingAnalytics] = useState(true);
+    const queryClient = useQueryClient();
     const [keyword, setKeyword] = useState("");
     const [status, setStatus] = useState("");
     const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
     const [analyticsRange, setAnalyticsRange] = useState("this_month");
     const [customDateFrom, setCustomDateFrom] = useState(getMonthStartInput);
     const [customDateTo, setCustomDateTo] = useState(() =>
         formatDateInput(new Date()),
     );
-    const [analytics, setAnalytics] = useState<OrdersAnalytics | null>(null);
     const [sortBy, setSortBy] = useState<SortBy>("created_at");
     const [sortDir, setSortDir] = useState<SortDir>("desc");
     const customDateRangeInvalid =
@@ -275,6 +273,49 @@ export default function AdminOrdersPage() {
         Boolean(customDateFrom) &&
         Boolean(customDateTo) &&
         customDateFrom > customDateTo;
+    const ordersQueryKey = ["admin-orders", page, keyword, status, sortBy, sortDir];
+    const {
+        data: ordersResponse,
+        isLoading: loading,
+        refetch: refetchOrders,
+    } = useApiQuery<any>(
+        ordersQueryKey,
+        "/admin/orders",
+        {
+            params: {
+                page,
+                limit: 20,
+                keyword,
+                status,
+                sort_by: sortBy,
+                sort_dir: sortDir,
+            },
+        },
+    );
+    const analyticsEnabled =
+        analyticsRange !== "custom" ||
+        (Boolean(customDateFrom) && Boolean(customDateTo) && !customDateRangeInvalid);
+    const analyticsParams: Record<string, string> = { range: analyticsRange };
+    if (analyticsRange === "custom") {
+        analyticsParams.date_from = customDateFrom;
+        analyticsParams.date_to = customDateTo;
+    }
+    const {
+        data: analyticsResponse,
+        isLoading: analyticsQueryLoading,
+        refetch: refetchAnalytics,
+    } = useApiQuery<any>(
+        ["admin-orders-analytics", analyticsRange, customDateFrom, customDateTo],
+        "/admin/orders/analytics",
+        { params: analyticsParams },
+        { enabled: analyticsEnabled, staleTime: 60 * 1000 },
+    );
+    const orders = ordersResponse?.data || [];
+    const totalPages = ordersResponse?.pagination?.total_pages || 1;
+    const analytics: OrdersAnalytics | null = analyticsEnabled
+        ? analyticsResponse?.data || null
+        : null;
+    const loadingAnalytics = analyticsEnabled ? analyticsQueryLoading : false;
     const domicileChartData = summarizeDomiciles(
         analytics?.domicileDistribution || [],
     );
@@ -282,70 +323,6 @@ export default function AdminOrdersPage() {
         (total, domicile) => total + domicile.value,
         0,
     );
-
-    const fetchOrders = async () => {
-        setLoading(true);
-        try {
-            const { data } = await axios.get("/admin/orders", {
-                params: {
-                    page,
-                    limit: 20,
-                    keyword,
-                    status,
-                    sort_by: sortBy,
-                    sort_dir: sortDir,
-                },
-            });
-            if (data.success) {
-                setOrders(data.data || []);
-                setTotalPages(data.pagination?.total_pages || 1);
-            }
-        } catch (error: any) {
-            toast.error("Failed to fetch orders", {
-                description: getErrorMessage(error, "Please try again."),
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchOrders();
-    }, [page, keyword, status, sortBy, sortDir]);
-
-    const fetchAnalytics = async () => {
-        setLoadingAnalytics(true);
-        if (analyticsRange === "custom") {
-            if (!customDateFrom || !customDateTo || customDateRangeInvalid) {
-                setAnalytics(null);
-                setLoadingAnalytics(false);
-                return;
-            }
-        }
-
-        try {
-            const params: Record<string, string> = { range: analyticsRange };
-            if (analyticsRange === "custom") {
-                params.date_from = customDateFrom;
-                params.date_to = customDateTo;
-            }
-
-            const { data } = await axios.get("/admin/orders/analytics", {
-                params,
-            });
-            if (data.success) setAnalytics(data.data);
-        } catch (error: any) {
-            toast.error("Failed to fetch order analytics", {
-                description: getErrorMessage(error, "Please try again."),
-            });
-        } finally {
-            setLoadingAnalytics(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchAnalytics();
-    }, [analyticsRange, customDateFrom, customDateTo]);
 
     const handleSort = (field: SortBy) => {
         setPage(1);
@@ -359,10 +336,17 @@ export default function AdminOrdersPage() {
     };
 
     const updateOrderStatus = async (orderId: string, nextStatus: string) => {
-        setOrders((prev) =>
-            prev.map((order) =>
-                order.id === orderId ? { ...order, status: nextStatus } : order,
-            ),
+        queryClient.setQueryData(ordersQueryKey, (current: any) =>
+            current
+                ? {
+                      ...current,
+                      data: (current.data || []).map((order: any) =>
+                          order.id === orderId
+                              ? { ...order, status: nextStatus }
+                              : order,
+                      ),
+                  }
+                : current,
         );
 
         try {
@@ -375,8 +359,8 @@ export default function AdminOrdersPage() {
             }
 
             toast.success("Order status updated");
-            if (status && status !== nextStatus) fetchOrders();
-            fetchAnalytics();
+            if (status && status !== nextStatus) refetchOrders();
+            refetchAnalytics();
         } catch (error: any) {
             toast.error("Failed to update order status", {
                 description:
@@ -384,7 +368,7 @@ export default function AdminOrdersPage() {
                     error?.message ||
                     "Please try again.",
             });
-            fetchOrders();
+            refetchOrders();
         }
     };
 

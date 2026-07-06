@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
     Search,
     Loader2,
@@ -12,41 +12,29 @@ import {
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
 import { PreorderInterface } from "@/interface/preorders";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
 
 export default function AdminPreordersPage() {
-    const [preorders, setPreorders] = useState<PreorderInterface[]>([]);
-    const [loading, setLoading] = useState(true);
     const [keyword, setKeyword] = useState("");
     const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-
-    const fetchPreorders = async () => {
-        setLoading(true);
-        try {
-            const { data } = await axios.get("/admin/preorders", {
-                params: { page, limit: 20, keyword },
-            });
-            if (data.success) {
-                setPreorders(data.data || []);
-                setTotalPages(data.pagination?.total_pages || 1);
-            }
-        } catch {
-            toast.error("Failed to fetch preorders");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchPreorders();
-    }, [page, keyword]);
+    const {
+        data: preordersResponse,
+        isLoading: loading,
+        refetch: refetchPreorders,
+    } = useApiQuery<any>(
+        ["admin-preorders", page, keyword],
+        "/admin/preorders",
+        { params: { page, limit: 20, keyword } },
+    );
+    const preorders: PreorderInterface[] = preordersResponse?.data || [];
+    const totalPages = preordersResponse?.pagination?.total_pages || 1;
 
     const handleDelete = async (id: string) => {
         if (!confirm("Are you sure you want to delete this preorder?")) return;
         try {
             await axios.delete(`/admin/preorders/${id}`);
             toast.success("Preorder deleted");
-            fetchPreorders();
+            refetchPreorders();
         } catch {
             toast.error("Failed to delete preorder");
         }
@@ -56,7 +44,7 @@ export default function AdminPreordersPage() {
         try {
             await axios.put(`/admin/preorders/${id}`, { status: newStatus });
             toast.success("Preorder status updated");
-            fetchPreorders();
+            refetchPreorders();
         } catch {
             toast.error("Failed to update status");
         }

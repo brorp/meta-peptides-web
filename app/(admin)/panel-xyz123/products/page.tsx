@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
 
 type QuickEditField = "price" | "stock";
 type QuickEditValues = {
@@ -56,51 +57,40 @@ function getStockTone(value: number | string) {
 
 export default function AdminProductsPage() {
     const router = useRouter();
-    const [products, setProducts] = useState<any[]>([]);
     const [quickEdits, setQuickEdits] = useState<Record<string, QuickEditValues>>({});
     const [editingCells, setEditingCells] = useState<EditingCells>({});
     const [savingQuickEditKey, setSavingQuickEditKey] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
     const [keyword, setKeyword] = useState("");
     const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-
-    const fetchProducts = async (showLoading = true) => {
-        if (showLoading) setLoading(true);
-        try {
-            const { data } = await axios.get("/admin/products", {
-                params: { page, limit: 20, keyword },
-            });
-            if (data.success) {
-                const nextProducts = data.data || [];
-                setProducts(nextProducts);
-                setQuickEdits(
-                    Object.fromEntries(
-                        nextProducts.map((product: any) => [
-                            product.id,
-                            makeQuickEditValues(product),
-                        ]),
-                    ),
-                );
-                setTotalPages(data.pagination?.total_pages || 1);
-            }
-        } catch {
-            toast.error("Failed to fetch products");
-        } finally {
-            if (showLoading) setLoading(false);
-        }
-    };
+    const {
+        data: productsResponse,
+        isLoading: loading,
+        refetch: refetchProducts,
+    } = useApiQuery<any>(
+        ["admin-products", page, keyword],
+        "/admin/products",
+        { params: { page, limit: 20, keyword } },
+    );
+    const products: any[] = productsResponse?.data || [];
+    const totalPages = productsResponse?.pagination?.total_pages || 1;
 
     useEffect(() => {
-        fetchProducts();
-    }, [page, keyword]);
+        setQuickEdits(
+            Object.fromEntries(
+                products.map((product: any) => [
+                    product.id,
+                    makeQuickEditValues(product),
+                ]),
+            ),
+        );
+    }, [productsResponse]);
 
     const handleDelete = async (id: string) => {
         if (!confirm("Are you sure you want to delete this product?")) return;
         try {
             await axios.delete(`/admin/products/${id}`);
             toast.success("Product deleted");
-            fetchProducts();
+            refetchProducts();
         } catch {
             toast.error("Failed to delete product");
         }
@@ -112,7 +102,7 @@ export default function AdminProductsPage() {
                 is_active: !current,
             });
             toast.success(current ? "Product hidden" : "Product visible");
-            fetchProducts();
+            refetchProducts();
         } catch {
             toast.error("Failed to update product");
         }
@@ -197,7 +187,7 @@ export default function AdminProductsPage() {
                 [field]: numericValue,
             });
             toast.success(`${field === "price" ? "Price" : "Stock"} updated`);
-            await fetchProducts(false);
+            await refetchProducts();
             closeQuickEdit(product, field);
         } catch {
             toast.error("Failed to update product");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Edit,
   Loader2,
@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
+import { useQueryClient } from "@tanstack/react-query";
 
 const JOURNEY_OPTIONS = [
   ["new_leads", "New Leads"],
@@ -82,62 +84,43 @@ const getErrorMessage = (error: any, fallback: string) =>
   error?.response?.data?.message || error?.message || fallback;
 
 export default function AdminCustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [logs, setLogs] = useState<any[]>([]);
-  const [role, setRole] = useState<"root" | "admin" | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [journey, setJourney] = useState("");
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<CustomerForm>(buildBlankForm);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [updatingJourneyId, setUpdatingJourneyId] = useState<string | null>(null);
-
-  const fetchAdminRole = async () => {
-    try {
-      const { data } = await axios.get("/admin/auth/me");
-      setRole(data.data?.role || null);
-      if (data.data?.role === "root") {
-        const logResponse = await axios.get("/admin/daily-tasks/logs", {
-          params: { page: 1, limit: 10 },
-        });
-        setLogs(logResponse.data?.data || []);
-      }
-    } catch {
-      setRole(null);
-    }
-  };
-
-  const fetchCustomers = async () => {
-    setLoading(true);
-    try {
-      const { data } = await axios.get("/admin/customers", {
-        params: { page, limit: 20, keyword, journey },
-      });
-
-      if (data.success) {
-        setCustomers(data.data || []);
-        setTotalPages(data.pagination?.total_pages || 1);
-      }
-    } catch (error: any) {
-      toast.error("Failed to fetch customers", {
-        description: getErrorMessage(error, "Please try again."),
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchAdminRole();
-  }, []);
-
-  useEffect(() => {
-    fetchCustomers();
-  }, [page, keyword, journey]);
+  const customersQueryKey = ["admin-customers", page, keyword, journey];
+  const { data: authResponse } = useApiQuery<any>(
+    ["admin-auth-me"],
+    "/admin/auth/me",
+    undefined,
+    { staleTime: 5 * 60 * 1000 },
+  );
+  const role = authResponse?.data?.role || null;
+  const {
+    data: logsResponse,
+  } = useApiQuery<any>(
+    ["admin-daily-task-logs", "latest"],
+    "/admin/daily-tasks/logs",
+    { params: { page: 1, limit: 10 } },
+    { enabled: role === "root", staleTime: 60 * 1000 },
+  );
+  const {
+    data: customersResponse,
+    isLoading: loading,
+    refetch: refetchCustomers,
+  } = useApiQuery<any>(
+    customersQueryKey,
+    "/admin/customers",
+    { params: { page, limit: 20, keyword, journey } },
+  );
+  const customers: Customer[] = customersResponse?.data || [];
+  const logs: any[] = logsResponse?.data || [];
+  const totalPages = customersResponse?.pagination?.total_pages || 1;
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -173,7 +156,7 @@ export default function AdminCustomersPage() {
       }
 
       closeModal();
-      fetchCustomers();
+      refetchCustomers();
     } catch (error: any) {
       toast.error(
         editingId ? "Failed to update customer" : "Failed to create customer",
@@ -206,10 +189,17 @@ export default function AdminCustomersPage() {
     setUpdatingJourneyId(customer.id);
     const previousJourney = customer.current_journey;
 
-    setCustomers((prev) =>
-      prev.map((item) =>
-        item.id === customer.id ? { ...item, current_journey: nextJourney } : item,
-      ),
+    queryClient.setQueryData(customersQueryKey, (current: any) =>
+      current
+        ? {
+            ...current,
+            data: (current.data || []).map((item: Customer) =>
+              item.id === customer.id
+                ? { ...item, current_journey: nextJourney }
+                : item,
+            ),
+          }
+        : current,
     );
 
     try {
@@ -219,14 +209,19 @@ export default function AdminCustomersPage() {
       toast.success("Customer journey updated", {
         description: `${customer.full_name} is now ${journeyLabel(nextJourney)}.`,
       });
-      fetchCustomers();
+      refetchCustomers();
     } catch (error: any) {
-      setCustomers((prev) =>
-        prev.map((item) =>
-          item.id === customer.id
-            ? { ...item, current_journey: previousJourney }
-            : item,
-        ),
+      queryClient.setQueryData(customersQueryKey, (current: any) =>
+        current
+          ? {
+              ...current,
+              data: (current.data || []).map((item: Customer) =>
+                item.id === customer.id
+                  ? { ...item, current_journey: previousJourney }
+                  : item,
+              ),
+            }
+          : current,
       );
       toast.error("Failed to update journey", {
         description: getErrorMessage(error, "Please try again."),
@@ -243,7 +238,7 @@ export default function AdminCustomersPage() {
       await axios.delete(`/admin/customers/${customer.id}`);
       toast.success("Customer deleted");
       if (editingId === customer.id) closeModal();
-      fetchCustomers();
+      refetchCustomers();
     } catch (error: any) {
       toast.error("Failed to delete customer", {
         description: getErrorMessage(error, "Please try again."),

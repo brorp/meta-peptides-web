@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
 
 type AdminRole = "root" | "admin";
 
@@ -210,21 +211,13 @@ export default function AdminLayout({
     children: React.ReactNode;
 }) {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-    const [role, setRole] = useState<AdminRole | null>(null);
-
-    useEffect(() => {
-        const fetchAdminContext = async () => {
-            try {
-                const { data } = await axios.get("/admin/auth/me");
-                const nextRole = data.data?.role || null;
-                setRole(nextRole);
-            } catch {
-                setRole(null);
-            }
-        };
-
-        fetchAdminContext();
-    }, []);
+    const { data: authResponse } = useApiQuery<any>(
+        ["admin-auth-me"],
+        "/admin/auth/me",
+        undefined,
+        { staleTime: 5 * 60 * 1000 },
+    );
+    const role: AdminRole | null = authResponse?.data?.role || null;
 
     return (
         <div className="dark">

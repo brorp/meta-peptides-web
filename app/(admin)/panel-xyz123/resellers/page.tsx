@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
     ExternalLink,
     Handshake,
@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
 
 type ResellerApplication = {
     id: string;
@@ -67,42 +68,26 @@ function getWhatsAppUrl(phone: string) {
 }
 
 export default function AdminResellersPage() {
-    const [applications, setApplications] = useState<ResellerApplication[]>([]);
-    const [loading, setLoading] = useState(true);
     const [keyword, setKeyword] = useState("");
     const [status, setStatus] = useState("");
     const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-
-    const fetchApplications = async () => {
-        setLoading(true);
-        try {
-            const { data } = await axios.get("/admin/resellers", {
-                params: { page, limit: 20, keyword, status },
-            });
-
-            if (data.success) {
-                setApplications(data.data || []);
-                setTotalPages(data.pagination?.total_pages || 1);
-            }
-        } catch (error: any) {
-            toast.error("Failed to fetch reseller applications", {
-                description: getErrorMessage(error, "Please try again."),
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchApplications();
-    }, [page, keyword, status]);
+    const {
+        data: applicationsResponse,
+        isLoading: loading,
+        refetch: refetchApplications,
+    } = useApiQuery<any>(
+        ["admin-resellers", page, keyword, status],
+        "/admin/resellers",
+        { params: { page, limit: 20, keyword, status } },
+    );
+    const applications: ResellerApplication[] = applicationsResponse?.data || [];
+    const totalPages = applicationsResponse?.pagination?.total_pages || 1;
 
     const updateStatus = async (id: string, nextStatus: string) => {
         try {
             await axios.put(`/admin/resellers/${id}`, { status: nextStatus });
             toast.success("Reseller status updated");
-            fetchApplications();
+            refetchApplications();
         } catch (error: any) {
             toast.error("Failed to update reseller", {
                 description: getErrorMessage(error, "Please try again."),
@@ -118,7 +103,7 @@ export default function AdminResellersPage() {
         try {
             await axios.delete(`/admin/resellers/${application.id}`);
             toast.success("Reseller application deleted");
-            fetchApplications();
+            refetchApplications();
         } catch (error: any) {
             toast.error("Failed to delete reseller application", {
                 description: getErrorMessage(error, "Please try again."),

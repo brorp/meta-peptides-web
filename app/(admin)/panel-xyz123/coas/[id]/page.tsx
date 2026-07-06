@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { ArrowLeft, Loader2, Save, Upload, X, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
 
 const MAX_IMAGES = 2;
 
@@ -15,11 +16,22 @@ export default function EditCoaPage() {
 
     const fileInputRef1 = useRef<HTMLInputElement>(null);
     const fileInputRef2 = useRef<HTMLInputElement>(null);
-    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState<boolean[]>([false, false]);
     const [imagePreviews, setImagePreviews] = useState<(string | null)[]>([null, null]);
-    const [products, setProducts] = useState<any[]>([]);
+    const { data: productsResponse } = useApiQuery<any>(
+        ["admin-product-options", "coa"],
+        "/admin/products",
+        { params: { limit: 100 } },
+        { staleTime: 5 * 60 * 1000 },
+    );
+    const { data: coaResponse, isLoading: loading } = useApiQuery<any>(
+        ["admin-lab-test", id],
+        `/admin/lab-tests/${id}`,
+        undefined,
+        { enabled: Boolean(id) },
+    );
+    const products: any[] = productsResponse?.data || [];
 
     const [form, setForm] = useState<Record<string, any>>({
         product_id: "",
@@ -30,36 +42,21 @@ export default function EditCoaPage() {
     });
 
     useEffect(() => {
-        const fetchInitialData = async () => {
-            try {
-                const prodRes = await axios.get("/admin/products?limit=100");
-                if (prodRes.data.success) {
-                    setProducts(prodRes.data.data);
-                }
+        const coa = coaResponse?.data;
+        if (!coa) return;
 
-                const coaRes = await axios.get(`/admin/lab-tests/${id}`);
-                if (coaRes.data.success) {
-                    const coa = coaRes.data.data;
-                    const imgs: string[] = coa.report_images || [];
-                    setForm({
-                        product_id: coa.product_id || "",
-                        purity_level: coa.purity_level || "",
-                        test_date: coa.test_date ? new Date(coa.test_date).toISOString().split("T")[0] : "",
-                        report_url: coa.report_url || "",
-                        report_images: imgs,
-                    });
-                    // Populate preview slots
-                    setImagePreviews([imgs[0] ?? null, imgs[1] ?? null]);
-                }
-            } catch {
-                toast.error("Failed to load data");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (id) fetchInitialData();
-    }, [id]);
+        const imgs: string[] = coa.report_images || [];
+        setForm({
+            product_id: coa.product_id || "",
+            purity_level: coa.purity_level || "",
+            test_date: coa.test_date
+                ? new Date(coa.test_date).toISOString().split("T")[0]
+                : "",
+            report_url: coa.report_url || "",
+            report_images: imgs,
+        });
+        setImagePreviews([imgs[0] ?? null, imgs[1] ?? null]);
+    }, [coaResponse]);
 
     const updateField = (key: string, value: any) => {
         setForm((prev) => ({ ...prev, [key]: value }));

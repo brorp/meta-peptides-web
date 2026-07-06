@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,6 +27,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ProductInterface } from "@/interface/products";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
+import type { ApiResponse } from "@/interface/global";
 
 const formSchema = z.object({
   name: z.string().min(2, "Nama terlalu pendek"),
@@ -50,9 +52,16 @@ const DOMISILI_OPTIONS = [
 
 export default function PreorderPage() {
   const router = useRouter();
-  const [products, setProducts] = useState<ProductInterface[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { data: productsResponse, isLoading: loadingProducts } =
+    useApiQuery<ApiResponse<ProductInterface[]>>(
+      ["preorder-products"],
+      "/products",
+      { params: { limit: 100 } },
+      { staleTime: 5 * 60 * 1000 },
+    );
+  const products = productsResponse?.data || [];
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -64,25 +73,6 @@ export default function PreorderPage() {
       product_id: "",
     },
   });
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        // Fetch active products
-        const { data } = await axios.get("/products?limit=100");
-        if (data.success) {
-          setProducts(data.data || []);
-        }
-      } catch (error) {
-        console.error("Failed to fetch products:", error);
-        toast.error("Gagal memuat daftar produk");
-      } finally {
-        setLoadingProducts(false);
-      }
-    };
-
-    fetchProducts();
-  }, []);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);

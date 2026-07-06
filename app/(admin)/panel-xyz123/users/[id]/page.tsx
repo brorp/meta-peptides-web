@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
 
 function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString("id-ID", {
@@ -31,49 +32,35 @@ export default function AdminUserDetailPage({
 }) {
     const { id } = use(params);
     const router = useRouter();
-    const [user, setUser] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [adminRole, setAdminRole] = useState<"root" | "admin" | null>(null);
     const [form, setForm] = useState({
         full_name: "",
         phone: "",
         role: "customer",
     });
+    const { data: authResponse } = useApiQuery<any>(
+        ["admin-auth-me"],
+        "/admin/auth/me",
+        undefined,
+        { staleTime: 5 * 60 * 1000 },
+    );
+    const adminRole = authResponse?.data?.role || null;
+    const {
+        data: userResponse,
+        isLoading: loading,
+        refetch: refetchUser,
+    } = useApiQuery<any>(["admin-user", id], `/admin/users/${id}`);
+    const user = userResponse?.data || null;
 
     useEffect(() => {
-        const fetchAdminRole = async () => {
-            try {
-                const { data } = await axios.get("/admin/auth/me");
-                setAdminRole(data.data?.role || null);
-            } catch {
-                setAdminRole(null);
-            }
-        };
+        if (!user) return;
 
-        fetchAdminRole();
-    }, []);
-
-    useEffect(() => {
-        const fetchUser = async () => {
-            try {
-                const { data } = await axios.get(`/admin/users/${id}`);
-                if (data.success) {
-                    setUser(data.data);
-                    setForm({
-                        full_name: data.data.full_name || "",
-                        phone: data.data.phone || "",
-                        role: data.data.role || "customer",
-                    });
-                }
-            } catch {
-                toast.error("Failed to fetch user");
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchUser();
-    }, [id]);
+        setForm({
+            full_name: user.full_name || "",
+            phone: user.phone || "",
+            role: user.role || "customer",
+        });
+    }, [userResponse]);
 
     const handleSave = async () => {
         setSaving(true);
@@ -88,7 +75,7 @@ export default function AdminUserDetailPage({
             const { data } = await axios.put(`/admin/users/${id}`, payload);
             if (data.success) {
                 toast.success("User updated");
-                setUser({ ...user, ...form });
+                refetchUser();
             } else {
                 toast.error(data.message);
             }

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Save, Upload, X, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
 
 const MAX_IMAGES = 2;
 
@@ -15,7 +16,13 @@ export default function NewCoaPage() {
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState<(boolean)[]>([false, false]);
     const [imagePreviews, setImagePreviews] = useState<(string | null)[]>([null, null]);
-    const [products, setProducts] = useState<any[]>([]);
+    const { data: productsResponse } = useApiQuery<any>(
+        ["admin-product-options", "coa"],
+        "/admin/products",
+        { params: { limit: 100 } },
+        { staleTime: 5 * 60 * 1000 },
+    );
+    const products: any[] = productsResponse?.data || [];
 
     const [form, setForm] = useState<Record<string, any>>({
         product_id: "",
@@ -24,20 +31,6 @@ export default function NewCoaPage() {
         report_url: "",
         report_images: [],
     });
-
-    useEffect(() => {
-        const fetchProducts = async () => {
-            try {
-                const { data } = await axios.get("/admin/products?limit=100");
-                if (data.success) {
-                    setProducts(data.data);
-                }
-            } catch {
-                toast.error("Failed to fetch products for dropdown");
-            }
-        };
-        fetchProducts();
-    }, []);
 
     const updateField = (key: string, value: any) => {
         setForm((prev) => ({ ...prev, [key]: value }));

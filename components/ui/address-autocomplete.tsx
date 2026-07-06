@@ -1,10 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { OpenStreetMapProvider } from "leaflet-geosearch";
 import { MapPin, Loader2, Search } from "lucide-react";
 import { useDebounce } from "@/hooks/use-debounce";
 import { cn } from "@/lib/utils";
+
+const ADDRESS_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const ADDRESS_CACHE_PREFIX = "meta-peptides:address-search";
 
 const provider = new OpenStreetMapProvider({
   params: {
@@ -12,6 +16,77 @@ const provider = new OpenStreetMapProvider({
     "accept-language": "id",
   },
 });
+
+type CachedAddressResults = {
+  data: any[];
+  savedAt: number;
+};
+
+function normalizeQuery(query: string) {
+  return query.trim().toLowerCase();
+}
+
+function addressStorageKey(query: string) {
+  return `${ADDRESS_CACHE_PREFIX}:${encodeURIComponent(normalizeQuery(query))}:v1`;
+}
+
+function readAddressCache(query: string, allowExpired = false) {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.localStorage.getItem(addressStorageKey(query));
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw) as CachedAddressResults;
+    if (!parsed || !Array.isArray(parsed.data) || typeof parsed.savedAt !== "number") {
+      return null;
+    }
+
+    const expired = Date.now() - parsed.savedAt > ADDRESS_CACHE_TTL_MS;
+    if (expired && !allowExpired) return null;
+
+    return parsed.data;
+  } catch {
+    return null;
+  }
+}
+
+function writeAddressCache(query: string, data: any[]) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(
+      addressStorageKey(query),
+      JSON.stringify({
+        data,
+        savedAt: Date.now(),
+      }),
+    );
+  } catch {
+    // Autocomplete still works without storage.
+  }
+}
+
+async function searchAddress(query: string) {
+  const cached = readAddressCache(query);
+  if (cached) return cached;
+
+  const stale = readAddressCache(query, true);
+
+  try {
+    const searchResults = await provider.search({ query });
+    const formattedResults = searchResults.map((res) => ({
+      ...res,
+      label: res.label.replace(", Indonesia", ""),
+    }));
+
+    writeAddressCache(query, formattedResults);
+    return formattedResults;
+  } catch (error) {
+    if (stale) return stale;
+    throw error;
+  }
+}
 
 interface AddressAutocompleteProps {
   onSelect: (data: { label: string; postcode: string }) => void;
@@ -27,12 +102,24 @@ export function AddressAutocomplete({
   error,
 }: AddressAutocompleteProps) {
   const [query, setQuery] = useState(defaultValue);
-  const [results, setResults] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const debouncedQuery = useDebounce(query, 500);
+  const debouncedQuery = useDebounce(query, 700);
+  const normalizedDebouncedQuery = normalizeQuery(debouncedQuery);
+  const shouldSearch = normalizedDebouncedQuery.length >= 3;
+
+  const addressQuery = useQuery({
+    queryKey: ["address-autocomplete", normalizedDebouncedQuery],
+    queryFn: () => searchAddress(normalizedDebouncedQuery),
+    enabled: isOpen && shouldSearch,
+    staleTime: ADDRESS_CACHE_TTL_MS,
+    gcTime: ADDRESS_CACHE_TTL_MS,
+    retry: false,
+  });
+
+  const results = isOpen && shouldSearch ? addressQuery.data || [] : [];
+  const isLoading = isOpen && shouldSearch && addressQuery.isFetching;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -46,31 +133,6 @@ export function AddressAutocomplete({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  useEffect(() => {
-    const fetchAddress = async () => {
-      if (debouncedQuery.length < 3) {
-        setResults([]);
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        const searchResults = await provider.search({ query: debouncedQuery });
-        const formattedResults = searchResults.map((res) => ({
-          ...res,
-          label: res.label.replace(", Indonesia", ""),
-        }));
-        setResults(formattedResults);
-      } catch (err) {
-        console.error("OSM Search Error:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchAddress();
-  }, [debouncedQuery]);
 
   const extractPostcode = (label: string): string => {
     const postcodeMatch = label.match(/\b\d{5}\b/);
@@ -155,6 +217,13 @@ export function AddressAutocomplete({
             ))}
           </div>
         </div>
+      )}
+
+      {isOpen && addressQuery.isError && results.length === 0 && (
+        <p className="mt-2 text-[11px] font-medium text-amber-600">
+          City lookup is temporarily limited. You can keep typing manually and
+          continue checkout.
+        </p>
       )}
     </div>
   );

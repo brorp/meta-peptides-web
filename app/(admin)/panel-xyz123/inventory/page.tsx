@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
 
 type InventoryProduct = {
   id: string;
@@ -65,47 +66,51 @@ export default function AdminInventoryPage() {
   const [componentRows, setComponentRows] = useState<InventoryComponent[]>([]);
   const [packagingForm, setPackagingForm] =
     useState<PackagingForm>(buildPackagingForm);
-  const [loading, setLoading] = useState(true);
   const [savingProductId, setSavingProductId] = useState<string | null>(null);
   const [savingComponents, setSavingComponents] = useState(false);
   const [creatingPackaging, setCreatingPackaging] = useState(false);
-
-  const fetchInventory = async () => {
-    setLoading(true);
-    try {
-      const [productsResponse, componentsResponse] = await Promise.all([
-        axios.get("/admin/products", { params: { page: 1, limit: 1000 } }),
-        axios.get("/admin/inventory/components"),
-      ]);
-
-      const nextProducts = productsResponse.data.success
-        ? productsResponse.data.data || []
-        : [];
-
-      setProducts(nextProducts);
-      setComponents(
-        componentsResponse.data.success ? componentsResponse.data.data || [] : [],
-      );
-
-      if (!selectedProductId && nextProducts.length) {
-        const firstSellable = nextProducts.find(
-          (product: InventoryProduct) =>
-            (product.inventory_type || "product") === "product",
-        );
-        setSelectedProductId(firstSellable?.id || nextProducts[0].id);
-      }
-    } catch (error: any) {
-      toast.error("Failed to load inventory", {
-        description: getErrorMessage(error, "Please try again."),
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    data: productsResponse,
+    isLoading: loadingProducts,
+    refetch: refetchProducts,
+  } = useApiQuery<any>(
+    ["admin-inventory-products"],
+    "/admin/products",
+    { params: { page: 1, limit: 1000 } },
+    { staleTime: 60 * 1000 },
+  );
+  const {
+    data: componentsResponse,
+    isLoading: loadingComponents,
+    refetch: refetchComponents,
+  } = useApiQuery<any>(
+    ["admin-inventory-components"],
+    "/admin/inventory/components",
+    undefined,
+    { staleTime: 60 * 1000 },
+  );
+  const loading = loadingProducts || loadingComponents;
 
   useEffect(() => {
-    fetchInventory();
-  }, []);
+    const nextProducts = productsResponse?.data || [];
+    setProducts(nextProducts);
+
+    if (!selectedProductId && nextProducts.length) {
+      const firstSellable = nextProducts.find(
+        (product: InventoryProduct) =>
+          (product.inventory_type || "product") === "product",
+      );
+      setSelectedProductId(firstSellable?.id || nextProducts[0].id);
+    }
+  }, [productsResponse]);
+
+  useEffect(() => {
+    setComponents(componentsResponse?.data || []);
+  }, [componentsResponse]);
+
+  const refetchInventory = async () => {
+    await Promise.all([refetchProducts(), refetchComponents()]);
+  };
 
   const productMap = useMemo(
     () => new Map(products.map((product) => [product.id, product])),
@@ -153,7 +158,7 @@ export default function AdminInventoryPage() {
         inventory_type: product.inventory_type || "product",
       });
       toast.success("Inventory item updated");
-      fetchInventory();
+      refetchInventory();
     } catch (error: any) {
       toast.error("Failed to update inventory item", {
         description: getErrorMessage(error, "Please review stock and COGS."),
@@ -187,7 +192,7 @@ export default function AdminInventoryPage() {
 
       toast.success("Packaging inventory created");
       setPackagingForm(buildPackagingForm());
-      fetchInventory();
+      refetchInventory();
     } catch (error: any) {
       toast.error("Failed to create packaging item", {
         description: getErrorMessage(error, "Please review the inventory data."),
@@ -226,7 +231,7 @@ export default function AdminInventoryPage() {
       });
 
       toast.success("Packaging recipe updated");
-      fetchInventory();
+      refetchInventory();
     } catch (error: any) {
       toast.error("Failed to update packaging recipe", {
         description: getErrorMessage(error, "Please review the selected items."),

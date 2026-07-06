@@ -18,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
 import { useIndonesiaRegions } from "@/hooks/use-indonesia-regions";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
 
 type ProductOption = {
     id: string;
@@ -113,9 +114,7 @@ export default function NewManualOrderPage() {
     const router = useRouter();
     const shopeePdfInputRef = useRef<HTMLInputElement | null>(null);
     const [duplicateOrderId, setDuplicateOrderId] = useState<string | null>(null);
-    const [products, setProducts] = useState<ProductOption[]>([]);
-    const [loadingProducts, setLoadingProducts] = useState(true);
-    const [loadingDuplicate, setLoadingDuplicate] = useState(false);
+    const [appliedDuplicateId, setAppliedDuplicateId] = useState<string | null>(null);
     const [importingShopeePdf, setImportingShopeePdf] = useState(false);
     const [pdfImportSummary, setPdfImportSummary] =
         useState<PdfImportSummary | null>(null);
@@ -140,6 +139,21 @@ export default function NewManualOrderPage() {
         order_date: todayLocalDate(),
     });
     const [items, setItems] = useState<ManualOrderItem[]>([buildBlankItem()]);
+    const { data: productsResponse, isLoading: loadingProducts } =
+        useApiQuery<any>(
+            ["admin-order-product-options"],
+            "/admin/products",
+            { params: { page: 1, limit: 200 } },
+            { staleTime: 5 * 60 * 1000 },
+        );
+    const products: ProductOption[] = productsResponse?.data || [];
+    const { data: duplicateResponse, isLoading: loadingDuplicate } =
+        useApiQuery<any>(
+            ["admin-order-duplicate", duplicateOrderId],
+            duplicateOrderId ? `/admin/orders/${duplicateOrderId}` : "/admin/orders/duplicate",
+            undefined,
+            { enabled: Boolean(duplicateOrderId), staleTime: 0 },
+        );
 
     const {
         provinces,
@@ -147,6 +161,7 @@ export default function NewManualOrderPage() {
         selectedProvinceId,
         loadingProvinces,
         loadingCities,
+        cityError,
         selectProvince,
     } = useIndonesiaRegions();
     const [selectedCityDisplayName, setSelectedCityDisplayName] = useState("");
@@ -156,87 +171,52 @@ export default function NewManualOrderPage() {
     }, []);
 
     useEffect(() => {
-        const fetchProducts = async () => {
-            try {
-                const { data } = await axios.get("/admin/products", {
-                    params: { page: 1, limit: 200 },
-                });
+        if (!duplicateOrderId || appliedDuplicateId === duplicateOrderId) return;
+        if (!duplicateResponse?.success) return;
 
-                if (data.success) {
-                    setProducts(data.data || []);
-                }
-            } catch (error: any) {
-                toast.error("Failed to load products", {
-                    description: getErrorMessage(error, "Please try again."),
-                });
-            } finally {
-                setLoadingProducts(false);
-            }
-        };
+        const duplicatedOrder = duplicateResponse.data;
+        const source = duplicatedOrder.order_source || "manual_whatsapp";
+        const paymentType =
+            duplicatedOrder.payments?.[0]?.payment_type ||
+            (source === "shopee" ? "Shopee" : "Bank Transfer");
 
-        fetchProducts();
-    }, []);
+        setForm({
+            order_source: source,
+            payment_type: PAYMENT_TYPES.includes(paymentType)
+                ? paymentType
+                : "Bank Transfer",
+            shipping_name: duplicatedOrder.shipping_name || "",
+            customer_username: duplicatedOrder.customer_username || "",
+            shipping_phone: duplicatedOrder.shipping_phone || "",
+            shipping_email: duplicatedOrder.shipping_email || "",
+            shipping_address: duplicatedOrder.shipping_address || "",
+            shipping_regional: duplicatedOrder.shipping_regional || "",
+            shipping_zip: duplicatedOrder.shipping_zip || "",
+            manual_reference: duplicatedOrder.manual_reference || "",
+            status: duplicatedOrder.status || "processing",
+            manual_discount_amount: String(
+                Number(duplicatedOrder.voucher_discount_amount || 0),
+            ),
+            marketplace_fee: String(Number(duplicatedOrder.marketplace_fee || 0)),
+            shipment_type: duplicatedOrder.shipment_type || "",
+            shipping_fee: String(Number(duplicatedOrder.shipping_fee || 0)),
+            note: duplicatedOrder.note || "",
+            order_date: toLocalDate(duplicatedOrder.created_at),
+        });
 
-    useEffect(() => {
-        if (!duplicateOrderId) return;
+        const duplicatedItems = (duplicatedOrder.order_items || [])
+            .filter((item: any) => item.product_id)
+            .map((item: any) => ({
+                localId: crypto.randomUUID(),
+                product_id: item.product_id,
+                quantity: Number(item.quantity || 1),
+                price_at_purchase: Number(item.price_at_purchase || 0),
+            }));
 
-        const fetchDuplicateOrder = async () => {
-            setLoadingDuplicate(true);
-            try {
-                const { data } = await axios.get(`/admin/orders/${duplicateOrderId}`);
-                if (!data.success) return;
-
-                const source = data.data.order_source || "manual_whatsapp";
-                const paymentType =
-                    data.data.payments?.[0]?.payment_type ||
-                    (source === "shopee" ? "Shopee" : "Bank Transfer");
-
-                setForm({
-                    order_source: source,
-                    payment_type: PAYMENT_TYPES.includes(paymentType)
-                        ? paymentType
-                        : "Bank Transfer",
-                    shipping_name: data.data.shipping_name || "",
-                    customer_username: data.data.customer_username || "",
-                    shipping_phone: data.data.shipping_phone || "",
-                    shipping_email: data.data.shipping_email || "",
-                    shipping_address: data.data.shipping_address || "",
-                    shipping_regional: data.data.shipping_regional || "",
-                    shipping_zip: data.data.shipping_zip || "",
-                    manual_reference: data.data.manual_reference || "",
-                    status: data.data.status || "processing",
-                    manual_discount_amount: String(
-                        Number(data.data.voucher_discount_amount || 0),
-                    ),
-                    marketplace_fee: String(Number(data.data.marketplace_fee || 0)),
-                    shipment_type: data.data.shipment_type || "",
-                    shipping_fee: String(Number(data.data.shipping_fee || 0)),
-                    note: data.data.note || "",
-                    order_date: toLocalDate(data.data.created_at),
-                });
-
-                const duplicatedItems = (data.data.order_items || [])
-                    .filter((item: any) => item.product_id)
-                    .map((item: any) => ({
-                        localId: crypto.randomUUID(),
-                        product_id: item.product_id,
-                        quantity: Number(item.quantity || 1),
-                        price_at_purchase: Number(item.price_at_purchase || 0),
-                    }));
-
-                setItems(duplicatedItems.length ? duplicatedItems : [buildBlankItem()]);
-                toast.success("Order copied into the form");
-            } catch (error: any) {
-                toast.error("Failed to duplicate order", {
-                    description: getErrorMessage(error, "Please try again."),
-                });
-            } finally {
-                setLoadingDuplicate(false);
-            }
-        };
-
-        fetchDuplicateOrder();
-    }, [duplicateOrderId]);
+        setItems(duplicatedItems.length ? duplicatedItems : [buildBlankItem()]);
+        setAppliedDuplicateId(duplicateOrderId);
+        toast.success("Order copied into the form");
+    }, [appliedDuplicateId, duplicateOrderId, duplicateResponse]);
 
     const productMap = useMemo(
         () => new Map(products.map((product) => [product.id, product])),
@@ -260,6 +240,21 @@ export default function NewManualOrderPage() {
 
     const updateForm = (key: keyof typeof form, value: string) => {
         setForm((prev) => ({ ...prev, [key]: value }));
+    };
+
+    const selectedProvinceName =
+        provinces.find((province) => province.id === selectedProvinceId)?.nama || "";
+    const shouldUseManualCityInput =
+        Boolean(selectedProvinceId) &&
+        !loadingCities &&
+        (Boolean(cityError) || cities.length === 0);
+
+    const updateShippingRegionalFromCity = (cityName: string) => {
+        setSelectedCityDisplayName(cityName);
+        updateForm(
+            "shipping_regional",
+            selectedProvinceName ? `${selectedProvinceName} - ${cityName}` : cityName,
+        );
     };
 
     const updateItem = (
@@ -599,40 +594,53 @@ export default function NewManualOrderPage() {
                                 <span className="text-xs font-medium text-muted-foreground">
                                     City / Regional
                                 </span>
-                                <div className="relative">
-                                    <select
-                                        value={selectedCityDisplayName}
-                                        onChange={(e) => {
-                                            setSelectedCityDisplayName(e.target.value);
-                                            const prov = provinces.find((p) => p.id === selectedProvinceId);
-                                            updateForm(
-                                                "shipping_regional",
-                                                prov ? `${prov.nama} - ${e.target.value}` : e.target.value,
-                                            );
-                                        }}
-                                        disabled={!selectedProvinceId || loadingCities}
-                                        className="w-full appearance-none bg-background border border-border rounded-xl px-4 py-2.5 pr-10 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent disabled:opacity-60"
-                                        required
-                                    >
-                                        <option value="">
-                                            {!selectedProvinceId
-                                                ? "Select province first"
-                                                : loadingCities
-                                                ? "Loading cities..."
-                                                : "Select city"}
-                                        </option>
-                                        {cities.map((city) => (
-                                            <option key={city.id} value={city.nama}>
-                                                {city.nama}
+                                {shouldUseManualCityInput ? (
+                                    <>
+                                        <input
+                                            value={selectedCityDisplayName}
+                                            onChange={(e) =>
+                                                updateShippingRegionalFromCity(e.target.value)
+                                            }
+                                            className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+                                            placeholder="Type city manually"
+                                            required
+                                        />
+                                        <p className="text-[11px] text-amber-600">
+                                            City lookup is temporarily unavailable. Manual city input
+                                            will still save to this order.
+                                        </p>
+                                    </>
+                                ) : (
+                                    <div className="relative">
+                                        <select
+                                            value={selectedCityDisplayName}
+                                            onChange={(e) =>
+                                                updateShippingRegionalFromCity(e.target.value)
+                                            }
+                                            disabled={!selectedProvinceId || loadingCities}
+                                            className="w-full appearance-none bg-background border border-border rounded-xl px-4 py-2.5 pr-10 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent disabled:opacity-60"
+                                            required
+                                        >
+                                            <option value="">
+                                                {!selectedProvinceId
+                                                    ? "Select province first"
+                                                    : loadingCities
+                                                    ? "Loading cities..."
+                                                    : "Select city"}
                                             </option>
-                                        ))}
-                                    </select>
-                                    {loadingCities ? (
-                                        <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-accent" />
-                                    ) : (
-                                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                    )}
-                                </div>
+                                            {cities.map((city) => (
+                                                <option key={city.id} value={city.nama}>
+                                                    {city.nama}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {loadingCities ? (
+                                            <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-accent" />
+                                        ) : (
+                                            <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                        )}
+                                    </div>
+                                )}
                             </label>
                             <label className="space-y-2 md:col-span-2">
                                 <span className="text-xs font-medium text-muted-foreground">

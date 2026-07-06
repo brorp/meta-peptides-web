@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { X, ArrowRight, Sparkles, Loader2, User, Phone, Mail, MapPin, Target, MessageSquare, ChevronDown } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { api as axios } from "@/lib/axios";
 import { useIndonesiaRegions } from "@/hooks/use-indonesia-regions";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
+import type { ApiResponse } from "@/interface/global";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -172,7 +174,6 @@ export function ConsultationModal({ open, onOpenChange }: ConsultationModalProps
     concern: "",
   });
   const [errors, setErrors] = useState<Partial<ConsultationFormData>>({});
-  const [categories, setCategories] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -185,18 +186,18 @@ export function ConsultationModal({ open, onOpenChange }: ConsultationModalProps
   } = useIndonesiaRegions();
   const [selectedCityName, setSelectedCityName] = useState("");
 
-  // Fetch categories from API
-  useEffect(() => {
-    if (!open) return;
-    axios
-      .get<any>("/categories")
-      .then(({ data }) => {
-        if (data?.success && Array.isArray(data.data)) {
-          setCategories(data.data as string[]);
-        }
-      })
-      .catch(() => {});
-  }, [open]);
+  const { data: categoriesResponse } = useApiQuery<ApiResponse<string[]>>(
+    ["categories"],
+    "/categories",
+    undefined,
+    {
+      enabled: open,
+      staleTime: 60 * 60 * 1000,
+    },
+  );
+  const categories = Array.isArray(categoriesResponse?.data)
+    ? categoriesResponse.data
+    : [];
 
   const set = (field: keyof ConsultationFormData) => (v: string) => {
     setForm((prev) => ({ ...prev, [field]: v }));

@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
 import { useIndonesiaRegions } from "@/hooks/use-indonesia-regions";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
 
 const ORDER_STATUSES = [
     "pending_review",
@@ -89,7 +90,10 @@ export default function AdminOrderDetailPage({
     const { id } = use(params);
     const router = useRouter();
     const [order, setOrder] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    const { data: orderResponse, isLoading: loading } = useApiQuery<any>(
+        ["admin-order", id],
+        `/admin/orders/${id}`,
+    );
     const [saving, setSaving] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [generatingPdf, setGeneratingPdf] = useState<string | null>(null);
@@ -110,6 +114,7 @@ export default function AdminOrderDetailPage({
         selectedProvinceId,
         loadingProvinces,
         loadingCities,
+        cityError,
         selectProvince,
     } = useIndonesiaRegions();
     const [selectedCityDisplayName, setSelectedCityDisplayName] = useState("");
@@ -121,53 +126,56 @@ export default function AdminOrderDetailPage({
     const [shippingFee, setShippingFee] = useState("");
     const [paymentType, setPaymentType] = useState("Bank Transfer");
     const trackingNumberSupported = order?._schema?.tracking_number !== false;
+    const selectedProvinceName =
+        provinces.find((province) => province.id === selectedProvinceId)?.nama || "";
+    const shouldUseManualCityInput =
+        Boolean(selectedProvinceId) &&
+        !loadingCities &&
+        (Boolean(cityError) || cities.length === 0);
+
+    const updateShippingRegionalFromCity = (cityName: string) => {
+        setSelectedCityDisplayName(cityName);
+        setShippingRegional(
+            selectedProvinceName ? `${selectedProvinceName} - ${cityName}` : cityName,
+        );
+    };
 
     useEffect(() => {
-        const fetchOrder = async () => {
-            try {
-                const { data } = await axios.get(`/admin/orders/${id}`);
-                if (data.success) {
-                    setOrder(data.data);
-                    setStatus(data.data.status);
-                    // Format created_at to "YYYY-MM-DD" for the date input
-                    const raw = data.data.created_at ? new Date(data.data.created_at) : new Date();
-                    const y = raw.getFullYear();
-                    const mo = String(raw.getMonth() + 1).padStart(2, "0");
-                    const d = String(raw.getDate()).padStart(2, "0");
-                    setOrderDate(`${y}-${mo}-${d}`);
-                    setTrackingNumber(
-                        data.data._schema?.tracking_number === false
-                            ? ""
-                            : data.data.tracking_number || "",
-                    );
-                    setShippingName(data.data.shipping_name || "");
-                    setCustomerUsername(data.data.customer_username || "");
-                    setShippingPhone(data.data.shipping_phone || "");
-                    setShippingEmail(data.data.shipping_email || "");
-                    setShippingAddress(data.data.shipping_address || "");
-                    setShippingRegional(data.data.shipping_regional || "");
-                    setShippingZip(data.data.shipping_zip || "");
-                    setSubtotal(String(Number(data.data.subtotal || data.data.total_price || 0)));
-                    setDiscountAmount(
-                        String(Number(data.data.voucher_discount_amount || 0)),
-                    );
-                    setMarketplaceFee(String(Number(data.data.marketplace_fee || 0)));
-                    setTotalPrice(String(Number(data.data.total_price || 0)));
-                    setShipmentType(data.data.shipment_type || "");
-                    setShippingFee(String(Number(data.data.shipping_fee || 0)));
-                    setPaymentType(
-                        data.data.payments?.[0]?.payment_type ||
-                        (data.data.order_source === "shopee" ? "Shopee" : "Bank Transfer"),
-                    );
-                }
-            } catch {
-                toast.error("Failed to fetch order");
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchOrder();
-    }, [id]);
+        const fetchedOrder = orderResponse?.data;
+        if (!fetchedOrder) return;
+
+        setOrder(fetchedOrder);
+        setStatus(fetchedOrder.status);
+        const raw = fetchedOrder.created_at
+            ? new Date(fetchedOrder.created_at)
+            : new Date();
+        const y = raw.getFullYear();
+        const mo = String(raw.getMonth() + 1).padStart(2, "0");
+        const d = String(raw.getDate()).padStart(2, "0");
+        setOrderDate(`${y}-${mo}-${d}`);
+        setTrackingNumber(
+            fetchedOrder._schema?.tracking_number === false
+                ? ""
+                : fetchedOrder.tracking_number || "",
+        );
+        setShippingName(fetchedOrder.shipping_name || "");
+        setCustomerUsername(fetchedOrder.customer_username || "");
+        setShippingPhone(fetchedOrder.shipping_phone || "");
+        setShippingEmail(fetchedOrder.shipping_email || "");
+        setShippingAddress(fetchedOrder.shipping_address || "");
+        setShippingRegional(fetchedOrder.shipping_regional || "");
+        setShippingZip(fetchedOrder.shipping_zip || "");
+        setSubtotal(String(Number(fetchedOrder.subtotal || fetchedOrder.total_price || 0)));
+        setDiscountAmount(String(Number(fetchedOrder.voucher_discount_amount || 0)));
+        setMarketplaceFee(String(Number(fetchedOrder.marketplace_fee || 0)));
+        setTotalPrice(String(Number(fetchedOrder.total_price || 0)));
+        setShipmentType(fetchedOrder.shipment_type || "");
+        setShippingFee(String(Number(fetchedOrder.shipping_fee || 0)));
+        setPaymentType(
+            fetchedOrder.payments?.[0]?.payment_type ||
+                (fetchedOrder.order_source === "shopee" ? "Shopee" : "Bank Transfer"),
+        );
+    }, [orderResponse]);
 
     const handleSave = async () => {
         setSaving(true);
@@ -622,38 +630,51 @@ export default function AdminOrderDetailPage({
                             <span className="text-xs font-medium text-muted-foreground">
                                 City / Regional
                             </span>
-                            <div className="relative">
-                                <select
-                                    value={selectedCityDisplayName}
-                                    onChange={(e) => {
-                                        setSelectedCityDisplayName(e.target.value);
-                                        const prov = provinces.find((p) => p.id === selectedProvinceId);
-                                        setShippingRegional(
-                                            prov ? `${prov.nama} - ${e.target.value}` : e.target.value,
-                                        );
-                                    }}
-                                    disabled={!selectedProvinceId || loadingCities}
-                                    className="w-full appearance-none bg-background border border-border rounded-xl py-2.5 px-3 pr-10 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all disabled:opacity-60"
-                                >
-                                    <option value="">
-                                        {!selectedProvinceId
-                                            ? `Current: ${shippingRegional || "—"}`
-                                            : loadingCities
-                                            ? "Loading cities..."
-                                            : "Select city"}
-                                    </option>
-                                    {cities.map((city) => (
-                                        <option key={city.id} value={city.nama}>
-                                            {city.nama}
+                            {shouldUseManualCityInput ? (
+                                <>
+                                    <input
+                                        value={selectedCityDisplayName}
+                                        onChange={(e) =>
+                                            updateShippingRegionalFromCity(e.target.value)
+                                        }
+                                        placeholder="Type city manually"
+                                        className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                                    />
+                                    <p className="text-[11px] text-amber-600">
+                                        City lookup is temporarily unavailable. Manual city input
+                                        will still save to this order.
+                                    </p>
+                                </>
+                            ) : (
+                                <div className="relative">
+                                    <select
+                                        value={selectedCityDisplayName}
+                                        onChange={(e) =>
+                                            updateShippingRegionalFromCity(e.target.value)
+                                        }
+                                        disabled={!selectedProvinceId || loadingCities}
+                                        className="w-full appearance-none bg-background border border-border rounded-xl py-2.5 px-3 pr-10 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all disabled:opacity-60"
+                                    >
+                                        <option value="">
+                                            {!selectedProvinceId
+                                                ? `Current: ${shippingRegional || "—"}`
+                                                : loadingCities
+                                                ? "Loading cities..."
+                                                : "Select city"}
                                         </option>
-                                    ))}
-                                </select>
-                                {loadingCities ? (
-                                    <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-accent" />
-                                ) : (
-                                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                )}
-                            </div>
+                                        {cities.map((city) => (
+                                            <option key={city.id} value={city.nama}>
+                                                {city.nama}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {loadingCities ? (
+                                        <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-accent" />
+                                    ) : (
+                                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                    )}
+                                </div>
+                            )}
                             {shippingRegional && !selectedProvinceId && (
                                 <p className="text-[11px] text-muted-foreground mt-1">
                                     Current value: <span className="font-medium text-foreground">{shippingRegional}</span>. Select a province above to change it.

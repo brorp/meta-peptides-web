@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Loader2, Eye, Trash2, UserX } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
 
 type User = {
     id: string;
@@ -24,47 +25,27 @@ function formatDate(dateStr: string) {
 
 export default function AdminUsersPage() {
     const router = useRouter();
-    const [users, setUsers] = useState<User[]>([]);
-    const [loading, setLoading] = useState(true);
     const [keyword, setKeyword] = useState("");
     const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
     const [deleting, setDeleting] = useState<string | null>(null);
-    const [role, setRole] = useState<"root" | "admin" | null>(null);
-
-    const fetchAdminRole = async () => {
-        try {
-            const { data } = await axios.get("/admin/auth/me");
-            setRole(data.data?.role || null);
-        } catch {
-            setRole(null);
-        }
-    };
-
-    const fetchUsers = async () => {
-        setLoading(true);
-        try {
-            const { data } = await axios.get("/admin/users", {
-                params: { page, limit: 20, keyword },
-            });
-            if (data.success) {
-                setUsers(data.data || []);
-                setTotalPages(data.pagination?.total_pages || 1);
-            }
-        } catch (err) {
-            toast.error("Failed to fetch users");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchAdminRole();
-    }, []);
-
-    useEffect(() => {
-        fetchUsers();
-    }, [page, keyword]);
+    const { data: authResponse } = useApiQuery<any>(
+        ["admin-auth-me"],
+        "/admin/auth/me",
+        undefined,
+        { staleTime: 5 * 60 * 1000 },
+    );
+    const role = authResponse?.data?.role || null;
+    const {
+        data: usersResponse,
+        isLoading: loading,
+        refetch: refetchUsers,
+    } = useApiQuery<any>(
+        ["admin-users", page, keyword],
+        "/admin/users",
+        { params: { page, limit: 20, keyword } },
+    );
+    const users: User[] = usersResponse?.data || [];
+    const totalPages = usersResponse?.pagination?.total_pages || 1;
 
     const handleDelete = async (id: string) => {
         if (!confirm("Are you sure you want to delete this user?")) return;
@@ -72,7 +53,7 @@ export default function AdminUsersPage() {
         try {
             await axios.delete(`/admin/users/${id}`);
             toast.success("User deleted");
-            fetchUsers();
+            refetchUsers();
         } catch {
             toast.error("Failed to delete user");
         } finally {

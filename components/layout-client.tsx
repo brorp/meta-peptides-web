@@ -35,7 +35,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <Navbar />
+      {!isFreeConsultation && <Navbar />}
       <main>{children}</main>
       <OneModal />
       {!isFreeConsultation && <FloatingActions />}

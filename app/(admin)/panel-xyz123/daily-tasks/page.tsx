@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, ClipboardList, Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
 
 const JOURNEY_LABELS: Record<string, string> = {
   fu_h1: "FU H+1",
@@ -33,44 +34,34 @@ const formatDueDate = (value: string) =>
   });
 
 export default function DailyTasksPage() {
-  const [tasks, setTasks] = useState<any[]>([]);
   const [taskState, setTaskState] = useState<Record<string, TaskState>>({});
-  const [loading, setLoading] = useState(true);
-
-  const fetchTasks = async () => {
-    setLoading(true);
-    try {
-      const { data } = await axios.get("/admin/daily-tasks");
-      const nextTasks = data.data?.tasks || [];
-      setTasks(nextTasks);
-      setTaskState((prev) => {
-        const next = { ...prev };
-        for (const task of nextTasks) {
-          if (!next[task.id]) {
-            next[task.id] = {
-              next_journey: task.allowed_next_stages?.[0] || "",
-              order_id: "",
-              evidence_url: "",
-              notes: "",
-              uploading: false,
-              saving: false,
-            };
-          }
-        }
-        return next;
-      });
-    } catch (error: any) {
-      toast.error("Failed to fetch daily tasks", {
-        description: getErrorMessage(error, "Please try again."),
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    data: tasksResponse,
+    isLoading: loading,
+    refetch: refetchTasks,
+  } = useApiQuery<any>(["admin-daily-tasks"], "/admin/daily-tasks", undefined, {
+    staleTime: 60 * 1000,
+  });
+  const tasks: any[] = tasksResponse?.data?.tasks || [];
 
   useEffect(() => {
-    fetchTasks();
-  }, []);
+    setTaskState((prev) => {
+      const next = { ...prev };
+      for (const task of tasks) {
+        if (!next[task.id]) {
+          next[task.id] = {
+            next_journey: task.allowed_next_stages?.[0] || "",
+            order_id: "",
+            evidence_url: "",
+            notes: "",
+            uploading: false,
+            saving: false,
+          };
+        }
+      }
+      return next;
+    });
+  }, [tasksResponse]);
 
   const updateTaskState = (taskId: string, patch: Partial<TaskState>) => {
     setTaskState((prev) => ({
@@ -127,7 +118,7 @@ export default function DailyTasksPage() {
       });
 
       toast.success("Daily task completed");
-      fetchTasks();
+      refetchTasks();
     } catch (error: any) {
       toast.error("Failed to complete task", {
         description: getErrorMessage(error, "Please review the task data."),

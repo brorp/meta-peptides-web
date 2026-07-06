@@ -1,44 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import {
   ArrowRight,
-  Check,
-  ChevronDown,
-  Loader2,
-  LockKeyhole,
+  Dumbbell,
+  HeartPulse,
   MessageCircle,
+  Moon,
+  Flame,
+  ShieldCheck,
+  Sparkles,
+  Zap,
+  type LucideIcon,
 } from "lucide-react";
-import { toast } from "sonner";
-import { api as axios } from "@/lib/axios";
-import { useAllIndonesiaCities } from "@/hooks/use-indonesia-regions";
 
 const WHATSAPP_NUMBER = "6285191378473";
-
-const AGE_OPTIONS = [
-  { label: "21 - 35 years", value: "21-35" },
-  { label: "36 - 55 years", value: "36-55" },
-  { label: "Above 55 years", value: "55+" },
-  { label: "Rather not say", value: "undisclosed" },
-];
-
-const GENDER_OPTIONS = ["Male", "Female"];
-
-
-
-const INITIAL_FORM = {
-  name: "",
-  whatsapp: "",
-  age: "",
-  gender: "",
-  email: "",
-  domicile: "",
-  concern: "",
-  website: "",
-};
-
-type FormField = keyof typeof INITIAL_FORM | "ageConfirmed";
 
 declare global {
   interface Window {
@@ -46,476 +22,162 @@ declare global {
   }
 }
 
-function getErrorMessage(error: any) {
-  return (
-    error?.response?.data?.message ||
-    error?.message ||
-    "Please review your details and try again."
-  );
-}
+type GoalCard = {
+  title: string;
+  eyebrow: string;
+  description: string;
+  icon: LucideIcon;
+};
 
-function trackFreeConsultationLead() {
+const GOALS: GoalCard[] = [
+  {
+    title: "Weight Loss",
+    eyebrow: "Body composition",
+    description: "For guidance around body recomposition and wellness planning.",
+    icon: Flame,
+  },
+  {
+    title: "Energy & Recovery",
+    eyebrow: "Daily performance",
+    description: "For routines focused on stamina, recovery, and consistency.",
+    icon: Zap,
+  },
+  {
+    title: "Anti-Aging Support",
+    eyebrow: "Longevity goals",
+    description: "For age-management, vitality, and long-term wellness questions.",
+    icon: Sparkles,
+  },
+  {
+    title: "Skin & Hair",
+    eyebrow: "Appearance support",
+    description: "For consultation around skin quality, hair support, and glow goals.",
+    icon: HeartPulse,
+  },
+  {
+    title: "Muscle & Strength",
+    eyebrow: "Training support",
+    description: "For strength, lean mass, and training-adjacent wellness goals.",
+    icon: Dumbbell,
+  },
+  {
+    title: "Sleep & Stress",
+    eyebrow: "Balance protocol",
+    description: "For recovery rhythm, rest quality, and stress-management support.",
+    icon: Moon,
+  },
+  {
+    title: "Not Sure Yet",
+    eyebrow: "Help me choose",
+    description: "For a quick recommendation when you are unsure where to start.",
+    icon: MessageCircle,
+  },
+];
+
+function trackGoalClick(goal: string) {
   if (typeof window === "undefined" || typeof window.fbq !== "function") {
-    return false;
+    return;
   }
 
   window.fbq("track", "Lead", {
-    content_name: "Free Consultation",
+    content_name: "Free Consultation Goal",
     content_category: "Consultation",
+    goal,
   });
+}
 
-  return true;
+function getWhatsAppUrl(goal: string) {
+  const message = [
+    "Halo Kak MetaPeptides, saya mau free consultation.",
+    "",
+    `Goal saya: ${goal}`,
+    "Saya ingin dibantu pilih guidance yang paling sesuai.",
+    "",
+    "Mohon dibantu ya, thank you.",
+  ].join("\n");
+
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
 }
 
 export function FreeConsultationForm() {
-  const [form, setForm] = useState(INITIAL_FORM);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
-  const [errors, setErrors] = useState<Partial<Record<FormField, string>>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isAgeConfirmed, setIsAgeConfirmed] = useState(false);
-
-  const { allCities, loading: loadingCities } = useAllIndonesiaCities();
-  const [citySearch, setCitySearch] = useState("");
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setCitySearch(form.domicile);
-  }, [form.domicile]);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        setShowSuggestions(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const handleSelectCity = (nama: string, provinsi: string) => {
-    const value = `${provinsi} - ${nama}`;
-    setCitySearch(value);
-    updateForm("domicile", value);
-    setShowSuggestions(false);
-  };
-
-  const filteredCities =
-    citySearch.trim() === ""
-      ? []
-      : allCities
-          .filter(
-            (c) =>
-              c.nama.toLowerCase().includes(citySearch.toLowerCase()) ||
-              c.provinsi.toLowerCase().includes(citySearch.toLowerCase())
-          )
-          .slice(0, 10);
-
-  useEffect(() => {
-    axios
-      .get<any>("/categories")
-      .then(({ data }) => {
-        if (data?.success && Array.isArray(data.data)) {
-          setCategories(data.data);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  const updateForm = (field: FormField, value: string) => {
-    setForm((current) => ({ ...current, [field]: value }));
-    setErrors((current) => ({ ...current, [field]: undefined }));
-  };
-
-  const validate = () => {
-    const nextErrors: Partial<Record<FormField, string>> = {};
-    if (!form.name.trim()) nextErrors.name = "Full name is required";
-    if (!form.whatsapp.trim()) {
-      nextErrors.whatsapp = "WhatsApp number is required";
-    }
-    if (!form.age) nextErrors.age = "Select your age range";
-    if (!form.gender) nextErrors.gender = "Select your gender";
-    if (!form.domicile) nextErrors.domicile = "Select your city";
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      nextErrors.email = "Enter a valid email";
-    }
-    if (!isAgeConfirmed) {
-      nextErrors.ageConfirmed = "You must confirm you are 21 years or older";
-    }
-    setErrors(nextErrors);
-    return Object.keys(nextErrors).length === 0;
-  };
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!validate()) return;
-
-    setIsSubmitting(true);
-
-    try {
-      const query = new URLSearchParams(window.location.search);
-      await axios.post("/consultations", {
-        ...form,
-        goals: selectedGoals.join(", "),
-        utm_source: query.get("utm_source") || "",
-        utm_medium: query.get("utm_medium") || "",
-        utm_campaign: query.get("utm_campaign") || "",
-        utm_content: query.get("utm_content") || "",
-        utm_term: query.get("utm_term") || "",
-      });
-
-      const date = new Intl.DateTimeFormat("id-ID", {
-        dateStyle: "medium",
-        timeStyle: "short",
-        timeZone: "Asia/Jakarta",
-      }).format(new Date());
-      const ageLabel =
-        AGE_OPTIONS.find((option) => option.value === form.age)?.label || form.age;
-      const message = [
-        `Halo Kak, saya ingin konsultasi mengenai produk`,
-        "",
-        `Nama: ${form.name.trim()}`,
-        `No. WhatsApp: ${form.whatsapp.trim()}`,
-        `Usia: ${ageLabel}`,
-        `Gender: ${form.gender}`,
-        form.email.trim() ? `Email: ${form.email.trim()}` : null,
-        `Domisili: ${form.domicile}`,
-        selectedGoals.length > 0 ? `Goals: ${selectedGoals.join(", ")}` : null,
-        form.concern.trim() ? `Concern: ${form.concern.trim()}` : null,
-        "",
-        "Mohon dibantu informasinya, thank you",
-      ]
-        .filter((line) => line !== null)
-        .join("\n");
-
-      const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-        message,
-      )}`;
-      const trackedLead = trackFreeConsultationLead();
-
-      if (trackedLead) {
-        window.setTimeout(() => {
-          window.location.href = whatsappUrl;
-        }, 150);
-        return;
-      }
-
-      window.location.href = whatsappUrl;
-    } catch (error: any) {
-      toast.error("Could not submit your consultation", {
-        description: getErrorMessage(error),
-      });
-      setIsSubmitting(false);
-    }
-  };
-
-  const inputClass =
-    "h-12 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-900 outline-none transition-all placeholder:text-slate-300 focus:border-accent focus:bg-white focus:ring-4 focus:ring-accent/10";
-  const labelClass =
-    "mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-slate-500";
-
   return (
-    <div className="min-h-screen overflow-hidden bg-[#f3f4ef] pt-28 text-slate-900 md:pt-32">
-      <div className="pointer-events-none fixed inset-0 opacity-[0.035] [background-image:radial-gradient(#111_1px,transparent_1px)] [background-size:22px_22px]" />
+    <div className="min-h-screen overflow-hidden bg-background text-foreground">
+      <div className="pointer-events-none fixed inset-0 opacity-[0.035] [background-image:radial-gradient(#414042_1px,transparent_1px)] [background-size:22px_22px]" />
+      <div className="pointer-events-none fixed -left-24 top-16 h-72 w-72 rounded-full bg-accent/10 blur-3xl" />
+      <div className="pointer-events-none fixed -right-20 bottom-10 h-80 w-80 rounded-full bg-[#414042]/10 blur-3xl" />
 
-      <main className="relative mx-auto max-w-2xl px-5 pb-16 md:px-8">
-        <section className="rounded-[2rem] border border-slate-200 bg-white p-5 shadow-[0_30px_90px_rgba(15,23,42,0.10)] md:p-8">
-          <div className="mb-8 flex items-center gap-3">
-            <Image
-              src="/logo.webp"
-              alt="MetaPeptides"
-              width={56}
-              height={56}
-              className="h-12 w-auto object-contain"
-            />
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-accent">
-                MetaWellness
-              </p>
-              <p className="text-xs font-bold text-slate-500">
-                Free Personal Consultation
-              </p>
-            </div>
-          </div>
-          <div className="mb-7 flex items-start justify-between gap-4 border-b border-slate-100 pb-6">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-accent">
-                Before we start the journey
-              </p>
-              <h2 className="mt-2 text-2xl font-black tracking-tight">
-                Tell us about yourself
-              </h2>
-            </div>
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-white">
-              <MessageCircle className="h-5 w-5" />
-            </div>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <input
-              tabIndex={-1}
-              autoComplete="off"
-              value={form.website}
-              onChange={(event) => updateForm("website", event.target.value)}
-              className="hidden"
-              aria-hidden="true"
-            />
-
-            <div className="grid gap-5 md:grid-cols-2">
-              <label>
-                <span className={labelClass}>Full Name *</span>
-                <input
-                  value={form.name}
-                  onChange={(event) => updateForm("name", event.target.value)}
-                  placeholder="Your full name"
-                  className={inputClass}
-                />
-                {errors.name && (
-                  <span className="mt-1.5 block text-[10px] font-bold text-red-500">
-                    {errors.name}
-                  </span>
-                )}
-              </label>
-
-              <label>
-                <span className={labelClass}>WhatsApp Number *</span>
-                <input
-                  type="tel"
-                  value={form.whatsapp}
-                  onChange={(event) => updateForm("whatsapp", event.target.value)}
-                  placeholder="e.g. 08123456789"
-                  className={inputClass}
-                />
-                {errors.whatsapp && (
-                  <span className="mt-1.5 block text-[10px] font-bold text-red-500">
-                    {errors.whatsapp}
-                  </span>
-                )}
-              </label>
-
-              <label>
-                <span className={labelClass}>Age Range *</span>
-                <select
-                  value={form.age}
-                  onChange={(event) => updateForm("age", event.target.value)}
-                  className={inputClass}
-                >
-                  <option value="">Select age range</option>
-                  {AGE_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {errors.age && (
-                  <span className="mt-1.5 block text-[10px] font-bold text-red-500">
-                    {errors.age}
-                  </span>
-                )}
-              </label>
-
-              <fieldset>
-                <legend className={labelClass}>Gender *</legend>
-                <div className="grid grid-cols-2 gap-2">
-                  {GENDER_OPTIONS.map((gender) => (
-                    <button
-                      key={gender}
-                      type="button"
-                      onClick={() => updateForm("gender", gender)}
-                      className={`h-12 rounded-xl border text-xs font-black uppercase tracking-wider transition-all ${
-                        form.gender === gender
-                          ? "border-slate-900 bg-slate-900 text-white"
-                          : "border-slate-200 bg-slate-50 text-slate-500 hover:border-accent/40 hover:text-accent"
-                      }`}
-                    >
-                      {gender}
-                    </button>
-                  ))}
-                </div>
-                {errors.gender && (
-                  <span className="mt-1.5 block text-[10px] font-bold text-red-500">
-                    {errors.gender}
-                  </span>
-                )}
-              </fieldset>
-
-              <label>
-                <span className={labelClass}>Email</span>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={(event) => updateForm("email", event.target.value)}
-                  placeholder="Optional"
-                  className={inputClass}
-                />
-                {errors.email && (
-                  <span className="mt-1.5 block text-[10px] font-bold text-red-500">
-                    {errors.email}
-                  </span>
-                )}
-              </label>
-
-              <div ref={containerRef} className="relative flex flex-col justify-end">
-                <span className={labelClass}>City / Kota / Kabupaten *</span>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={citySearch}
-                    onChange={(event) => {
-                      const val = event.target.value;
-                      setCitySearch(val);
-                      updateForm("domicile", val);
-                      setShowSuggestions(true);
-                    }}
-                    onFocus={() => setShowSuggestions(true)}
-                    placeholder={loadingCities ? "Loading cities database..." : "e.g. JAKARTA"}
-                    className={inputClass + " pr-10"}
-                  />
-                  {loadingCities ? (
-                    <Loader2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-accent" />
-                  ) : (
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  )}
-                  {showSuggestions && filteredCities.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
-                      {filteredCities.map((city) => (
-                        <button
-                          key={`${city.provinsi}-${city.nama}`}
-                          type="button"
-                          onClick={() => handleSelectCity(city.nama, city.provinsi)}
-                          className="flex w-full items-center justify-between gap-2 border-b border-slate-50 px-4 py-2.5 text-left transition-colors hover:bg-slate-100/80 last:border-b-0"
-                        >
-                          <span className="truncate text-xs font-bold text-slate-800">
-                            {city.nama}
-                          </span>
-                          <span className="shrink-0 text-[9px] font-black uppercase tracking-wider text-accent">
-                            {city.provinsi}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {errors.domicile && (
-                  <span className="mt-1.5 block text-[10px] font-bold text-red-500">
-                    {errors.domicile}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {categories.length > 0 && (
-              <fieldset>
-                <legend className={labelClass}>Goals (select all that apply)</legend>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {categories.map((category) => {
-                    const checked = selectedGoals.includes(category);
-                    return (
-                      <button
-                        key={category}
-                        type="button"
-                        onClick={() => {
-                          setSelectedGoals((prev) =>
-                            prev.includes(category)
-                              ? prev.filter((g) => g !== category)
-                              : [...prev, category],
-                          );
-                        }}
-                        className={`flex items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left text-[11px] font-semibold transition-all ${
-                          checked
-                            ? "border-slate-900 bg-slate-900 text-white"
-                            : "border-slate-200 bg-slate-50 text-slate-600 hover:border-accent/40 hover:text-accent"
-                        }`}
-                      >
-                        <span
-                          className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                            checked
-                              ? "border-white bg-transparent"
-                              : "border-slate-300 bg-white"
-                          }`}
-                        >
-                          {checked && <Check className="h-2.5 w-2.5 text-white" />}
-                        </span>
-                        {category}
-                      </button>
-                    );
-                  })}
-                </div>
-              </fieldset>
-            )}
-
-            <label className="block">
-              <span className={labelClass}>Your Concern or Question</span>
-              <textarea
-                value={form.concern}
-                onChange={(event) => updateForm("concern", event.target.value)}
-                placeholder="Tell us what you want to discuss..."
-                rows={4}
-                className={`${inputClass} h-auto resize-none py-3`}
-              />
-            </label>
-
-            <div className="space-y-3">
-              <div className={`rounded-2xl border p-4 transition-all duration-200 ${errors.ageConfirmed ? 'border-red-200 bg-red-50/30' : 'border-slate-100 bg-slate-50 hover:bg-slate-100/50'}`}>
-                <label className="flex items-start gap-3 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={isAgeConfirmed}
-                    onChange={(event) => {
-                      setIsAgeConfirmed(event.target.checked);
-                      setErrors((current) => ({ ...current, ageConfirmed: undefined }));
-                    }}
-                    className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-accent focus:ring-accent accent-accent cursor-pointer"
-                  />
-                  <div className="flex-grow">
-                    <span className="text-[11px] font-semibold leading-5 text-slate-600">
-                      By checking this box, I confirm that I am 21 years old or older, understand that this consultation is intended for responsible adults who can make informed wellness decisions, and acknowledge that I am responsible for seeking appropriate professional guidance when needed.
-                    </span>
-                    {errors.ageConfirmed && (
-                      <span className="mt-1.5 block text-[10px] font-bold text-red-500">
-                        {errors.ageConfirmed}
-                      </span>
-                    )}
+      <main className="relative mx-auto max-w-6xl px-5 py-5 md:px-8 md:py-8">
+        <section className="overflow-hidden rounded-[2.25rem] border border-border bg-card shadow-[0_30px_90px_rgba(65,64,66,0.12)]">
+          <div className="relative grid gap-0 lg:grid-cols-[0.9fr_1.35fr]">
+            <div className="relative overflow-hidden bg-[#414042] p-7 text-white md:p-10">
+              <div className="absolute inset-0 opacity-40 [background-image:radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.26),transparent_24%),radial-gradient(circle_at_80%_10%,rgba(255,255,255,0.14),transparent_26%),linear-gradient(145deg,rgba(255,255,255,0.14),transparent_45%)]" />
+              <div className="relative">
+                <div className="mb-9 flex items-center gap-3">
+                  <div className="rounded-2xl bg-white p-2">
+                    <Image
+                      src="/logo.webp"
+                      alt="MetaPeptides"
+                      width={58}
+                      height={58}
+                      className="h-11 w-auto object-contain"
+                      priority
+                    />
                   </div>
-                </label>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.34em] text-white/55">
+                      MetaWellness
+                    </p>
+                    <p className="text-xs font-bold text-white/60">
+                      Free Personal Consultation
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
+            <div className="p-5 md:p-8 lg:p-10">
+              <div className="mb-6 flex flex-col justify-between gap-3 md:flex-row md:items-end">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.24em] text-accent">
+                    Choose your goal,
+                  </p>
+                  <h2 className="mt-2 text-2xl font-black tracking-tight text-foreground md:text-3xl">
+                    What do you want to improve?
+                  </h2>
+                </div>
+              </div>
 
-            <div className="flex items-center gap-1.5 px-1 text-[10px] font-semibold text-slate-400">
-              <LockKeyhole className="h-3.5 w-3.5 text-accent" />
-              <span>Your data is safe and encrypted</span>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {GOALS.map((goal, index) => {
+                  const Icon = goal.icon;
+
+                  return (
+                    <a
+                      key={goal.title}
+                      href={getWhatsAppUrl(goal.title)}
+                      onClick={() => trackGoalClick(goal.title)}
+                      className="group relative overflow-hidden rounded-[1.6rem] border border-border bg-muted/50 p-4 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-accent hover:bg-card hover:shadow-xl hover:shadow-[#414042]/10 focus:outline-none focus:ring-4 focus:ring-accent/20"
+                    >
+                      <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-accent/10 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100" />
+                      <div className="relative flex items-start gap-4">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#414042] text-white shadow-lg shadow-[#414042]/10 transition-transform duration-300 group-hover:rotate-3 group-hover:scale-105 group-hover:bg-accent">
+                          <Icon className="h-6 w-6" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-lg font-black leading-tight tracking-tight text-foreground">
+                            {goal.title}
+                          </h3>
+                          <p className="mt-2 text-xs font-semibold leading-5 text-slate-500">
+                            {goal.description}
+                          </p>
+                        </div>
+                      </div>
+                    </a>
+                  );
+                })}
+              </div>
             </div>
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="group flex h-14 w-full items-center justify-center rounded-2xl bg-slate-900 px-6 text-xs font-black uppercase tracking-[0.16em] text-white shadow-xl shadow-slate-200 transition-all hover:bg-accent disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Preparing...
-                </>
-              ) : (
-                <>
-                  Start Consultation
-                  <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </>
-              )}
-            </button>
-
-            <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-slate-400">
-              <Check className="h-3.5 w-3.5 text-emerald-500" />
-              No consultation fee
-              <span className="text-slate-200">•</span>
-              Working Hour Response
-            </div>
-          </form>
+          </div>
         </section>
       </main>
     </div>

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ApiResponse } from "@/interface/global";
 import { ProductCard } from "@/components/product-card";
 import { Search, Loader2, Filter } from "lucide-react";
 import { useGetProducts } from "@/hooks/api/useGetProducts";
-import { api as apiClient } from "@/lib/axios";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
 import { useDebounce } from "@/hooks/use-debounce";
 import { ProductCardSkeleton } from "@/components/skeleton/product-card-skeleton";
 import { FilterSidebar } from "./filter-sidebar";
@@ -30,21 +30,17 @@ export default function ShopPageComponent() {
   const [isCatOpen, setIsCatOpen] = useState(true);
   const [isSortOpen, setIsSortOpen] = useState(true);
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-  const [categoriesList, setCategoriesList] = useState<string[]>(["All"]);
 
-  useEffect(() => {
-    async function fetchCategories() {
-      try {
-        const { data } = await apiClient.get<ApiResponse<string[]>>("/categories");
-        if (data?.success && Array.isArray(data.data)) {
-          setCategoriesList(["All", ...data.data]);
-        }
-      } catch (err) {
-        console.error("Failed to fetch categories", err);
-      }
-    }
-    fetchCategories();
-  }, []);
+  const { data: categoriesResponse } = useApiQuery<ApiResponse<string[]>>(
+    ["categories"],
+    "/categories",
+    undefined,
+    { staleTime: 60 * 60 * 1000 },
+  );
+  const categoriesList = [
+    "All",
+    ...(Array.isArray(categoriesResponse?.data) ? categoriesResponse.data : []),
+  ];
 
   const debouncedSearch = useDebounce(searchQuery, 500);
   const isFiltering =

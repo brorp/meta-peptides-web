@@ -1,46 +1,34 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Loader2, Plus, Edit, Trash2, FileText, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
 
 export default function AdminCoasPage() {
     const router = useRouter();
-    const [coas, setCoas] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
     const [keyword, setKeyword] = useState("");
     const [page, setPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-
-    const fetchCoas = async () => {
-        setLoading(true);
-        try {
-            const { data } = await axios.get("/admin/lab-tests", {
-                params: { page, limit: 20, keyword },
-            });
-            if (data.success) {
-                setCoas(data.data || []);
-                setTotalPages(data.pagination?.total_pages || 1);
-            }
-        } catch {
-            toast.error("Failed to fetch COAs");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchCoas();
-    }, [page, keyword]);
+    const {
+        data: coasResponse,
+        isLoading: loading,
+        refetch: refetchCoas,
+    } = useApiQuery<any>(
+        ["admin-lab-tests", page, keyword],
+        "/admin/lab-tests",
+        { params: { page, limit: 20, keyword } },
+    );
+    const coas: any[] = coasResponse?.data || [];
+    const totalPages = coasResponse?.pagination?.total_pages || 1;
 
     const handleDelete = async (id: string) => {
         if (!confirm("Are you sure you want to delete this COA?")) return;
         try {
             await axios.delete(`/admin/lab-tests/${id}`);
             toast.success("COA deleted");
-            fetchCoas();
+            refetchCoas();
         } catch {
             toast.error("Failed to delete COA");
         }

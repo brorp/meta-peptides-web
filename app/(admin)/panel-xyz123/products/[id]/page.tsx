@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Save, Upload, X, ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
 
 const PRODUCT_FIELDS = [
     { key: "name", label: "Product Name", required: true },
@@ -40,13 +41,30 @@ export default function EditProductPage({
     const { id } = use(params);
     const router = useRouter();
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [productOptions, setProductOptions] = useState<any[]>([]);
-    const [role, setRole] = useState<AdminRole | null>(null);
     const [form, setForm] = useState<Record<string, any>>({});
+    const { data: authResponse } = useApiQuery<any>(
+        ["admin-auth-me"],
+        "/admin/auth/me",
+        undefined,
+        { staleTime: 5 * 60 * 1000 },
+    );
+    const { data: productResponse, isLoading: loading } = useApiQuery<any>(
+        ["admin-product", id],
+        `/admin/products/${id}`,
+    );
+    const { data: productOptionsResponse } = useApiQuery<any>(
+        ["admin-product-options"],
+        "/admin/products",
+        { params: { page: 1, limit: 500 } },
+        { staleTime: 5 * 60 * 1000 },
+    );
+    const role: AdminRole | null = authResponse?.data?.role || null;
+    const productOptions: any[] = (productOptionsResponse?.data || []).filter(
+        (product: any) => product.id !== id,
+    );
     const isStaffAdmin = role === "admin";
     const canViewCostOfGoods = role === "root";
     const visibleProductFields = PRODUCT_FIELDS.filter(
@@ -54,56 +72,14 @@ export default function EditProductPage({
     );
 
     useEffect(() => {
-        const fetchProduct = async () => {
-            try {
-                const { data } = await axios.get(`/admin/products/${id}`);
-                if (data.success) {
-                    setForm(data.data);
-                    if (data.data.image_url) {
-                        setImagePreview(data.data.image_url);
-                    }
-                }
-            } catch {
-                toast.error("Failed to fetch product");
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchProduct();
-    }, [id]);
+        const product = productResponse?.data;
+        if (!product) return;
 
-    useEffect(() => {
-        const fetchAdminRole = async () => {
-            try {
-                const { data } = await axios.get("/admin/auth/me");
-                setRole(data.data?.role || null);
-            } catch {
-                setRole(null);
-            }
-        };
-
-        fetchAdminRole();
-    }, []);
-
-    useEffect(() => {
-        const fetchProductOptions = async () => {
-            try {
-                const { data } = await axios.get("/admin/products", {
-                    params: { page: 1, limit: 500 },
-                });
-
-                if (data.success) {
-                    setProductOptions(
-                        (data.data || []).filter((product: any) => product.id !== id),
-                    );
-                }
-            } catch {
-                toast.error("Failed to load product options");
-            }
-        };
-
-        fetchProductOptions();
-    }, [id]);
+        setForm(product);
+        if (product.image_url) {
+            setImagePreview(product.image_url);
+        }
+    }, [productResponse]);
 
     const updateField = (key: string, value: any) => {
         setForm((prev) => ({ ...prev, [key]: value }));

@@ -7,11 +7,11 @@ const META_PIXEL_ID = "4563926690560508";
 export const metadata: Metadata = {
   title: "Free Consultation | MetaPeptides",
   description:
-    "Tell us your goals and receive a personalized MetaPeptides consultation through WhatsApp.",
+    "Pick your goal and continue",
   openGraph: {
     title: "Start Your Free MetaPeptides Consultation",
     description:
-      "Complete a short form and continue directly to WhatsApp with our consultation team.",
+      "Choose your wellness goal and continue directly to WhatsApp with our consultation team.",
     url: "/free-consultation",
     images: ["/logo.webp"],
   },

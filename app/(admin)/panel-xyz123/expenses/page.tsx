@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Copy,
   Edit,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
+import { useApiQuery } from "@/hooks/api/useApiQuery";
 
 type ExpenseRecord = {
   id: string;
@@ -70,39 +71,23 @@ const getErrorMessage = (error: any, fallback: string) =>
   error?.response?.data?.message || error?.message || error?.error || fallback;
 
 export default function AdminExpensesPage() {
-  const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [form, setForm] = useState<ExpenseFormState>(buildDefaultForm);
-
-  const fetchExpenses = async () => {
-    setLoading(true);
-    try {
-      const { data } = await axios.get("/admin/expenses", {
-        params: { page, limit: 20, keyword },
-      });
-
-      if (data.success) {
-        setExpenses(data.data || []);
-        setTotalPages(data.pagination?.total_pages || 1);
-      }
-    } catch (error: any) {
-      toast.error("Failed to fetch expenses", {
-        description: getErrorMessage(error, "Please try again."),
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchExpenses();
-  }, [page, keyword]);
+  const {
+    data: expensesResponse,
+    isLoading: loading,
+    refetch: refetchExpenses,
+  } = useApiQuery<any>(
+    ["admin-expenses", page, keyword],
+    "/admin/expenses",
+    { params: { page, limit: 20, keyword } },
+  );
+  const expenses: ExpenseRecord[] = expensesResponse?.data || [];
+  const totalPages = expensesResponse?.pagination?.total_pages || 1;
 
   const resetForm = () => {
     setEditingId(null);
@@ -133,7 +118,7 @@ export default function AdminExpensesPage() {
       }
 
       resetForm();
-      fetchExpenses();
+      refetchExpenses();
     } catch (error: any) {
       toast.error(editingId ? "Failed to update expense" : "Failed to create expense", {
         description: getErrorMessage(error, "Please review the expense data."),
@@ -179,7 +164,7 @@ export default function AdminExpensesPage() {
       toast.success("Expense deleted");
 
       if (editingId === expense.id) resetForm();
-      fetchExpenses();
+      refetchExpenses();
     } catch (error: any) {
       toast.error("Failed to delete expense", {
         description: getErrorMessage(error, "Please try again."),
