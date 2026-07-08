@@ -12,23 +12,23 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://meta-peptides.com";
+
 export const metadata: Metadata = {
   title: {
     default: "MetaPeptides | Premium Research Peptides",
     template: "%s | MetaPeptides",
   },
   description:
-    "High-purity research peptides verified for laboratory excellence. Providing scientific compounds with ≥99% purity standards.",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-  ),
+    "Indonesia's leading supplier of high-purity research peptides. Verified laboratory compounds with ≥99% purity standards for scientific advancement.",
+  metadataBase: new URL(baseUrl),
 
   keywords: [
     "Research Peptides",
     "Buy Peptides",
-    "Laboratory Compounds",
-    "Peptide Purity",
     "MetaPeptides",
+    "Peptide Purity",
+    "Laboratory Compounds",
   ],
 
   icons: {
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    url: baseUrl,
     siteName: "MetaPeptides",
     title: "MetaPeptides | Premium Research Peptides",
     description:
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
   },
 
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "MetaPeptides",
     description: "Verified Research Peptides for Scientific Advancement.",
     images: ["/logo.webp"],
@@ -70,6 +70,13 @@ export const metadata: Metadata = {
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 };
 
@@ -78,12 +85,53 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${baseUrl}/#website`,
+        url: baseUrl,
+        name: "Meta Peptides",
+        publisher: { "@id": `${baseUrl}/#organization` },
+        potentialAction: {
+          "@type": "SearchAction",
+          target: {
+            "@type": "EntryPoint",
+            urlTemplate: `${baseUrl}/search?q={search_term_string}`,
+          },
+          "query-input": "required name=search_term_string",
+        },
+      },
+      {
+        "@type": "Organization",
+        "@id": `${baseUrl}/#organization`,
+        name: "Meta Peptides",
+        url: baseUrl,
+        logo: {
+          "@type": "ImageObject",
+          url: `${baseUrl}/logo.webp`,
+        },
+        contactPoint: {
+          "@type": "ContactPoint",
+          contactType: "customer support",
+          email: "support@meta-peptides.com",
+        },
+      },
+    ],
+  };
+
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} font-sans antialiased`}
         suppressHydrationWarning
       >
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+
         <Providers>{children}</Providers>
         <Toaster richColors position="top-right" />
       </body>
