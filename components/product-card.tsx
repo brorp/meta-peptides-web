@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/format";
 import { ProductInterface } from "@/interface/products";
 import { toast } from "sonner";
 
@@ -26,14 +25,14 @@ export function ProductCard({
       onClick={onClick}
       className="group relative border border-border/50 bg-card hover:border-accent/40 transition-all duration-500 rounded-3xl overflow-hidden flex flex-col shadow-sm hover:shadow-2xl hover:shadow-accent/5 hover:-translate-y-1 cursor-pointer"
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-gradient-to-br from-muted/50 to-accent/5">
+      <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-muted/50 to-accent/5">
         {product.image_url ? (
           <Image
             src={product.image_url}
             alt={product.name}
             fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="object-cover transition-transform duration-700 group-hover:scale-110"
+            className="object-contain"
             priority={false}
           />
         ) : (
@@ -59,20 +58,6 @@ export function ProductCard({
               {product.volume}
             </span>
           </div>
-          {/* Tambahan: Nama Label (Kimia) */}
-          <p className="text-xs text-muted-foreground italic line-clamp-1">
-            {product.label}
-          </p>
-        </div>
-
-        {/* Pricing Area */}
-        <div className="flex flex-col items-start gap-0.5 mb-4">
-          <span className="text-sm text-muted-foreground line-through decoration-red-500/30">
-            {formatCurrency(product.original_price)}
-          </span>
-          <span className="text-2xl font-black text-foreground tracking-tighter">
-            {formatCurrency(product.price)}
-          </span>
         </div>
 
         {/* Stock Bar Indicator */}

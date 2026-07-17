@@ -10,6 +10,36 @@ const PUBLIC_PRODUCT_SELECT =
   "id, name, label, slug, price, original_price, stock, image_url, category, purity, volume, formula, cas, short_desc, overview, storage_instruction, usage_instruction, dosing, complimentary_product_id, complimentary_quantity, is_active, created_at, updated_at";
 const BESTSELLER_ORDER_STATUSES = ["processing", "completed"];
 
+const normalizeProductText = (value?: string | null) =>
+  String(value || "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+
+const isBacWaterProduct = (product: { name?: string; label?: string | null }) => {
+  const name = normalizeProductText(product.name);
+  const label = normalizeProductText(product.label);
+
+  return (
+    name.includes("bac water") ||
+    name.includes("bacwater") ||
+    name.includes("bacteriostatic water") ||
+    label.includes("bac water") ||
+    label.includes("bacwater") ||
+    label.startsWith("bacw")
+  );
+};
+
+const getAvailabilityRank = (product: { stock?: number | string | null }) =>
+  Number(product.stock || 0) <= 0 ? 1 : 0;
+
+const compareAvailability = (left: any, right: any) =>
+  getAvailabilityRank(left) - getAvailabilityRank(right);
+
+const compareNewest = (left: any, right: any) =>
+  new Date(right.created_at || 0).getTime() -
+  new Date(left.created_at || 0).getTime();
+
 const applyProductFilters = (
   query: any,
   category?: string | null,
@@ -64,16 +94,50 @@ const rankProductsByBestSeller = async (
   }
 
   return [...products].sort((left, right) => {
+    const availabilityDiff = compareAvailability(left, right);
+    if (availabilityDiff !== 0) return availabilityDiff;
+
+    const bacWaterDiff =
+      Number(isBacWaterProduct(left)) - Number(isBacWaterProduct(right));
+    if (bacWaterDiff !== 0) return bacWaterDiff;
+
     const salesDiff =
       (quantityByProductId.get(right.id) || 0) -
       (quantityByProductId.get(left.id) || 0);
 
     if (salesDiff !== 0) return salesDiff;
 
-    return (
-      new Date(right.created_at || 0).getTime() -
-      new Date(left.created_at || 0).getTime()
-    );
+    return compareNewest(left, right);
+  });
+};
+
+const sortProducts = (products: any[], sort: string) => {
+  return [...products].sort((left, right) => {
+    const availabilityDiff = compareAvailability(left, right);
+    if (availabilityDiff !== 0) return availabilityDiff;
+
+    switch (sort) {
+      case "price_asc": {
+        const priceDiff = Number(left.price || 0) - Number(right.price || 0);
+        if (priceDiff !== 0) return priceDiff;
+        break;
+      }
+      case "price_desc": {
+        const priceDiff = Number(right.price || 0) - Number(left.price || 0);
+        if (priceDiff !== 0) return priceDiff;
+        break;
+      }
+      case "stock_asc": {
+        const stockDiff = Number(left.stock || 0) - Number(right.stock || 0);
+        if (stockDiff !== 0) return stockDiff;
+        break;
+      }
+      case "latest":
+      default:
+        break;
+    }
+
+    return compareNewest(left, right);
   });
 };
 
@@ -159,60 +223,31 @@ export async function GET(req: NextRequest) {
     let products: any[] = [];
     let count = 0;
 
+    const productsQuery = applyProductFilters(
+      supabaseServer
+        .from("products")
+        .select(PUBLIC_PRODUCT_SELECT, { count: "exact" }),
+      category,
+      keyword,
+    );
+
+    const { data, error, count: productsCount } = await productsQuery.order(
+      "created_at",
+      { ascending: false },
+    );
+
+    if (error) return errorResponse("Failed to load products", 400);
+
     if (sort === "popularity") {
-      const popularityQuery = applyProductFilters(
-        supabaseServer
-          .from("products")
-          .select(PUBLIC_PRODUCT_SELECT, { count: "exact" }),
-        category,
-        keyword,
-      );
-
-      const { data, error, count: popularityCount } = await popularityQuery.order(
-        "created_at",
-        { ascending: false },
-      );
-
-      if (error) return errorResponse("Failed to load products", 400);
-
       const rankedProducts = await rankProductsByBestSeller(
         supabaseServer,
         data || [],
       );
-
       products = rankedProducts.slice(from, to + 1);
-      count = popularityCount || 0;
+      count = productsCount || 0;
     } else {
-      let query = applyProductFilters(
-        supabaseServer
-          .from("products")
-          .select(PUBLIC_PRODUCT_SELECT, { count: "exact" }),
-        category,
-        keyword,
-      );
-
-      switch (sort) {
-        case "price_asc":
-          query = query.order("price", { ascending: true });
-          break;
-        case "price_desc":
-          query = query.order("price", { ascending: false });
-          break;
-        case "stock_asc":
-          query = query.order("stock", { ascending: true });
-          break;
-        case "latest":
-        default:
-          query = query.order("created_at", { ascending: false });
-          break;
-      }
-
-      const { data, error, count: queryCount } = await query.range(from, to);
-
-      if (error) return errorResponse("Failed to load products", 400);
-
-      products = data || [];
-      count = queryCount || 0;
+      products = sortProducts(data || [], sort).slice(from, to + 1);
+      count = productsCount || 0;
     }
 
     const enrichedProducts = await enrichComplimentaryProducts(

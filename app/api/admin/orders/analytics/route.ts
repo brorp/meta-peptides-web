@@ -155,10 +155,18 @@ function isExcludedBestSeller(product: { name?: string; label?: string | null })
       .trim()
       .replace(/\s+/g, " ")
       .toLowerCase();
+  const name = normalize(product.name);
+  const label = normalize(product.label);
 
   return (
-    excludedProducts.has(normalize(product.name)) ||
-    excludedProducts.has(normalize(product.label))
+    excludedProducts.has(name) ||
+    excludedProducts.has(label) ||
+    name.includes("bac water") ||
+    name.includes("bacwater") ||
+    name.includes("bacteriostatic water") ||
+    label.includes("bac water") ||
+    label.includes("bacwater") ||
+    label.startsWith("bacw")
   );
 }
 
