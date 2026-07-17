@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart } from "lucide-react";
@@ -25,18 +24,16 @@ export function ProductCard({
       onClick={onClick}
       className="group relative border border-border/50 bg-card hover:border-accent/40 transition-all duration-500 rounded-3xl overflow-hidden flex flex-col shadow-sm hover:shadow-2xl hover:shadow-accent/5 hover:-translate-y-1 cursor-pointer"
     >
-      <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-muted/50 to-accent/5">
+      <div className="overflow-hidden bg-white">
         {product.image_url ? (
-          <Image
+          <img
             src={product.image_url}
             alt={product.name}
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            className="object-contain"
-            priority={false}
+            className="block h-auto w-full"
+            loading="lazy"
           />
         ) : (
-          <div className="flex items-center justify-center h-full w-full">
+          <div className="flex min-h-48 items-center justify-center">
             <div className="relative z-10 text-6xl transform group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 ease-out">
               🧬
             </div>
@@ -48,7 +45,7 @@ export function ProductCard({
       </div>
 
       {/* Content Section */}
-      <div className="p-5 flex flex-col flex-grow">
+      <div className="flex flex-grow flex-col p-4">
         <div className="mb-3">
           <div className="flex justify-between items-start gap-2 mb-1">
             <h3 className="font-black text-base md:text-lg tracking-tight leading-tight group-hover:text-accent transition-colors">

@@ -116,14 +116,14 @@ export default function ShopPageComponent() {
             </div>
 
             {isLoading ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:gap-5">
                 {[...Array(6)].map((_, i) => (
                   <ProductCardSkeleton key={i} />
                 ))}
               </div>
             ) : data?.data?.length ? (
               <>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 md:gap-x-6 md:gap-y-10">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:gap-x-5 xl:gap-y-8">
                   {data.data.map((product: any) => (
                     <ProductCard
                       key={product.id}

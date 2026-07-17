@@ -4,10 +4,10 @@ export function ProductCardSkeleton() {
   return (
     <Card className="border border-border/50 bg-card rounded-3xl overflow-hidden flex flex-col shadow-sm animate-pulse">
       {/* Visual Top Section Skeleton */}
-      <div className="relative aspect-square bg-muted" />
+      <div className="h-56 bg-muted" />
 
       {/* Content Section Skeleton */}
-      <div className="p-5 flex flex-col flex-grow space-y-4">
+      <div className="flex flex-grow flex-col space-y-4 p-4">
         <div className="space-y-2">
           <div className="flex justify-between items-start gap-2">
             <div className="h-5 bg-muted rounded-md w-2/3" />
