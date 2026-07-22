@@ -15,7 +15,8 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
   const setUser = useUserStore((state) => state.setUser);
   const clearUser = useUserStore((state) => state.clearUser);
   const pathname = usePathname();
-  const isFreeConsultation = pathname === "/free-consultation";
+  const isCampaignLanding =
+    pathname === "/free-consultation" || pathname.startsWith("/ads/");
 
   useEffect(() => {
     const {
@@ -35,12 +36,12 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {!isFreeConsultation && <Navbar />}
+      {!isCampaignLanding && <Navbar />}
       <main>{children}</main>
-      <OneModal />
-      {!isFreeConsultation && <FloatingActions />}
-      {!isFreeConsultation && <Footer />}
-      <GlobalCart />
+      {!isCampaignLanding && <OneModal />}
+      {!isCampaignLanding && <FloatingActions />}
+      {!isCampaignLanding && <Footer />}
+      {!isCampaignLanding && <GlobalCart />}
     </>
   );
 }

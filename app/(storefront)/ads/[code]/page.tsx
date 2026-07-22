@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description:
         "Pelajari peptide support dan lanjutkan ke free consultation MetaWellness.",
       url: `/ads/${code}`,
-      images: ["/ads/meta-preview-4/result-body.png"],
+      images: ["/ads/meta-fit/hero.png"],
       type: "website",
     },
   };
