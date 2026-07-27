@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import { successResponse, errorResponse } from "@/lib/api-response";
 import { getAdminSessionFromCookies } from "@/lib/admin-auth";
+import { normalizeProductImages } from "@/lib/product-images";
 
 function hideCostOfGoodsForStaffAdmin(product: any, role: string | null) {
     if (role !== "admin") return product;
@@ -11,7 +12,7 @@ function hideCostOfGoodsForStaffAdmin(product: any, role: string | null) {
 }
 
 const ADMIN_PRODUCT_SELECT =
-    "id, name, label, slug, price, cost_of_goods, original_price, stock, usage_days, image_url, category, purity, volume, formula, cas, short_desc, overview, storage_instruction, usage_instruction, dosing, complimentary_product_id, complimentary_quantity, inventory_type, is_active, created_at, updated_at";
+    "id, name, label, slug, price, cost_of_goods, original_price, stock, usage_days, image_url, image_urls, category, purity, volume, formula, cas, short_desc, overview, storage_instruction, usage_instruction, dosing, complimentary_product_id, complimentary_quantity, inventory_type, is_active, created_at, updated_at";
 
 export async function GET(
     req: NextRequest,
@@ -72,7 +73,7 @@ export async function PUT(
         const updateData: any = {};
         const fields = [
             "name", "label", "slug", "price", "original_price", "stock", "usage_days",
-            "image_url", "category", "purity", "volume", "formula", "cas",
+            "image_url", "image_urls", "category", "purity", "volume", "formula", "cas",
             "short_desc", "overview", "storage_instruction", "usage_instruction",
             "dosing", "complimentary_product_id", "complimentary_quantity",
             "inventory_type", "is_active",
@@ -85,6 +86,16 @@ export async function PUT(
             if (body[field] !== undefined) {
                 updateData[field] = body[field];
             }
+        }
+
+        if (body.image_urls !== undefined) {
+            const imageUrls = normalizeProductImages(body.image_urls);
+            updateData.image_urls = imageUrls;
+            updateData.image_url = imageUrls[0] || null;
+        } else if (body.image_url !== undefined) {
+            const imageUrls = normalizeProductImages([], body.image_url);
+            updateData.image_urls = imageUrls;
+            updateData.image_url = imageUrls[0] || null;
         }
 
         if (updateData.price !== undefined)

@@ -9,6 +9,7 @@ export type ProductInterface = {
   volume: string;
   stock: number;
   image_url: string;
+  image_urls?: string[] | null;
   category: string;
   formula: string;
   overview: string;

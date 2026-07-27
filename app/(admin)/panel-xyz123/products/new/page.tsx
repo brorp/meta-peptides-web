@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Save, Upload, X, ImageIcon } from "lucide-react";
+import { ArrowLeft, Loader2, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
 import { useApiQuery } from "@/hooks/api/useApiQuery";
+import { ProductImageGalleryField } from "@/components/admin/product-image-gallery-field";
 
 const PRODUCT_FIELDS = [
     { key: "name", label: "Product Name", required: true },
@@ -35,10 +36,8 @@ type AdminRole = "root" | "admin";
 
 export default function NewProductPage() {
     const router = useRouter();
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const [saving, setSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [form, setForm] = useState<Record<string, any>>({
         name: "",
         price: "",
@@ -47,6 +46,8 @@ export default function NewProductPage() {
         usage_days: "0",
         complimentary_quantity: "1",
         is_active: true,
+        image_url: "",
+        image_urls: [],
     });
     const { data: authResponse } = useApiQuery<any>(
         ["admin-auth-me"],
@@ -72,44 +73,12 @@ export default function NewProductPage() {
         setForm((prev) => ({ ...prev, [key]: value }));
     };
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        // Client-side preview
-        const previewUrl = URL.createObjectURL(file);
-        setImagePreview(previewUrl);
-
-        setUploading(true);
-        try {
-            const formData = new FormData();
-            formData.append("file", file);
-
-            const { data } = await axios.post("/admin/upload", formData, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
-
-            if (data.success) {
-                updateField("image_url", data.data.url);
-                setImagePreview(data.data.url);
-                toast.success("Image uploaded");
-            } else {
-                toast.error(data.message);
-                setImagePreview(null);
-            }
-        } catch (err: any) {
-            toast.error(err?.response?.data?.message || "Failed to upload image");
-            setImagePreview(null);
-        } finally {
-            setUploading(false);
-            if (fileInputRef.current) fileInputRef.current.value = "";
-        }
-    };
-
-    const removeImage = () => {
-        setImagePreview(null);
-        updateField("image_url", "");
-        if (fileInputRef.current) fileInputRef.current.value = "";
+    const updateImages = (images: string[]) => {
+        setForm((prev) => ({
+            ...prev,
+            image_urls: images,
+            image_url: images[0] || "",
+        }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -158,64 +127,11 @@ export default function NewProductPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Image Upload Section */}
-                <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
-                    <h2 className="text-sm font-semibold text-foreground">
-                        Product Image
-                    </h2>
-
-                    <div className="flex items-start gap-6">
-                        {/* Image Preview */}
-                        <div className="relative w-40 h-40 rounded-xl border-2 border-dashed border-border bg-muted/30 flex items-center justify-center overflow-hidden shrink-0">
-                            {uploading && (
-                                <div className="absolute inset-0 bg-background/70 flex items-center justify-center z-10 rounded-xl">
-                                    <Loader2 className="w-6 h-6 animate-spin text-accent" />
-                                </div>
-                            )}
-                            {imagePreview ? (
-                                <>
-                                    <img
-                                        src={imagePreview}
-                                        alt="Product"
-                                        className="w-full h-full object-cover rounded-xl"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={removeImage}
-                                        className="absolute top-1.5 right-1.5 p-1 bg-destructive text-destructive-foreground rounded-full hover:bg-destructive/90 transition-colors"
-                                    >
-                                        <X className="w-3 h-3" />
-                                    </button>
-                                </>
-                            ) : (
-                                <ImageIcon className="w-10 h-10 text-muted-foreground/50" />
-                            )}
-                        </div>
-
-                        {/* Upload Controls */}
-                        <div className="flex flex-col gap-3 pt-2">
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/jpeg,image/png,image/webp,image/gif"
-                                onChange={handleImageUpload}
-                                className="hidden"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={uploading}
-                                className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
-                            >
-                                <Upload className="w-4 h-4" />
-                                {imagePreview ? "Change Image" : "Upload Image"}
-                            </button>
-                            <p className="text-xs text-muted-foreground">
-                                JPEG, PNG, WebP, or GIF. Max 5MB.
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                <ProductImageGalleryField
+                    images={form.image_urls || []}
+                    onChange={updateImages}
+                    onUploadingChange={setUploading}
+                />
 
                 <div className="bg-card border border-border rounded-2xl p-6 space-y-4">
                     <h2 className="text-sm font-semibold text-foreground">

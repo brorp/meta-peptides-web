@@ -6,7 +6,16 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProductInterface } from "@/interface/products";
 import { formatCurrency } from "@/lib/format";
+import { normalizeProductImages } from "@/lib/product-images";
 import { useCartStore } from "@/store/useCartStore";
+import {
+  Carousel,
+  type CarouselApi,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel";
 import {
   Beaker,
   ClipboardCheck,
@@ -17,6 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useEffect, useState } from "react";
 
 export default function ProductDetailComponent({
   product,
@@ -24,24 +34,107 @@ export default function ProductDetailComponent({
   product: ProductInterface;
 }) {
   const addToCart = useCartStore((state) => state.addToCart);
+  const images = normalizeProductImages(
+    product.image_urls,
+    product.image_url,
+  );
+  const galleryImages = images.length
+    ? images
+    : ["/product/product1.png"];
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
+  const [currentImage, setCurrentImage] = useState(0);
+
+  useEffect(() => {
+    if (!carouselApi) return;
+
+    const updateCurrentImage = () => {
+      setCurrentImage(carouselApi.selectedScrollSnap());
+    };
+
+    updateCurrentImage();
+    carouselApi.on("select", updateCurrentImage);
+    carouselApi.on("reInit", updateCurrentImage);
+
+    return () => {
+      carouselApi.off("select", updateCurrentImage);
+      carouselApi.off("reInit", updateCurrentImage);
+    };
+  }, [carouselApi]);
 
   return (
     <div className="min-h-screen bg-background pt-32 pb-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* --- TOP SECTION --- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 mb-20">
-          <div className="relative group">
+          <div className="relative group min-w-0">
             <div className="absolute -inset-4 bg-accent/5 rounded-[3rem] blur-2xl group-hover:bg-accent/10 transition-colors" />
-            <div className="relative aspect-square rounded-[2.5rem] border border-border bg-muted/30 overflow-hidden flex items-center justify-center p-12">
-              <img
-                src={product?.image_url || "/product/product1.png"}
-                alt={product?.name}
-                className="w-full h-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-110"
-              />
+            <div className="relative">
+              <Carousel
+                setApi={setCarouselApi}
+                opts={{
+                  align: "start",
+                  loop: galleryImages.length > 1,
+                }}
+                className="overflow-hidden rounded-[2.5rem] border border-border bg-muted/30"
+                aria-label={`${product.name} product gallery`}
+              >
+                <CarouselContent className="-ml-0">
+                  {galleryImages.map((image, index) => (
+                    <CarouselItem key={image} className="pl-0">
+                      <div className="aspect-square p-8 sm:p-12">
+                        <img
+                          src={image}
+                          alt={`${product.name} product image ${index + 1}`}
+                          loading={index === 0 ? "eager" : "lazy"}
+                          className="h-full w-full object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
+                        />
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+
+                {galleryImages.length > 1 && (
+                  <>
+                    <CarouselPrevious className="left-4 top-1/2 z-20 h-10 w-10 border-white/70 bg-white/90 shadow-lg hover:bg-white" />
+                    <CarouselNext className="right-4 top-1/2 z-20 h-10 w-10 border-white/70 bg-white/90 shadow-lg hover:bg-white" />
+                    <span className="absolute bottom-5 right-5 z-20 rounded-full bg-black/75 px-3 py-1.5 text-[10px] font-bold tracking-widest text-white backdrop-blur-sm">
+                      {currentImage + 1} / {galleryImages.length}
+                    </span>
+                  </>
+                )}
+              </Carousel>
               <Badge className="absolute top-8 left-8 bg-black text-white border-none px-4 py-1 uppercase tracking-widest text-[10px]">
                 Purity {product?.purity || "≥99%"}
               </Badge>
             </div>
+
+            {galleryImages.length > 1 && (
+              <div
+                className="mt-4 flex gap-3 overflow-x-auto pb-2"
+                aria-label="Choose product image"
+              >
+                {galleryImages.map((image, index) => (
+                  <button
+                    key={image}
+                    type="button"
+                    onClick={() => carouselApi?.scrollTo(index)}
+                    aria-label={`Show product image ${index + 1}`}
+                    aria-current={currentImage === index}
+                    className={`h-20 w-20 shrink-0 overflow-hidden rounded-2xl border-2 bg-muted/30 p-2 transition-all ${
+                      currentImage === index
+                        ? "border-black shadow-md"
+                        : "border-transparent opacity-65 hover:border-border hover:opacity-100"
+                    }`}
+                  >
+                    <img
+                      src={image}
+                      alt=""
+                      className="h-full w-full object-contain mix-blend-multiply"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col justify-center space-y-8">
