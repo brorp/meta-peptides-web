@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 import { Toaster } from "sonner";
+import { PageLoader } from "@/components/page-loader";
 
 const geistSans = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -80,13 +81,23 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <link
+          rel="preload"
+          href="/Animasi%20Logotype%201s.mp4"
+          as="video"
+          type="video/mp4"
+        />
+      </head>
       <body
         className={`${geistSans.variable} font-sans antialiased`}
         suppressHydrationWarning
       >
+        <PageLoader />
         <Providers>{children}</Providers>
         <Toaster richColors position="top-right" />
       </body>
     </html>
   );
 }
+
