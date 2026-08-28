@@ -12,6 +12,8 @@ import {
     Eye,
     EyeOff,
     Save,
+    Download,
+    FileSpreadsheet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
@@ -60,8 +62,16 @@ export default function AdminProductsPage() {
     const [quickEdits, setQuickEdits] = useState<Record<string, QuickEditValues>>({});
     const [editingCells, setEditingCells] = useState<EditingCells>({});
     const [savingQuickEditKey, setSavingQuickEditKey] = useState<string | null>(null);
+    const [exporting, setExporting] = useState(false);
     const [keyword, setKeyword] = useState("");
     const [page, setPage] = useState(1);
+    const { data: authResponse } = useApiQuery<any>(
+        ["admin-auth-me"],
+        "/admin/auth/me",
+        undefined,
+        { staleTime: 5 * 60 * 1000 },
+    );
+    const isRootAdmin = authResponse?.data?.role === "root";
     const {
         data: productsResponse,
         isLoading: loading,
@@ -93,6 +103,50 @@ export default function AdminProductsPage() {
             refetchProducts();
         } catch {
             toast.error("Failed to delete product");
+        }
+    };
+
+    const handleExport = async () => {
+        if (!isRootAdmin) {
+            toast.error("Only root admin can export products");
+            return;
+        }
+
+        setExporting(true);
+        try {
+            const response = await axios.get("/admin/products/export", {
+                params: { keyword: keyword.trim() || undefined },
+                responseType: "blob",
+            });
+            const blob = new Blob([response.data], {
+                type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            });
+            const contentDisposition = String(
+                response.headers["content-disposition"] || "",
+            );
+            const filenameMatch = contentDisposition.match(/filename="?([^";]+)"?/i);
+            const filename =
+                filenameMatch?.[1] ||
+                `meta-peptides-products-${new Date().toISOString().slice(0, 10)}.xlsx`;
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+
+            toast.success("Products exported", {
+                description: keyword.trim()
+                    ? `Exported products matching "${keyword.trim()}".`
+                    : "Exported all products.",
+            });
+        } catch {
+            toast.error("Failed to export products");
+        } finally {
+            setExporting(false);
         }
     };
 
@@ -198,15 +252,33 @@ export default function AdminProductsPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h1 className="text-2xl font-bold text-foreground">Products</h1>
-                <button
-                    onClick={() => router.push("/panel-xyz123/products/new")}
-                    className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
-                >
-                    <Plus className="w-4 h-4" />
-                    New Product
-                </button>
+                <div className="flex flex-wrap gap-2">
+                    {isRootAdmin && (
+                        <button
+                            type="button"
+                            onClick={handleExport}
+                            disabled={exporting}
+                            className="inline-flex items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-all hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {exporting ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                                <FileSpreadsheet className="w-4 h-4 text-green-600" />
+                            )}
+                            {exporting ? "Exporting..." : "Export XLSX"}
+                            {!exporting && <Download className="w-3.5 h-3.5" />}
+                        </button>
+                    )}
+                    <button
+                        onClick={() => router.push("/panel-xyz123/products/new")}
+                        className="inline-flex items-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+                    >
+                        <Plus className="w-4 h-4" />
+                        New Product
+                    </button>
+                </div>
             </div>
 
             {/* Search */}

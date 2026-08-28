@@ -19,13 +19,12 @@ import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
 import { useIndonesiaRegions } from "@/hooks/use-indonesia-regions";
 import { useApiQuery } from "@/hooks/api/useApiQuery";
+import {
+    SearchableProductSelect,
+    type SearchableProductOption,
+} from "@/components/admin/searchable-product-select";
 
-type ProductOption = {
-    id: string;
-    name: string;
-    label?: string | null;
-    price: number;
-};
+type ProductOption = SearchableProductOption;
 
 type ManualOrderItem = {
     localId: string;
@@ -142,8 +141,8 @@ export default function NewManualOrderPage() {
     const { data: productsResponse, isLoading: loadingProducts } =
         useApiQuery<any>(
             ["admin-order-product-options"],
-            "/admin/products",
-            { params: { page: 1, limit: 200 } },
+            "/admin/products/options",
+            undefined,
             { staleTime: 5 * 60 * 1000 },
         );
     const products: ProductOption[] = productsResponse?.data || [];
@@ -705,25 +704,15 @@ export default function NewManualOrderPage() {
                                     key={item.localId}
                                     className="grid gap-3 rounded-xl border border-border bg-background p-3 md:grid-cols-[1fr_110px_150px_40px]"
                                 >
-                                    <select
+                                    <SearchableProductSelect
+                                        products={products}
                                         value={item.product_id}
-                                        onChange={(e) =>
-                                            handleProductChange(item.localId, e.target.value)
+                                        onValueChange={(productId) =>
+                                            handleProductChange(item.localId, productId)
                                         }
                                         disabled={loadingProducts}
-                                        className="w-full bg-card border border-border rounded-xl px-3 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
-                                        required
-                                    >
-                                        <option value="">
-                                            {loadingProducts ? "Loading products..." : "Select product"}
-                                        </option>
-                                        {products.map((product) => (
-                                            <option key={product.id} value={product.id}>
-                                                {product.name}
-                                                {product.label ? ` (${product.label})` : ""}
-                                            </option>
-                                        ))}
-                                    </select>
+                                        loading={loadingProducts}
+                                    />
                                     <input
                                         type="number"
                                         min="1"
