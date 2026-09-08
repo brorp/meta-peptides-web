@@ -118,25 +118,26 @@ export function PageLoader() {
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="fixed inset-0 z-[99999] h-[100dvh] min-h-[100svh] w-screen overflow-hidden bg-black select-none pointer-events-auto"
           >
-            <div
-              className="flex h-full w-full items-center justify-center"
-              style={{
-                paddingTop: "max(12px, env(safe-area-inset-top))",
-                paddingRight: "max(12px, env(safe-area-inset-right))",
-                paddingBottom: "max(12px, env(safe-area-inset-bottom))",
-                paddingLeft: "max(12px, env(safe-area-inset-left))",
-              }}
-            >
+            <div className="h-full w-full">
               <video
                 ref={videoRef}
-                src="/Animasi%20Logotype%201s.mp4"
                 autoPlay
                 loop
                 muted
                 playsInline
                 preload="auto"
-                className="block h-auto w-auto max-h-full max-w-full object-contain object-center"
-              />
+                className="block h-full w-full object-cover object-center"
+              >
+                <source
+                  src="/Animasi%20Logo%20Mobile.mp4"
+                  type="video/mp4"
+                  media="(max-width: 767px)"
+                />
+                <source
+                  src="/Animasi%20Logotype%201s.mp4"
+                  type="video/mp4"
+                />
+              </video>
             </div>
           </motion.div>
         )}

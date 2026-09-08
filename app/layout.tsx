@@ -84,9 +84,17 @@ export default function RootLayout({
       <head>
         <link
           rel="preload"
+          href="/Animasi%20Logo%20Mobile.mp4"
+          as="video"
+          type="video/mp4"
+          media="(max-width: 767px)"
+        />
+        <link
+          rel="preload"
           href="/Animasi%20Logotype%201s.mp4"
           as="video"
           type="video/mp4"
+          media="(min-width: 768px)"
         />
       </head>
       <body
@@ -100,4 +108,3 @@ export default function RootLayout({
     </html>
   );
 }
-
