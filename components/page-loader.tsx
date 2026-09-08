@@ -116,18 +116,28 @@ export function PageLoader() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 z-[99999] flex items-center justify-center bg-black select-none pointer-events-auto overflow-hidden"
+            className="fixed inset-0 z-[99999] h-[100dvh] min-h-[100svh] w-screen overflow-hidden bg-black select-none pointer-events-auto"
           >
-            <video
-              ref={videoRef}
-              src="/Animasi%20Logotype%201s.mp4"
-              autoPlay
-              loop
-              muted
-              playsInline
-              preload="auto"
-              className="w-full h-full object-cover"
-            />
+            <div
+              className="flex h-full w-full items-center justify-center"
+              style={{
+                paddingTop: "max(12px, env(safe-area-inset-top))",
+                paddingRight: "max(12px, env(safe-area-inset-right))",
+                paddingBottom: "max(12px, env(safe-area-inset-bottom))",
+                paddingLeft: "max(12px, env(safe-area-inset-left))",
+              }}
+            >
+              <video
+                ref={videoRef}
+                src="/Animasi%20Logotype%201s.mp4"
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="auto"
+                className="block h-auto w-auto max-h-full max-w-full object-contain object-center"
+              />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
