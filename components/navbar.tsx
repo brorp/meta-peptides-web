@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
@@ -111,9 +112,15 @@ export function Navbar() {
                   className="h-6 md:h-8 min-w-8 m-2"
                 />
               </div>
-              <span className="text-xl font-bold tracking-tight text-foreground">
-                meta<span className="text-accent">wellness</span>
-              </span>
+              <Image
+                src="/title-nav.png"
+                alt="Meta Wellness"
+                width={2000}
+                height={334}
+                sizes="(max-width: 767px) 120px, 144px"
+                priority
+                className="h-5 w-auto md:h-6"
+              />
             </Link>
 
             {/* Desktop Navigation */}

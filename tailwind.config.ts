@@ -10,6 +10,31 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['var(--font-sans)', 'sans-serif'],
+      },
+      fontSize: {
+        xs: ['0.72rem', { lineHeight: '1.15rem' }],
+        sm: ['0.84rem', { lineHeight: '1.4rem' }],
+        base: ['0.96rem', { lineHeight: '1.7rem' }],
+        lg: ['1.08rem', { lineHeight: '1.85rem' }],
+        xl: ['1.2rem', { lineHeight: '1.95rem' }],
+        '2xl': ['1.4rem', { lineHeight: '2.1rem' }],
+        '3xl': ['1.75rem', { lineHeight: '2.2rem' }],
+        '4xl': ['2.1rem', { lineHeight: '2.45rem' }],
+        '5xl': ['2.75rem', { lineHeight: '1.08' }],
+        '6xl': ['3.4rem', { lineHeight: '1.04' }],
+        '7xl': ['4.1rem', { lineHeight: '1.02' }],
+        '8xl': ['5.4rem', { lineHeight: '1' }],
+        '9xl': ['7.2rem', { lineHeight: '1' }],
+      },
+      fontWeight: {
+        medium: '450',
+        semibold: '500',
+        bold: '550',
+        extrabold: '600',
+        black: '650',
+      },
       colors: {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',

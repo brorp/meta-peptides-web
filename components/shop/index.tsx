@@ -80,8 +80,8 @@ export default function ShopPageComponent() {
         <div className="absolute top-0 right-0 w-[500px] h-[300px] bg-accent/10 blur-[120px] -mr-40 -mt-40" />
       </section>
 
-      <div className="max-w-7xl mx-auto px-2 py-10">
-        <div className="grid lg:grid-cols-12 gap-8 lg:gap-12">
+      <div className="max-w-7xl mx-auto px-4 py-14 sm:px-6 md:py-20 lg:px-8">
+        <div className="grid lg:grid-cols-12 gap-10 lg:gap-16">
           {/* Desktop Sidebar */}
           <aside className="hidden lg:block lg:col-span-3 sticky top-32 h-fit">
             <FilterSidebar {...filterProps} />
@@ -116,14 +116,14 @@ export default function ShopPageComponent() {
             </div>
 
             {isLoading ? (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:gap-5">
+                <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4 xl:gap-7">
                 {[...Array(6)].map((_, i) => (
                   <ProductCardSkeleton key={i} />
                 ))}
               </div>
             ) : data?.data?.length ? (
               <>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:gap-x-5 xl:gap-y-8">
+                <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 sm:gap-6 lg:grid-cols-4 xl:gap-x-7 xl:gap-y-10">
                   {data.data.map((product: any) => (
                     <ProductCard
                       key={product.id}

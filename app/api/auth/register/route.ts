@@ -7,6 +7,7 @@ import {
   getUserDisplayName,
 } from "@/lib/auth-notifications";
 import { sendRegisteredUserEmails } from "@/lib/email-service";
+import { getTrustedRequestOrigin } from "@/lib/app-origin";
 
 export async function POST(req: NextRequest) {
   try {
@@ -60,9 +61,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const shopUrl =
-      process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "") ||
-      new URL(req.url).origin;
+    const shopUrl = getTrustedRequestOrigin(req.url);
 
     await sendRegisteredUserEmails({
       customerName: getUserDisplayName(user),

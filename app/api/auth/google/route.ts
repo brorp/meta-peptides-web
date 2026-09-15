@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClientCookies } from "@/lib/supabase-server";
+import { getTrustedRequestOrigin } from "@/lib/app-origin";
 
 export async function GET(req: NextRequest) {
+  const appOrigin = getTrustedRequestOrigin(req.url);
   const supabaseServer = await createClientCookies();
   const { data, error } = await supabaseServer.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`,
+      redirectTo: `${appOrigin}/api/auth/callback`,
       queryParams: {
         access_type: "offline",
         prompt: "select_account",
@@ -16,7 +18,7 @@ export async function GET(req: NextRequest) {
 
   if (error) {
     return NextResponse.redirect(
-      `${process.env.NEXT_PUBLIC_APP_URL}/shop?error=google-authentication-failed`,
+      `${appOrigin}/shop?error=google-authentication-failed`,
     );
   }
 

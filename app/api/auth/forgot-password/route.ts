@@ -3,6 +3,7 @@ import * as z from "zod";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { sendPasswordResetEmail } from "@/lib/email-service";
 import { supabaseAdmin } from "@/lib/supabase-server";
+import { getTrustedRequestOrigin } from "@/lib/app-origin";
 
 const forgotPasswordSchema = z.object({
   email: z.string().trim().email("Please enter a valid email address."),
@@ -82,9 +83,7 @@ export async function POST(req: NextRequest) {
       return successResponse({ email }, GENERIC_SUCCESS_MESSAGE);
     }
 
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL?.replace(/\/+$/, "") ||
-      new URL(req.url).origin;
+    const appUrl = getTrustedRequestOrigin(req.url);
 
     const { data: linkData, error: linkError } =
       await supabaseAdmin.auth.admin.generateLink({

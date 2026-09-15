@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Navbar } from "@/components/navbar";
 import Link from "next/link";
 import {
   ShieldCheck,
@@ -21,7 +20,7 @@ export default function OurCompanyPageComponent() {
       icon: <ShieldCheck className="w-6 h-6" />,
       title: "Quality",
       description:
-        "We partner with ISO 9001:2015 approved manufacturer to ensure the highest quality products available.",
+        "We partner with local laboratory to ensure the highest quality.",
     },
     {
       icon: <Truck className="w-6 h-6" />,
@@ -45,10 +44,8 @@ export default function OurCompanyPageComponent() {
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-accent/20">
-      <Navbar />
-
       {/* --- HERO SECTION --- */}
-      <section className="relative pt-32 pb-24 overflow-hidden bg-[#414042]">
+      <section className="relative pt-36 pb-28 overflow-hidden bg-[#414042]">
         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accent/10 rounded-full blur-[120px] -mr-40 -mt-40" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="max-w-3xl space-y-6">
@@ -69,9 +66,9 @@ export default function OurCompanyPageComponent() {
       </section>
 
       {/* --- PHILOSOPHY SECTION --- */}
-      <section className="py-24">
+      <section className="py-28 md:py-36">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid lg:grid-cols-12 gap-16 items-stretch">
+          <div className="grid lg:grid-cols-12 gap-20 items-stretch">
             <div className="lg:col-span-7 space-y-10">
               <div className="space-y-6">
                 <h2 className="text-4xl font-black tracking-tighter uppercase italic border-l-4 border-accent pl-6">
@@ -141,7 +138,7 @@ export default function OurCompanyPageComponent() {
       </section>
 
       {/* --- RESEARCH COMMITMENT --- */}
-      <section className="py-24 bg-muted/30">
+      <section className="py-28 bg-muted/30 md:py-36">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="max-w-3xl mx-auto space-y-8">
             <FlaskConical className="w-16 h-16 text-accent mx-auto animate-pulse" />
@@ -172,7 +169,7 @@ export default function OurCompanyPageComponent() {
       </section>
 
       {/* --- FINAL CTA --- */}
-      <section className="py-32 text-center">
+      <section className="py-36 text-center md:py-44">
         <div className="max-w-4xl mx-auto space-y-12">
           <h2 className="text-6xl font-black tracking-tighter uppercase italic leading-none">
             Your Research <br />{" "}

@@ -35,13 +35,13 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
   }, [createClientComponentClient(), setUser, clearUser]);
 
   return (
-    <>
+    <div className="storefront-shell">
       {!isCampaignLanding && <Navbar />}
       <main>{children}</main>
       {!isCampaignLanding && <OneModal />}
       {!isCampaignLanding && <FloatingActions />}
       {!isCampaignLanding && <Footer />}
       {!isCampaignLanding && <GlobalCart />}
-    </>
+    </div>
   );
 }

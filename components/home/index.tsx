@@ -110,17 +110,17 @@ export default function HomePageComponent() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          <div className="grid lg:grid-cols-2 gap-16 lg:gap-24 items-center">
             {/* Left Content */}
-            <div className="space-y-8 text-center lg:text-left order-2 lg:order-1 relative z-10 mt-1 md:mt-20 ">
-              <div className="space-y-4 ">
+            <div className="space-y-10 text-center lg:text-left order-2 lg:order-1 relative z-10 mt-1 md:mt-20 ">
+              <div className="space-y-6 ">
                 {/* Status Badge */}
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-black uppercase tracking-widest">
                   <span className="relative flex h-2 w-2">
                     <span className="animate-ping absolute inline-flex h-full w-2 rounded-full bg-accent opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
                   </span>
-                  ISO 9001:2015 CERTIFIED LAB
+                  LAB CERTIFIED PRODUCTS
                 </div>
 
                 {/* Typography Headline */}
@@ -240,7 +240,7 @@ export default function HomePageComponent() {
 
       {/* 2. TRUST TICKER */}
       <section className="border-y border-border bg-card/50 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="max-w-7xl mx-auto px-4 py-16 md:py-20">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-12">
             {[
               {
@@ -281,9 +281,9 @@ export default function HomePageComponent() {
       </section>
 
       {/* 3. BENEFITS */}
-      <section className="py-24 relative">
+      <section className="py-28 md:py-36 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-20 gap-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-24 gap-10">
             <div className="max-w-2xl space-y-4">
               <h2 className="text-5xl md:text-7xl font-black tracking-tighter leading-[0.85] uppercase">
                 Redefining <br />{" "}
@@ -301,11 +301,11 @@ export default function HomePageComponent() {
             </Link>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-3 gap-10">
             {features.map((item, i) => (
               <Card
                 key={i}
-                className="p-10 border-none bg-white shadow-xl shadow-slate-100/50 rounded-[3rem] group hover:bg-[#414042] transition-all duration-500 hover:-translate-y-2"
+                className="p-10 md:p-12 border-none bg-white shadow-xl shadow-slate-100/50 rounded-[3rem] group hover:bg-[#414042] transition-all duration-500 hover:-translate-y-2"
               >
                 <div className="w-14 h-14 bg-accent/10 text-accent rounded-2xl flex items-center justify-center mb-10 group-hover:bg-accent group-hover:text-white transition-colors">
                   {item.icon && <item.icon className="w-6 h-6" />}
@@ -323,14 +323,14 @@ export default function HomePageComponent() {
       </section>
 
       {/* 4. TESTIMONIALS (Premium Dark) */}
-      <section className="py-24 px-4">
+      <section className="py-28 px-4 md:py-36">
         <div className="max-w-7xl mx-auto bg-[#414042] rounded-[4rem] overflow-hidden relative shadow-2xl">
           {/* Decorative DNA Icon */}
           <div className="absolute top-0 right-0 p-12 opacity-5">
             <Dna className="w-96 h-96 text-white rotate-45" />
           </div>
 
-          <div className="grid lg:grid-cols-2 items-center p-8 md:p-24 gap-20 relative z-10">
+          <div className="grid lg:grid-cols-2 items-center p-10 md:p-28 gap-20 lg:gap-24 relative z-10">
             <div className="space-y-8">
               <div className="flex items-center gap-3 text-accent font-black text-[10px] uppercase tracking-[0.4em]">
                 <span className="w-8 h-px bg-accent" />
@@ -370,9 +370,9 @@ export default function HomePageComponent() {
       </section>
 
       {/* 5. FINAL CTA SECTION */}
-      <section className="py-32 text-center px-4">
+      <section className="py-36 text-center px-4 md:py-44">
         <div className="max-w-4xl mx-auto space-y-12">
-          <h2 className="text-4xl md:text-6xl md:text-[100px] font-black tracking-tighter leading-[0.8] uppercase">
+          <h2 className="text-4xl md:text-6xl md:text-[88px] font-black tracking-tighter leading-[0.85] uppercase">
             Start Your <br />{" "}
             <span className="text-accent italic">Breakthrough.</span>
           </h2>

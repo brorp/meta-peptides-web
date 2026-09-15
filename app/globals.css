@@ -2,10 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
-
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -89,6 +85,24 @@ body {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    font-weight: 400;
+    letter-spacing: -0.008em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  .storefront-shell {
+    min-height: 100vh;
+  }
+
+  .storefront-shell :where(h1, h2, h3, h4) {
+    text-wrap: balance;
+  }
+
+  .storefront-shell :where(p, li) {
+    text-wrap: pretty;
   }
 }
