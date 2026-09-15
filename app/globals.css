@@ -98,6 +98,10 @@
     min-height: 100vh;
   }
 
+  .storefront-shell .font-sans {
+    font-family: inherit;
+  }
+
   .storefront-shell :where(h1, h2, h3, h4) {
     text-wrap: balance;
   }

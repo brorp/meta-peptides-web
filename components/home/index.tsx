@@ -307,12 +307,14 @@ export default function HomePageComponent() {
                 key={i}
                 className="p-10 md:p-12 border-none bg-white shadow-xl shadow-slate-100/50 rounded-[3rem] group hover:bg-[#414042] transition-all duration-500 hover:-translate-y-2"
               >
-                <div className="w-14 h-14 bg-accent/10 text-accent rounded-2xl flex items-center justify-center mb-10 group-hover:bg-accent group-hover:text-white transition-colors">
-                  {item.icon && <item.icon className="w-6 h-6" />}
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-14 h-14 bg-accent/10 text-accent rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-accent group-hover:text-white transition-colors">
+                    {item.icon && <item.icon className="w-6 h-6" />}
+                  </div>
+                  <h3 className="text-2xl font-black group-hover:text-white transition-colors uppercase tracking-tight">
+                    {item.title}
+                  </h3>
                 </div>
-                <h3 className="text-2xl font-black mb-4 group-hover:text-white transition-colors uppercase tracking-tight">
-                  {item.title}
-                </h3>
                 <p className="text-muted-foreground leading-relaxed group-hover:text-white/60 transition-colors">
                   {item.desc}
                 </p>
@@ -377,7 +379,7 @@ export default function HomePageComponent() {
             <span className="text-accent italic">Breakthrough.</span>
           </h2>
           <p className="text-xl text-muted-foreground font-medium max-w-xl mx-auto italic">
-            Join 100+ journeys trusting MetaPeptides for better a life
+            Join 100+ journeys trusting Meta Wellness for better a life
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-6">
             <Link href="/shop">

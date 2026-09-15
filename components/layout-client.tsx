@@ -11,12 +11,23 @@ import { PromoModal } from "./promo-modal";
 import OneModal from "./one-modal";
 import { usePathname } from "next/navigation";
 
-export function LayoutClient({ children }: { children: React.ReactNode }) {
+export function LayoutClient({
+  children,
+  storefrontFontClassName,
+}: {
+  children: React.ReactNode;
+  storefrontFontClassName: string;
+}) {
   const setUser = useUserStore((state) => state.setUser);
   const clearUser = useUserStore((state) => state.clearUser);
   const pathname = usePathname();
   const isCampaignLanding =
     pathname === "/free-consultation" || pathname.startsWith("/ads/");
+
+  useEffect(() => {
+    document.body.classList.add(storefrontFontClassName);
+    return () => document.body.classList.remove(storefrontFontClassName);
+  }, [storefrontFontClassName]);
 
   useEffect(() => {
     const {
@@ -35,7 +46,7 @@ export function LayoutClient({ children }: { children: React.ReactNode }) {
   }, [createClientComponentClient(), setUser, clearUser]);
 
   return (
-    <div className="storefront-shell">
+    <div className={`storefront-shell ${storefrontFontClassName}`}>
       {!isCampaignLanding && <Navbar />}
       <main>{children}</main>
       {!isCampaignLanding && <OneModal />}
