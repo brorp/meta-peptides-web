@@ -1,5 +1,13 @@
 import type { Metadata } from "next";
-import "@/app/globals.css";
+import localFont from "next/font/local";
+
+const urbancat = localFont({
+  src: "../fonts/urbancat-rg.otf",
+  display: "swap",
+  weight: "400",
+  style: "normal",
+  adjustFontFallback: false,
+});
 
 export const metadata: Metadata = {
   title: "Peptides Guide | MetaPeptides",
@@ -12,11 +20,5 @@ export default function GuidelinesLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <html lang="id" suppressHydrationWarning>
-      <body className="bg-white text-slate-900 antialiased overflow-hidden">
-        {children}
-      </body>
-    </html>
-  );
+  return <div className={urbancat.className}>{children}</div>;
 }

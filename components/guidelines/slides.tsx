@@ -9,72 +9,65 @@ import { t } from "./translations";
 // ─────────────────────────────────────────────
 interface SlideCoverProps {
   lang: Lang;
-  onLangChange: (l: Lang) => void;
 }
 
-export function SlideCover({ lang, onLangChange }: SlideCoverProps) {
+export function SlideCover({ lang }: SlideCoverProps) {
   const c = t.cover;
   const steps = lang === "ID"
     ? ["Sanitasi", "Konsentrasi", "Reconstitution", "Dosing", "Aplikasi", "Penyimpanan"]
     : ["Sanitization", "Concentration", "Reconstitution", "Dosing", "Application", "Storage"];
 
   return (
-    <div className="relative w-full h-full flex flex-col justify-between bg-[#414042] overflow-hidden select-none">
-      {/* Background glow */}
-      <div className="absolute top-[-80px] right-[-80px] w-[320px] h-[320px] rounded-full bg-emerald-400/20 blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-[-60px] left-[-60px] w-[260px] h-[260px] rounded-full bg-emerald-400/10 blur-[80px] pointer-events-none" />
+    <div className="relative flex h-full w-full select-none flex-col justify-between overflow-hidden bg-[#414042]">
+      <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-white/[0.08] blur-[90px]" />
+      <div className="pointer-events-none absolute -bottom-24 -left-20 h-72 w-72 rounded-full bg-[#bcb8b1]/10 blur-[90px]" />
+      <div className="pointer-events-none absolute inset-0 opacity-[0.06] [background-image:linear-gradient(to_right,white_1px,transparent_1px),linear-gradient(to_bottom,white_1px,transparent_1px)] [background-size:40px_40px]" />
 
       {/* Header */}
-      <div className="relative z-10 flex items-center justify-between px-6 pt-8">
-        <Image src="/logo.webp" alt="MetaPeptides" width={36} height={36} className="rounded-lg opacity-90" />
-        <div className="flex items-center gap-1 bg-white/10 border border-white/10 rounded-full p-1">
-          {(["ID", "EN"] as Lang[]).map((l) => (
-            <button
-              key={l}
-              onClick={() => onLangChange(l)}
-              className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-200 ${
-                lang === l
-                  ? "bg-emerald-500 text-white shadow"
-                  : "text-white/40 hover:text-white/70"
-              }`}
-            >
-              {l}
-            </button>
-          ))}
+      <div className="relative z-10 flex items-center justify-between px-6 pt-8 sm:px-10 sm:pt-10">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl bg-white">
+            <Image src="/icon-meta.png" alt="MetaPeptides" width={44} height={44} className="h-full w-full object-cover" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-white/45">Research essentials</p>
+            <p className="text-xs font-black uppercase tracking-[0.12em] text-white">MetaPeptides</p>
+          </div>
         </div>
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/35">01 / 10</span>
       </div>
 
       {/* Main content */}
-      <div className="relative z-10 px-6 pb-0 flex-1 flex flex-col justify-center gap-6">
-        <div className="space-y-1">
-          <p className="text-[10px] font-black uppercase tracking-[0.4em] text-emerald-400">MetaPeptides</p>
-          <h1 className="text-5xl sm:text-6xl font-black uppercase italic tracking-tighter text-white leading-[0.85]">
+      <div className="relative z-10 flex flex-1 flex-col justify-center gap-7 px-6 pb-0 sm:px-10">
+        <div className="space-y-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.35em] text-[#c9c5bd]">Practical Reference</p>
+          <h1 className="text-5xl font-black uppercase tracking-[-0.055em] text-white sm:text-7xl sm:leading-[0.82]">
             Peptides<br />
-            <span className="text-emerald-400">Guide.</span>
+            <span className="text-[#c9c5bd]">Guide.</span>
           </h1>
         </div>
-        <p className="text-sm text-white/60 font-medium leading-relaxed max-w-xs">
+        <p className="max-w-md text-sm font-medium leading-relaxed text-white/60 sm:text-base">
           {c.subtitle[lang]}
         </p>
 
         {/* Step pills */}
-        <div className="flex flex-wrap gap-2">
+        <div className="flex max-w-2xl flex-wrap gap-2">
           {steps.map((s, i) => (
             <span
               key={s}
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/10 text-[10px] font-black uppercase tracking-wider text-white/70"
+              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.07] px-3 py-1.5 text-[10px] font-black uppercase tracking-wider text-white/70"
             >
-              <span className="text-emerald-400">0{i + 1}</span>{s}
+              <span className="text-[#c9c5bd]">0{i + 1}</span>{s}
             </span>
           ))}
         </div>
       </div>
 
       {/* Footer */}
-      <div className="relative z-10 px-6 pb-8 pt-6 border-t border-white/10 flex items-center justify-between">
+      <div className="relative z-10 flex items-center justify-between border-t border-white/10 px-6 pb-8 pt-6 sm:px-10">
         <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest">{c.swipeToBegin[lang]}</p>
-        <div className="w-8 h-8 rounded-full border border-emerald-400/40 flex items-center justify-center">
-          <ArrowRight size={14} className="text-emerald-400" />
+        <div className="flex h-9 w-9 items-center justify-center rounded-full border border-white/20 bg-white/5">
+          <ArrowRight size={14} className="text-[#c9c5bd]" />
         </div>
       </div>
     </div>
@@ -89,26 +82,26 @@ export function SlidePackage({ lang }: { lang: Lang }) {
   const items = c.items[lang];
 
   return (
-    <div className="w-full h-full flex flex-col bg-white overflow-hidden select-none">
+    <div className="flex h-full w-full select-none flex-col overflow-hidden bg-[#f8f7f4]">
       {/* Section header */}
-      <div className="bg-slate-900 px-6 py-5 shrink-0">
-        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-emerald-400 mb-1">{c.section[lang]}</p>
-        <h2 className="text-xl font-black uppercase italic tracking-tight text-white">
-          {c.title[lang]} <span className="text-emerald-400">{c.titleHighlight[lang]}</span>
+      <div className="shrink-0 bg-[#414042] px-6 py-6 sm:px-8">
+        <p className="mb-2 text-[10px] font-black uppercase tracking-[0.32em] text-[#c9c5bd]">{c.section[lang]}</p>
+        <h2 className="text-2xl font-black uppercase tracking-[-0.025em] text-white sm:text-3xl">
+          {c.title[lang]} <span className="text-[#c9c5bd]">{c.titleHighlight[lang]}</span>
         </h2>
-        <p className="text-[11px] text-white/50 mt-1 font-medium">{c.subtitle[lang]}</p>
+        <p className="mt-2 text-xs font-medium text-white/50 sm:text-sm">{c.subtitle[lang]}</p>
       </div>
 
       {/* Items */}
-      <div className="flex-1 overflow-auto px-5 py-5 space-y-3">
+      <div className="flex-1 space-y-3 overflow-auto px-5 py-5 sm:px-8 sm:py-7">
         {items.map((item, i) => (
-          <div key={i} className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-            <div className="w-11 h-11 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-xl shrink-0 shadow-sm">
+          <div key={i} className="flex items-center gap-4 rounded-2xl border border-black/[0.07] bg-white p-4 shadow-[0_6px_20px_rgba(65,64,66,0.04)]">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-black/10 bg-[#eeece8] text-xl">
               {item.emoji}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-black uppercase tracking-wider text-slate-900">— {item.name}</p>
-              <p className="text-[10px] text-slate-500 font-medium mt-0.5">{item.desc}</p>
+              <p className="text-xs font-black uppercase tracking-wider text-[#2c2b2d]">{item.name}</p>
+              <p className="mt-1 text-[11px] font-medium text-[#77736e] sm:text-xs">{item.desc}</p>
             </div>
           </div>
         ))}
@@ -132,22 +125,22 @@ export function SlideOverview({ lang }: { lang: Lang }) {
   const c = t.overview;
 
   return (
-    <div className="w-full h-full flex flex-col bg-white overflow-hidden select-none">
-      <div className="bg-slate-900 px-6 py-5 shrink-0">
-        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-emerald-400 mb-1">{c.section[lang]}</p>
-        <h2 className="text-xl font-black uppercase italic tracking-tight text-white">
-          {c.title[lang]} <span className="text-emerald-400">{c.titleHighlight[lang]}</span>
+    <div className="flex h-full w-full select-none flex-col overflow-hidden bg-[#f8f7f4]">
+      <div className="shrink-0 bg-[#414042] px-6 py-6 sm:px-8">
+        <p className="mb-2 text-[10px] font-black uppercase tracking-[0.32em] text-[#c9c5bd]">{c.section[lang]}</p>
+        <h2 className="text-2xl font-black uppercase tracking-[-0.025em] text-white sm:text-3xl">
+          {c.title[lang]} <span className="text-[#c9c5bd]">{c.titleHighlight[lang]}</span>
         </h2>
-        <p className="text-[11px] text-white/50 mt-1 font-medium">{c.subtitle[lang]}</p>
+        <p className="mt-2 text-xs font-medium text-white/50 sm:text-sm">{c.subtitle[lang]}</p>
       </div>
 
-      <div className="flex-1 overflow-auto px-5 py-5 space-y-4">
+      <div className="flex-1 space-y-4 overflow-auto px-5 py-5 sm:px-8 sm:py-7">
         {/* Step pills */}
         <div className="space-y-2">
           {c.steps[lang].map((step, i) => (
-            <div key={i} className="flex items-center gap-4 px-4 py-3 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-[13px] font-black text-emerald-500 w-6 shrink-0">0{i + 1}</span>
-              <span className="text-[12px] font-black uppercase tracking-wide text-slate-800">{step}</span>
+            <div key={i} className="flex items-center gap-4 rounded-xl border border-black/[0.07] bg-white px-4 py-3.5">
+              <span className="w-7 shrink-0 text-sm font-black text-[#aaa6a0]">0{i + 1}</span>
+              <span className="text-xs font-black uppercase tracking-wide text-[#414042] sm:text-sm">{step}</span>
             </div>
           ))}
         </div>
@@ -157,16 +150,16 @@ export function SlideOverview({ lang }: { lang: Lang }) {
           href="https://drive.google.com/file/d/1UweOzfVrftzw7_SDMZupCTmgiS3zsFpU/view?usp=sharing"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-3 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 active:bg-emerald-100 transition-colors"
+          className="flex items-center gap-3 rounded-2xl border border-black/10 bg-[#e9e7e2] p-4 transition-colors hover:bg-[#dfdcd6] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8f8b86] focus-visible:ring-offset-2 active:bg-[#d7d4ce]"
         >
-          <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#414042]">
             <span className="text-white text-base ml-0.5">▶</span>
           </div>
           <div>
-            <p className="text-[12px] font-black uppercase tracking-wide text-emerald-700">{c.watchLabel[lang]}</p>
-            <p className="text-[10px] text-emerald-600/70 font-medium">{c.watchSub[lang]}</p>
+            <p className="text-xs font-black uppercase tracking-wide text-[#414042]">{c.watchLabel[lang]}</p>
+            <p className="text-[11px] font-medium text-[#77736e]">{c.watchSub[lang]}</p>
           </div>
-          <ExternalLink size={14} className="text-emerald-400 ml-auto shrink-0" />
+          <ExternalLink size={14} className="ml-auto shrink-0 text-[#77736e]" />
         </a>
 
         <p className="text-[10px] text-slate-400 leading-relaxed font-medium italic text-center">
@@ -184,17 +177,17 @@ export function SlideSanitization({ lang }: { lang: Lang }) {
   const c = t.sanitization;
 
   return (
-    <div className="w-full h-full flex flex-col bg-white overflow-hidden select-none">
-      <div className="bg-[#414042] px-6 py-5 shrink-0">
-        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-emerald-400 mb-1">{c.step[lang]}</p>
-        <h2 className="text-xl font-black uppercase italic tracking-tight text-white">{c.title[lang]}</h2>
-        <p className="text-[11px] text-white/50 mt-1 font-medium">{c.subtitle[lang]}</p>
+    <div className="flex h-full w-full select-none flex-col overflow-hidden bg-[#f8f7f4]">
+      <div className="shrink-0 bg-[#414042] px-6 py-6 sm:px-8">
+        <p className="mb-2 text-[10px] font-black uppercase tracking-[0.32em] text-[#c9c5bd]">{c.step[lang]}</p>
+        <h2 className="text-2xl font-black uppercase tracking-[-0.025em] text-white sm:text-3xl">{c.title[lang]}</h2>
+        <p className="mt-2 text-xs font-medium text-white/50 sm:text-sm">{c.subtitle[lang]}</p>
       </div>
 
-      <div className="flex-1 overflow-auto px-5 py-5 space-y-4">
-        <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">{c.whyLabel[lang]}</p>
-          <p className="text-[13px] text-slate-700 font-medium leading-relaxed">
+      <div className="flex-1 space-y-4 overflow-auto px-5 py-5 sm:px-8 sm:py-7">
+        <div className="space-y-1 rounded-2xl border border-black/[0.07] bg-white p-4">
+          <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-[#85817c]">{c.whyLabel[lang]}</p>
+          <p className="text-sm font-medium leading-relaxed text-[#514f51]">
             {c.whyText[lang]}
           </p>
         </div>
@@ -203,10 +196,10 @@ export function SlideSanitization({ lang }: { lang: Lang }) {
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 px-1">{c.checklistLabel[lang]}</p>
           {c.checklist[lang].map((item, i) => (
             <div key={i} className="flex items-start gap-3 px-4 py-3 rounded-xl bg-slate-50 border border-slate-100">
-              <div className="w-5 h-5 rounded-full bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0 mt-0.5">
-                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-black/15 bg-[#e4e1dc]">
+                <div className="h-2 w-2 rounded-full bg-[#414042]" />
               </div>
-              <p className="text-[12px] font-bold text-slate-700 leading-snug">{item}</p>
+              <p className="text-xs font-bold leading-snug text-[#514f51] sm:text-sm">{item}</p>
             </div>
           ))}
         </div>
@@ -229,14 +222,14 @@ export function SlideConcentration({ lang }: { lang: Lang }) {
   const c = t.concentration;
 
   return (
-    <div className="w-full h-full flex flex-col bg-white overflow-hidden select-none">
-      <div className="bg-[#414042] px-6 py-5 shrink-0">
-        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-emerald-400 mb-1">{c.step[lang]}</p>
-        <h2 className="text-xl font-black uppercase italic tracking-tight text-white">{c.title[lang]}</h2>
-        <p className="text-[11px] text-white/50 mt-1 font-medium">{c.subtitle[lang]}</p>
+    <div className="flex h-full w-full select-none flex-col overflow-hidden bg-[#f8f7f4]">
+      <div className="shrink-0 bg-[#414042] px-6 py-6 sm:px-8">
+        <p className="mb-2 text-[10px] font-black uppercase tracking-[0.32em] text-[#c9c5bd]">{c.step[lang]}</p>
+        <h2 className="text-2xl font-black uppercase tracking-[-0.025em] text-white sm:text-3xl">{c.title[lang]}</h2>
+        <p className="mt-2 text-xs font-medium text-white/50 sm:text-sm">{c.subtitle[lang]}</p>
       </div>
 
-      <div className="flex-1 overflow-auto px-5 py-5 space-y-4">
+      <div className="flex-1 space-y-4 overflow-auto px-5 py-5 sm:px-8 sm:py-7">
         <div className="grid grid-cols-2 gap-3">
           <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-center">
             <p className="text-lg mb-1">😵</p>
@@ -251,23 +244,23 @@ export function SlideConcentration({ lang }: { lang: Lang }) {
         </div>
 
         {/* Example box */}
-        <div className="rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/50 p-5 space-y-3">
-          <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">{c.exampleLabel[lang]}</p>
+        <div className="space-y-3 rounded-2xl border border-black/10 bg-white p-5 shadow-[0_8px_24px_rgba(65,64,66,0.05)]">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#77736e]">{c.exampleLabel[lang]}</p>
           <div className="flex items-center gap-2 text-[13px] font-bold text-slate-800">
             <span>10mg</span>
             <span className="text-slate-400">+</span>
             <span>2mL BAC Water</span>
             <span className="text-slate-400">=</span>
-            <span className="text-emerald-600 font-black">5mg/mL</span>
+            <span className="font-black text-[#414042]">5mg/mL</span>
           </div>
-          <div className="border-t border-emerald-100 pt-3 space-y-1.5">
+          <div className="space-y-1.5 border-t border-black/10 pt-3">
             {[
               ["0.5mg", "0.1mL"],
               ["1mg", "0.2mL"],
               ["2mg", "0.4mL"],
             ].map(([dose, vol]) => (
               <div key={dose} className="flex items-center justify-between text-[12px] font-bold text-slate-700">
-                <span>{c.applyLabel[lang]} <span className="text-emerald-600">{dose}</span></span>
+                <span>{c.applyLabel[lang]} <span className="text-[#414042]">{dose}</span></span>
                 <span className="text-slate-400">→</span>
                 <span>{c.needLabel[lang]} <span className="font-black text-slate-900">{vol}</span></span>
               </div>
@@ -283,7 +276,7 @@ export function SlideConcentration({ lang }: { lang: Lang }) {
 
         <Link
           href="/peptide-guides"
-          className="flex items-center gap-2 text-[11px] font-black text-emerald-600 uppercase tracking-wide hover:underline"
+          className="flex items-center gap-2 rounded-md text-[11px] font-black uppercase tracking-wide text-[#414042] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8f8b86] focus-visible:ring-offset-2"
         >
           {c.learnMore[lang]} <ArrowRight size={12} />
         </Link>
@@ -299,20 +292,20 @@ export function SlideReconstitution({ lang }: { lang: Lang }) {
   const c = t.reconstitution;
 
   return (
-    <div className="w-full h-full flex flex-col bg-white overflow-hidden select-none">
-      <div className="bg-[#414042] px-6 py-5 shrink-0">
-        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-emerald-400 mb-1">{c.step[lang]}</p>
-        <h2 className="text-xl font-black uppercase italic tracking-tight text-white">{c.title[lang]}</h2>
-        <p className="text-[11px] text-white/50 mt-1 font-medium">{c.subtitle[lang]}</p>
+    <div className="flex h-full w-full select-none flex-col overflow-hidden bg-[#f8f7f4]">
+      <div className="shrink-0 bg-[#414042] px-6 py-6 sm:px-8">
+        <p className="mb-2 text-[10px] font-black uppercase tracking-[0.32em] text-[#c9c5bd]">{c.step[lang]}</p>
+        <h2 className="text-2xl font-black uppercase tracking-[-0.025em] text-white sm:text-3xl">{c.title[lang]}</h2>
+        <p className="mt-2 text-xs font-medium text-white/50 sm:text-sm">{c.subtitle[lang]}</p>
       </div>
 
-      <div className="flex-1 overflow-auto px-5 py-5 space-y-3">
+      <div className="flex-1 space-y-3 overflow-auto px-5 py-5 sm:px-8 sm:py-7">
         {c.steps[lang].map((step, i) => (
-          <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100">
-            <span className="w-6 h-6 rounded-full bg-emerald-500 text-white text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">
+          <div key={i} className="flex items-start gap-3 rounded-xl border border-black/[0.07] bg-white p-3.5">
+            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#414042] text-[10px] font-black text-white">
               {i + 1}
             </span>
-            <p className="text-[12px] font-bold text-slate-700 leading-snug">{step}</p>
+            <p className="text-xs font-bold leading-snug text-[#514f51] sm:text-sm">{step}</p>
           </div>
         ))}
 
@@ -336,22 +329,22 @@ export function SlideDosing({ lang }: { lang: Lang }) {
   const c = t.dosing;
 
   return (
-    <div className="w-full h-full flex flex-col bg-white overflow-hidden select-none">
-      <div className="bg-[#414042] px-6 py-5 shrink-0">
-        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-emerald-400 mb-1">{c.step[lang]}</p>
-        <h2 className="text-xl font-black uppercase italic tracking-tight text-white">{c.title[lang]}</h2>
-        <p className="text-[11px] text-white/50 mt-1 font-medium">{c.subtitle[lang]}</p>
+    <div className="flex h-full w-full select-none flex-col overflow-hidden bg-[#f8f7f4]">
+      <div className="shrink-0 bg-[#414042] px-6 py-6 sm:px-8">
+        <p className="mb-2 text-[10px] font-black uppercase tracking-[0.32em] text-[#c9c5bd]">{c.step[lang]}</p>
+        <h2 className="text-2xl font-black uppercase tracking-[-0.025em] text-white sm:text-3xl">{c.title[lang]}</h2>
+        <p className="mt-2 text-xs font-medium text-white/50 sm:text-sm">{c.subtitle[lang]}</p>
       </div>
 
-      <div className="flex-1 overflow-auto px-5 py-5 space-y-4">
+      <div className="flex-1 space-y-4 overflow-auto px-5 py-5 sm:px-8 sm:py-7">
         <div className="space-y-2">
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 px-1">{c.checklistLabel[lang]}</p>
           {c.checklist[lang].map((item, i) => (
             <div key={i} className="flex items-start gap-3 px-4 py-3 rounded-xl bg-slate-50 border border-slate-100">
-              <div className="w-5 h-5 rounded-full bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0 mt-0.5">
-                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-black/15 bg-[#e4e1dc]">
+                <div className="h-2 w-2 rounded-full bg-[#414042]" />
               </div>
-              <p className="text-[12px] font-bold text-slate-700 leading-snug">{item}</p>
+              <p className="text-xs font-bold leading-snug text-[#514f51] sm:text-sm">{item}</p>
             </div>
           ))}
         </div>
@@ -360,13 +353,13 @@ export function SlideDosing({ lang }: { lang: Lang }) {
           href="https://particlepeptides.com/en/content/48-peptide-calculator"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-between gap-3 p-4 rounded-2xl bg-slate-900 text-white active:bg-slate-800 transition-colors"
+          className="flex items-center justify-between gap-3 rounded-2xl bg-[#414042] p-4 text-white transition-colors hover:bg-[#2c2b2d] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8f8b86] focus-visible:ring-offset-2 active:bg-[#242326]"
         >
           <div>
             <p className="text-[12px] font-black uppercase tracking-wide">{c.calculatorLabel[lang]}</p>
             <p className="text-[10px] text-white/50 font-medium mt-0.5">{c.calculatorSub[lang]}</p>
           </div>
-          <ExternalLink size={16} className="text-emerald-400 shrink-0" />
+          <ExternalLink size={16} className="shrink-0 text-[#c9c5bd]" />
         </a>
       </div>
     </div>
@@ -380,14 +373,14 @@ export function SlideApplication({ lang }: { lang: Lang }) {
   const c = t.application;
 
   return (
-    <div className="w-full h-full flex flex-col bg-white overflow-hidden select-none">
-      <div className="bg-[#414042] px-6 py-5 shrink-0">
-        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-emerald-400 mb-1">{c.step[lang]}</p>
-        <h2 className="text-xl font-black uppercase italic tracking-tight text-white">{c.title[lang]}</h2>
-        <p className="text-[11px] text-white/50 mt-1 font-medium">{c.subtitle[lang]}</p>
+    <div className="flex h-full w-full select-none flex-col overflow-hidden bg-[#f8f7f4]">
+      <div className="shrink-0 bg-[#414042] px-6 py-6 sm:px-8">
+        <p className="mb-2 text-[10px] font-black uppercase tracking-[0.32em] text-[#c9c5bd]">{c.step[lang]}</p>
+        <h2 className="text-2xl font-black uppercase tracking-[-0.025em] text-white sm:text-3xl">{c.title[lang]}</h2>
+        <p className="mt-2 text-xs font-medium text-white/50 sm:text-sm">{c.subtitle[lang]}</p>
       </div>
 
-      <div className="flex-1 overflow-auto px-5 py-5 space-y-4">
+      <div className="flex-1 space-y-4 overflow-auto px-5 py-5 sm:px-8 sm:py-7">
         {/* Injection site image */}
         <div className="relative w-full rounded-2xl overflow-hidden bg-slate-100 border border-slate-200">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -406,10 +399,10 @@ export function SlideApplication({ lang }: { lang: Lang }) {
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 px-1">{c.stepsLabel[lang]}</p>
           {c.steps[lang].map((step, i) => (
             <div key={i} className="flex items-start gap-3 px-4 py-3 rounded-xl bg-slate-50 border border-slate-100">
-              <div className="w-5 h-5 rounded-full bg-emerald-100 border border-emerald-200 flex items-center justify-center shrink-0 mt-0.5">
-                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-black/15 bg-[#e4e1dc]">
+                <div className="h-2 w-2 rounded-full bg-[#414042]" />
               </div>
-              <p className="text-[12px] font-bold text-slate-700 leading-snug">{step}</p>
+              <p className="text-xs font-bold leading-snug text-[#514f51] sm:text-sm">{step}</p>
             </div>
           ))}
         </div>
@@ -430,14 +423,14 @@ export function SlideStorage({ lang }: { lang: Lang }) {
   const c = t.storage;
 
   return (
-    <div className="w-full h-full flex flex-col bg-white overflow-hidden select-none">
-      <div className="bg-[#414042] px-6 py-5 shrink-0">
-        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-emerald-400 mb-1">{c.step[lang]}</p>
-        <h2 className="text-xl font-black uppercase italic tracking-tight text-white">{c.title[lang]}</h2>
-        <p className="text-[11px] text-white/50 mt-1 font-medium">{c.subtitle[lang]}</p>
+    <div className="flex h-full w-full select-none flex-col overflow-hidden bg-[#f8f7f4]">
+      <div className="shrink-0 bg-[#414042] px-6 py-6 sm:px-8">
+        <p className="mb-2 text-[10px] font-black uppercase tracking-[0.32em] text-[#c9c5bd]">{c.step[lang]}</p>
+        <h2 className="text-2xl font-black uppercase tracking-[-0.025em] text-white sm:text-3xl">{c.title[lang]}</h2>
+        <p className="mt-2 text-xs font-medium text-white/50 sm:text-sm">{c.subtitle[lang]}</p>
       </div>
 
-      <div className="flex-1 overflow-auto px-5 py-5 space-y-4">
+      <div className="flex-1 space-y-4 overflow-auto px-5 py-5 sm:px-8 sm:py-7">
         {/* Before reconstitution */}
         <div className="rounded-2xl border border-slate-200 overflow-hidden">
           <div className="bg-slate-100 px-4 py-3 flex items-center gap-2">
@@ -481,16 +474,16 @@ export function SlideClosing({ lang }: { lang: Lang }) {
   const c = t.closing;
 
   return (
-    <div className="w-full h-full flex flex-col bg-white overflow-hidden select-none">
-      <div className="bg-[#414042] px-6 py-5 shrink-0">
-        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-emerald-400 mb-1">{c.sectionLabel[lang]}</p>
-        <h2 className="text-xl font-black uppercase italic tracking-tight text-white">
-          {c.title[lang]} <span className="text-emerald-400">{c.titleHighlight[lang]}</span>
+    <div className="flex h-full w-full select-none flex-col overflow-hidden bg-[#f8f7f4]">
+      <div className="shrink-0 bg-[#414042] px-6 py-6 sm:px-8">
+        <p className="mb-2 text-[10px] font-black uppercase tracking-[0.32em] text-[#c9c5bd]">{c.sectionLabel[lang]}</p>
+        <h2 className="text-2xl font-black uppercase tracking-[-0.025em] text-white sm:text-3xl">
+          {c.title[lang]} <span className="text-[#c9c5bd]">{c.titleHighlight[lang]}</span>
         </h2>
-        <p className="text-[11px] text-white/50 mt-1 font-medium">{c.subtitle[lang]}</p>
+        <p className="mt-2 text-xs font-medium text-white/50 sm:text-sm">{c.subtitle[lang]}</p>
       </div>
 
-      <div className="flex-1 overflow-auto px-5 py-5 space-y-4">
+      <div className="flex-1 space-y-4 overflow-auto px-5 py-5 sm:px-8 sm:py-7">
         {/* Common mistakes */}
         <div className="rounded-2xl bg-red-50 border border-red-100 p-4 space-y-3">
           <p className="text-[10px] font-black uppercase tracking-widest text-red-600 flex items-center gap-1.5">
@@ -515,7 +508,7 @@ export function SlideClosing({ lang }: { lang: Lang }) {
         {/* CTA */}
         <Link
           href="/shop"
-          className="flex items-center justify-center gap-3 p-4 rounded-2xl bg-emerald-500 text-white font-black uppercase tracking-[0.15em] text-[13px] shadow-lg shadow-emerald-500/30 active:scale-95 transition-transform"
+          className="flex items-center justify-center gap-3 rounded-2xl bg-[#414042] p-4 text-[13px] font-black uppercase tracking-[0.15em] text-white shadow-[0_12px_30px_rgba(65,64,66,0.22)] transition-all hover:bg-[#242326] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8f8b86] focus-visible:ring-offset-2 active:scale-[0.98]"
         >
           {c.goToShop[lang]} <ArrowRight size={16} />
         </Link>
