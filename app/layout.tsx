@@ -1,11 +1,15 @@
 import type { Metadata, Viewport } from "next";
-import { Geist } from "next/font/google";
+import { Rubik } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 import { Toaster } from "sonner";
 import { PageLoader } from "@/components/page-loader";
 
-const geistSans = Geist({ subsets: ["latin"], variable: "--font-sans" });
+const rubik = Rubik({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
 
 export const viewport: Viewport = {
   themeColor: "#414042",
@@ -98,7 +102,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${geistSans.variable} font-sans antialiased`}
+        className={`${rubik.variable} font-sans antialiased`}
         suppressHydrationWarning
       >
         <PageLoader />
