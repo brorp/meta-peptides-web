@@ -13,7 +13,11 @@ export async function deductOrderInventory(orderId: string, client = supabaseAdm
 export function normalizePaymentType(value: unknown) {
   const paymentType = String(value || "").trim();
 
-  if (paymentType === "Shopee" || paymentType === "QRIS") {
+  if (
+    paymentType === "Shopee" ||
+    paymentType === "Tokopedia" ||
+    paymentType === "QRIS"
+  ) {
     return paymentType;
   }
 

@@ -252,6 +252,14 @@ function SourceBadge({ source }: { source?: string }) {
         );
     }
 
+    if (source === "tokopedia") {
+        return (
+            <span className="inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-500">
+                Tokopedia
+            </span>
+        );
+    }
+
     return null;
 }
 
@@ -378,7 +386,7 @@ export default function AdminOrdersPage() {
                 <div>
                     <h1 className="text-2xl font-bold text-foreground">Orders</h1>
                     <p className="text-sm text-muted-foreground">
-                        Manage checkout, WhatsApp manual, and Shopee orders.
+                        Manage checkout, WhatsApp, Shopee, and Tokopedia orders.
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -704,7 +712,7 @@ export default function AdminOrdersPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                     type="text"
-                    placeholder="Search by name, email, or Shopee order no..."
+                    placeholder="Search by name, email, or marketplace order no..."
                     value={keyword}
                     onChange={(e) => {
                         setKeyword(e.target.value);

@@ -26,7 +26,8 @@ const ORDER_STATUSES = [
     "cancelled",
 ];
 
-const ORDER_SOURCES = ["manual_whatsapp", "shopee"];
+const ORDER_SOURCES = ["manual_whatsapp", "shopee", "tokopedia"];
+const MARKETPLACE_ORDER_SOURCES = new Set(["shopee", "tokopedia"]);
 const ORDER_SORT_FIELDS = [
     "created_at",
     "shipping_name",
@@ -248,7 +249,10 @@ export async function POST(req: NextRequest) {
         const orderSource = ORDER_SOURCES.includes(body.order_source)
             ? body.order_source
             : "manual_whatsapp";
-        const manualChannel = orderSource === "shopee" ? "shopee" : "whatsapp";
+        const isMarketplaceOrder = MARKETPLACE_ORDER_SOURCES.has(orderSource);
+        const marketplacePaymentType =
+            orderSource === "tokopedia" ? "Tokopedia" : "Shopee";
+        const manualChannel = isMarketplaceOrder ? orderSource : "whatsapp";
         const status = ORDER_STATUSES.includes(body.status)
             ? body.status
             : "processing";
@@ -266,7 +270,8 @@ export async function POST(req: NextRequest) {
                 ? normalizeShipmentFee(body.shipping_fee)
                 : 0;
         const paymentType = normalizePaymentType(
-            body.payment_type || (orderSource === "shopee" ? "Shopee" : "Bank Transfer"),
+            body.payment_type ||
+                (isMarketplaceOrder ? marketplacePaymentType : "Bank Transfer"),
         );
         // Optional custom order date (ISO string or YYYY-MM-DD)
         const orderDateRaw = body.order_date ? String(body.order_date).trim() : null;
@@ -323,18 +328,27 @@ export async function POST(req: NextRequest) {
             (sum, item) => sum + item.quantity * item.price_at_purchase,
             0,
         );
-        const totalPrice = Math.max(0, subtotal - manualDiscountAmount - (orderSource === "shopee" ? marketplaceFee : 0));
+        const totalPrice = Math.max(
+            0,
+            subtotal - manualDiscountAmount - (isMarketplaceOrder ? marketplaceFee : 0),
+        );
         const transactionCode =
             String(body.transaction_code || "").trim() ||
             manualReference ||
-            `${orderSource === "shopee" ? "SHOPEE" : "WA"}-${Date.now()}`;
+            `${
+                orderSource === "shopee"
+                    ? "SHOPEE"
+                    : orderSource === "tokopedia"
+                      ? "TOKOPEDIA"
+                      : "WA"
+            }-${Date.now()}`;
 
         const orderPayload: Record<string, any> = {
             user_id: null,
             is_guest: true,
             total_price: totalPrice,
             subtotal,
-            marketplace_fee: orderSource === "shopee" ? marketplaceFee : 0,
+            marketplace_fee: isMarketplaceOrder ? marketplaceFee : 0,
             shipment_type: shipmentType,
             shipping_fee: shipmentFee,
             shipping_address: shippingAddress,

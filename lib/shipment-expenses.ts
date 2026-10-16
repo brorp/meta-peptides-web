@@ -13,11 +13,14 @@ export function normalizeShipmentFee(value: unknown) {
 }
 
 function shouldSyncShipmentExpense(orderSource?: string | null) {
-  return orderSource !== "shopee";
+  return orderSource !== "shopee" && orderSource !== "tokopedia";
 }
 
 function orderSourceLabel(orderSource?: string | null) {
-  return orderSource === "manual_whatsapp" ? "WhatsApp manual" : "website";
+  if (orderSource === "manual_whatsapp") return "WhatsApp manual";
+  if (orderSource === "shopee") return "Shopee";
+  if (orderSource === "tokopedia") return "Tokopedia";
+  return "website";
 }
 
 function getExpenseDate(createdAt?: string | null) {

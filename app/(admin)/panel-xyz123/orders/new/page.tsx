@@ -65,9 +65,22 @@ const ORDER_SOURCES = [
         value: "shopee",
         badgeClass: "border-orange-500/20 bg-orange-500/10 text-orange-500",
     },
+    {
+        label: "Tokopedia",
+        value: "tokopedia",
+        badgeClass: "border-emerald-500/20 bg-emerald-500/10 text-emerald-500",
+    },
 ];
 
-const PAYMENT_TYPES = ["Shopee", "QRIS", "Bank Transfer"];
+const PAYMENT_TYPES = ["Shopee", "Tokopedia", "QRIS", "Bank Transfer"];
+
+function isMarketplaceSource(source: string) {
+    return source === "shopee" || source === "tokopedia";
+}
+
+function getMarketplacePaymentType(source: string) {
+    return source === "tokopedia" ? "Tokopedia" : "Shopee";
+}
 
 const buildBlankItem = (): ManualOrderItem => ({
     localId: crypto.randomUUID(),
@@ -177,7 +190,9 @@ export default function NewManualOrderPage() {
         const source = duplicatedOrder.order_source || "manual_whatsapp";
         const paymentType =
             duplicatedOrder.payments?.[0]?.payment_type ||
-            (source === "shopee" ? "Shopee" : "Bank Transfer");
+            (isMarketplaceSource(source)
+                ? getMarketplacePaymentType(source)
+                : "Bank Transfer");
 
         setForm({
             order_source: source,
@@ -223,14 +238,15 @@ export default function NewManualOrderPage() {
     );
 
     const isShopee = form.order_source === "shopee";
+    const isMarketplace = isMarketplaceSource(form.order_source);
 
     const subtotal = items.reduce(
         (sum, item) => sum + Number(item.quantity || 0) * Number(item.price_at_purchase || 0),
         0,
     );
-    const manualDiscount = isShopee ? 0 : Math.max(0, Number(form.manual_discount_amount || 0));
-    const marketplaceFee = isShopee ? Math.max(0, Number(form.marketplace_fee || 0)) : 0;
-    const shipmentFee = isShopee ? 0 : Math.max(0, Number(form.shipping_fee || 0));
+    const manualDiscount = isMarketplace ? 0 : Math.max(0, Number(form.manual_discount_amount || 0));
+    const marketplaceFee = isMarketplace ? Math.max(0, Number(form.marketplace_fee || 0)) : 0;
+    const shipmentFee = isMarketplace ? 0 : Math.max(0, Number(form.shipping_fee || 0));
     const total = Math.max(0, subtotal - manualDiscount - marketplaceFee);
 
     const selectedSource =
@@ -388,7 +404,7 @@ export default function NewManualOrderPage() {
                 ...form,
                 manual_discount_amount: manualDiscount,
                 marketplace_fee: marketplaceFee,
-                shipment_type: isShopee ? null : form.shipment_type,
+                shipment_type: isMarketplace ? null : form.shipment_type,
                 shipping_fee: shipmentFee,
                 payment_type: form.payment_type,
                 items: payloadItems,
@@ -425,14 +441,14 @@ export default function NewManualOrderPage() {
                         <p className="text-sm text-muted-foreground">
                             {duplicateOrderId
                                 ? "Review the copied data, adjust anything needed, then create a new order."
-                                : "Create a WhatsApp or Shopee order and keep it in the normal order flow."}
+                                : "Create a WhatsApp, Shopee, or Tokopedia order and keep it in the normal order flow."}
                         </p>
                     </div>
                 </div>
                 <div
                     className={`inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-medium ${selectedSource.badgeClass}`}
                 >
-                    {selectedSource.value === "shopee" ? (
+                    {isMarketplaceSource(selectedSource.value) ? (
                         <ShoppingBag className="w-4 h-4" />
                     ) : (
                         <MessageCircle className="w-4 h-4" />
@@ -667,14 +683,16 @@ export default function NewManualOrderPage() {
                                 <span className="text-xs font-medium text-muted-foreground">
                                     {form.order_source === "shopee"
                                         ? "Shopee Order No."
-                                        : "WhatsApp Reference"}
+                                        : form.order_source === "tokopedia"
+                                          ? "Tokopedia Order No."
+                                          : "WhatsApp Reference"}
                                 </span>
                                 <input
                                     value={form.manual_reference}
                                     onChange={(e) => updateForm("manual_reference", e.target.value)}
                                     className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
                                     placeholder={
-                                        form.order_source === "shopee"
+                                        isMarketplace
                                             ? "No. Pesanan"
                                             : "WA chat/order code"
                                     }
@@ -764,9 +782,15 @@ export default function NewManualOrderPage() {
                                 onChange={(e) => {
                                     const nextSource = e.target.value;
                                     updateForm("order_source", nextSource);
-                                    if (nextSource === "shopee") {
-                                        updateForm("payment_type", "Shopee");
-                                    } else if (form.payment_type === "Shopee") {
+                                    if (isMarketplaceSource(nextSource)) {
+                                        updateForm(
+                                            "payment_type",
+                                            getMarketplacePaymentType(nextSource),
+                                        );
+                                    } else if (
+                                        form.payment_type === "Shopee" ||
+                                        form.payment_type === "Tokopedia"
+                                    ) {
                                         updateForm("payment_type", "Bank Transfer");
                                     }
                                 }}
@@ -806,7 +830,7 @@ export default function NewManualOrderPage() {
                                 className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
                             />
                         </label>
-                        {!isShopee && (
+                        {!isMarketplace && (
                             <div className="space-y-3 rounded-xl border border-green-500/20 bg-green-500/5 p-3">
                                 <p className="text-xs font-semibold uppercase tracking-wider text-green-500">
                                     WhatsApp Shipment
@@ -863,7 +887,7 @@ export default function NewManualOrderPage() {
                         </label>
 
                         {/* Discount (WhatsApp only) */}
-                        {!isShopee && (
+                        {!isMarketplace && (
                             <label className="space-y-2 block">
                                 <span className="text-xs font-medium text-muted-foreground">
                                     Manual Discount
@@ -880,11 +904,11 @@ export default function NewManualOrderPage() {
                             </label>
                         )}
 
-                        {/* Shopee Fee (Shopee only) */}
-                        {isShopee && (
+                        {/* Marketplace fee */}
+                        {isMarketplace && (
                             <label className="space-y-2 block">
                                 <span className="text-xs font-medium text-muted-foreground">
-                                    Shopee Fee (Marketplace Fee)
+                                    {selectedSource.label} Fee (Marketplace Fee)
                                 </span>
                                 <input
                                     type="number"
@@ -894,7 +918,7 @@ export default function NewManualOrderPage() {
                                         updateForm("marketplace_fee", e.target.value)
                                     }
                                     className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
-                                    placeholder="Biaya platform Shopee"
+                                    placeholder={`Biaya platform ${selectedSource.label}`}
                                 />
                             </label>
                         )}
@@ -923,7 +947,7 @@ export default function NewManualOrderPage() {
                                     {formatCurrency(subtotal)}
                                 </span>
                             </div>
-                            {!isShopee && manualDiscount > 0 && (
+                            {!isMarketplace && manualDiscount > 0 && (
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Discount</span>
                                     <span className="text-green-500">
@@ -931,7 +955,7 @@ export default function NewManualOrderPage() {
                                     </span>
                                 </div>
                             )}
-                            {isShopee && marketplaceFee > 0 && (
+                            {isMarketplace && marketplaceFee > 0 && (
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Marketplace Fee</span>
                                     <span className="text-orange-500">
@@ -939,7 +963,7 @@ export default function NewManualOrderPage() {
                                     </span>
                                 </div>
                             )}
-                            {!isShopee && shipmentFee > 0 && (
+                            {!isMarketplace && shipmentFee > 0 && (
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">
                                         Shipment Expense

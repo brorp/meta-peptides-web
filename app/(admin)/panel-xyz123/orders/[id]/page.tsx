@@ -24,7 +24,15 @@ const ORDER_STATUSES = [
     "cancelled",
 ];
 
-const PAYMENT_TYPES = ["Shopee", "QRIS", "Bank Transfer"];
+const PAYMENT_TYPES = ["Shopee", "Tokopedia", "QRIS", "Bank Transfer"];
+
+function isMarketplaceSource(source?: string | null) {
+    return source === "shopee" || source === "tokopedia";
+}
+
+function getMarketplaceName(source?: string | null) {
+    return source === "tokopedia" ? "Tokopedia" : "Shopee";
+}
 
 function formatCurrency(value: number) {
     return new Intl.NumberFormat("id-ID", {
@@ -79,6 +87,14 @@ function SourceBadge({ source }: { source?: string }) {
         );
     }
 
+    if (source === "tokopedia") {
+        return (
+            <p className="mt-1 inline-flex rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-500">
+                Tokopedia
+            </p>
+        );
+    }
+
     return null;
 }
 
@@ -126,7 +142,9 @@ export default function AdminOrderDetailPage({
     const [shippingFee, setShippingFee] = useState("");
     const [paymentType, setPaymentType] = useState("Bank Transfer");
     const trackingNumberSupported = order?._schema?.tracking_number !== false;
-    const canSyncShipmentExpense = Boolean(order && order.order_source !== "shopee");
+    const isMarketplace = isMarketplaceSource(order?.order_source);
+    const marketplaceName = getMarketplaceName(order?.order_source);
+    const canSyncShipmentExpense = Boolean(order && !isMarketplace);
     const shipmentExpenseLabel =
         order?.order_source === "manual_whatsapp"
             ? "WhatsApp Shipment"
@@ -178,7 +196,9 @@ export default function AdminOrderDetailPage({
         setShippingFee(String(Number(fetchedOrder.shipping_fee || 0)));
         setPaymentType(
             fetchedOrder.payments?.[0]?.payment_type ||
-                (fetchedOrder.order_source === "shopee" ? "Shopee" : "Bank Transfer"),
+                (isMarketplaceSource(fetchedOrder.order_source)
+                    ? getMarketplaceName(fetchedOrder.order_source)
+                    : "Bank Transfer"),
         );
     }, [orderResponse]);
 
@@ -206,12 +226,12 @@ export default function AdminOrderDetailPage({
                 payload.tracking_number = trackingNumber.trim();
             }
 
-            if (order.order_source !== "shopee") {
+            if (!isMarketplaceSource(order.order_source)) {
                 payload.shipment_type = shipmentType;
                 payload.shipping_fee = Number(shippingFee || 0);
             }
 
-            if (order.order_source === "shopee") {
+            if (isMarketplaceSource(order.order_source)) {
                 payload.subtotal = Number(subtotal || 0);
                 payload.voucher_discount_amount = Number(discountAmount || 0);
                 payload.marketplace_fee = Number(marketplaceFee || 0);
@@ -244,7 +264,9 @@ export default function AdminOrderDetailPage({
                 setShippingFee(String(Number(data.data.shipping_fee || 0)));
                 setPaymentType(
                     data.data.payments?.[0]?.payment_type ||
-                    (data.data.order_source === "shopee" ? "Shopee" : "Bank Transfer"),
+                    (isMarketplaceSource(data.data.order_source)
+                        ? getMarketplaceName(data.data.order_source)
+                        : "Bank Transfer"),
                 );
                 setTrackingNumber(
                     data.data._schema?.tracking_number === false
@@ -812,10 +834,22 @@ export default function AdminOrderDetailPage({
                             </div>
                         )}
 
-                        {order.order_source === "shopee" && (
-                            <div className="space-y-3 rounded-xl border border-orange-500/20 bg-orange-500/5 p-3">
-                                <p className="text-xs font-semibold uppercase tracking-wider text-orange-500">
-                                    Shopee Financials
+                        {isMarketplace && (
+                            <div
+                                className={`space-y-3 rounded-xl border p-3 ${
+                                    order.order_source === "tokopedia"
+                                        ? "border-emerald-500/20 bg-emerald-500/5"
+                                        : "border-orange-500/20 bg-orange-500/5"
+                                }`}
+                            >
+                                <p
+                                    className={`text-xs font-semibold uppercase tracking-wider ${
+                                        order.order_source === "tokopedia"
+                                            ? "text-emerald-500"
+                                            : "text-orange-500"
+                                    }`}
+                                >
+                                    {marketplaceName} Financials
                                 </p>
                                 <label className="block space-y-1.5">
                                     <span className="text-xs font-medium text-muted-foreground">
@@ -843,7 +877,7 @@ export default function AdminOrderDetailPage({
                                 </label>
                                 <label className="block space-y-1.5">
                                     <span className="text-xs font-medium text-muted-foreground">
-                                        Shopee Fee (Marketplace Fee)
+                                        {marketplaceName} Fee (Marketplace Fee)
                                     </span>
                                     <input
                                         type="number"
@@ -911,7 +945,9 @@ export default function AdminOrderDetailPage({
                                 <span className="text-muted-foreground text-xs">
                                     {order.order_source === "shopee"
                                         ? "Shopee Order No."
-                                        : "Manual Reference"}
+                                        : order.order_source === "tokopedia"
+                                          ? "Tokopedia Order No."
+                                          : "Manual Reference"}
                                 </span>
                                 <p className="text-foreground text-xs mt-1">
                                     {order.manual_reference}
