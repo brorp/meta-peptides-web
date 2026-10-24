@@ -88,6 +88,13 @@ export async function PUT(
             }
         }
 
+        if (updateData.name !== undefined) {
+            updateData.name = String(updateData.name).trim();
+            if (!updateData.name) {
+                return errorResponse("Product name is required", 400);
+            }
+        }
+
         if (body.image_urls !== undefined) {
             const imageUrls = normalizeProductImages(body.image_urls);
             updateData.image_urls = imageUrls;

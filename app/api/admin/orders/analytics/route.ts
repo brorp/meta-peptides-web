@@ -219,7 +219,7 @@ function customerLabel(order: any) {
   );
 }
 
-function getOrderRevenue(order: any) {
+function getFinalInvoiceTotal(order: any) {
   const totalPrice = Number(order.total_price || 0);
   return Number.isFinite(totalPrice) ? totalPrice : 0;
 }
@@ -260,12 +260,12 @@ export async function GET(req: NextRequest) {
     const shipmentMap = new Map<string, { label: string; orders: number; fees: number }>();
 
     let unitsSold = 0;
-    let totalRevenue = 0;
+    let grossSales = 0;
     let totalShipmentFees = 0;
 
     for (const order of orders || []) {
-      const orderTotal = getOrderRevenue(order);
-      totalRevenue += orderTotal;
+      const finalInvoiceTotal = getFinalInvoiceTotal(order);
+      grossSales += finalInvoiceTotal;
 
       const key = customerKey(order);
       const spender = spenderMap.get(key) || {
@@ -273,7 +273,7 @@ export async function GET(req: NextRequest) {
         total: 0,
         orders: 0,
       };
-      spender.total += orderTotal;
+      spender.total += finalInvoiceTotal;
       spender.orders += 1;
       spenderMap.set(key, spender);
 
@@ -284,7 +284,7 @@ export async function GET(req: NextRequest) {
         revenue: 0,
       };
       domicileRow.value += 1;
-      domicileRow.revenue += orderTotal;
+      domicileRow.revenue += finalInvoiceTotal;
       domicileMap.set(domicile, domicileRow);
 
       const shipmentFee = Number(order.shipping_fee || 0);
@@ -336,8 +336,10 @@ export async function GET(req: NextRequest) {
         to: dateRange.to,
         orderCount,
         unitsSold,
-        totalRevenue,
-        averageOrderValue: orderCount > 0 ? totalRevenue / orderCount : 0,
+        grossSales,
+        // Keep the previous field during rollout for backward compatibility.
+        totalRevenue: grossSales,
+        averageOrderValue: orderCount > 0 ? grossSales / orderCount : 0,
         uniqueCustomers: spenderMap.size,
         totalShipmentFees,
         topSpender: topSpenders[0] || null,

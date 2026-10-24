@@ -73,6 +73,7 @@ type DomicileDistribution = {
 type OrdersAnalytics = {
     orderCount: number;
     unitsSold: number;
+    grossSales: number;
     totalRevenue: number;
     averageOrderValue: number;
     uniqueCustomers: number;
@@ -410,8 +411,9 @@ export default function AdminOrdersPage() {
                             Sales pulse and customer signals
                         </h2>
                         <p className="text-sm text-muted-foreground">
-                            Active orders only: processing and completed. Revenue
-                            sums order total amount in the selected date range.
+                            Processing and completed orders only. Gross Sales sums
+                            final invoice totals after discounts, vouchers, and
+                            marketplace fees in the selected date range.
                         </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -479,8 +481,12 @@ export default function AdminOrdersPage() {
                     <div className="mt-5 space-y-4">
                         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                             <AnalyticsMetric
-                                label="Revenue"
-                                value={formatCurrency(analytics?.totalRevenue || 0)}
+                                label="Gross Sales"
+                                value={formatCurrency(
+                                    analytics?.grossSales ??
+                                        analytics?.totalRevenue ??
+                                        0,
+                                )}
                                 icon={TrendingUp}
                                 tone="bg-emerald-500/10 text-emerald-500"
                             />
@@ -676,7 +682,7 @@ export default function AdminOrdersPage() {
                                         </p>
                                     )}
                                     <div className="rounded-xl bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                                        Average order:{" "}
+                                        Average final invoice:{" "}
                                         <span className="font-semibold text-foreground">
                                             {formatCurrency(analytics?.averageOrderValue || 0)}
                                         </span>

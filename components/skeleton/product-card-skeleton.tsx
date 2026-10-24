@@ -9,10 +9,8 @@ export function ProductCardSkeleton() {
       {/* Content Section Skeleton */}
       <div className="flex flex-grow flex-col space-y-4 p-4">
         <div className="space-y-2">
-          <div className="flex justify-between items-start gap-2">
-            <div className="h-5 bg-muted rounded-md w-2/3" />
-            <div className="h-4 bg-muted rounded-md w-12" />
-          </div>
+          <div className="h-5 w-2/3 rounded-md bg-muted" />
+          <div className="h-3 w-20 rounded bg-muted" />
         </div>
 
         <div className="mt-auto space-y-3">

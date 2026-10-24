@@ -19,8 +19,9 @@ import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
 import { useApiQuery } from "@/hooks/api/useApiQuery";
 
-type QuickEditField = "price" | "stock";
+type QuickEditField = "name" | "price" | "stock";
 type QuickEditValues = {
+    name: string;
     price: string;
     stock: string;
 };
@@ -43,6 +44,7 @@ function formatCurrencyPreview(value: string) {
 
 function makeQuickEditValues(product: any): QuickEditValues {
     return {
+        name: String(product.name || ""),
         price: String(Number(product.price || 0)),
         stock: String(Number(product.stock || 0)),
     };
@@ -214,6 +216,11 @@ export default function AdminProductsPage() {
         const value = edits[field];
         const numericValue = Number(value);
 
+        if (field === "name" && value.trim() === "") {
+            toast.error("Product name is required");
+            return;
+        }
+
         if (
             field === "price" &&
             (value.trim() === "" ||
@@ -238,9 +245,14 @@ export default function AdminProductsPage() {
         setSavingQuickEditKey(getQuickEditKey(product, field));
         try {
             await axios.put(`/admin/products/${product.id}`, {
-                [field]: numericValue,
+                [field]: field === "name" ? value.trim() : numericValue,
             });
-            toast.success(`${field === "price" ? "Price" : "Stock"} updated`);
+            const fieldLabel = field === "name"
+                ? "Product name"
+                : field === "price"
+                    ? "Price"
+                    : "Stock";
+            toast.success(`${fieldLabel} updated`);
             await refetchProducts();
             closeQuickEdit(product, field);
         } catch {
@@ -348,10 +360,52 @@ export default function AdminProductsPage() {
                                                         {product.name[0]}
                                                     </div>
                                                 )}
-                                                <div>
-                                                    <p className="font-medium text-foreground">
-                                                        {product.name}
-                                                    </p>
+                                                <div className="min-w-0">
+                                                    {isEditingField(product, "name") ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <input
+                                                                type="text"
+                                                                autoFocus
+                                                                value={getQuickEditValues(product).name}
+                                                                onChange={(e) =>
+                                                                    updateQuickEdit(product, "name", e.target.value)
+                                                                }
+                                                                onKeyDown={(e) => {
+                                                                    if (e.key === "Enter") saveQuickEdit(product, "name");
+                                                                    if (e.key === "Escape") closeQuickEdit(product, "name");
+                                                                }}
+                                                                className="w-48 rounded-lg border border-border bg-background px-2 py-1.5 text-sm font-medium text-foreground outline-none transition-all focus:border-accent focus:ring-2 focus:ring-accent/20"
+                                                                aria-label={`Edit name for ${product.name}`}
+                                                            />
+                                                            <button
+                                                                onClick={() => saveQuickEdit(product, "name")}
+                                                                disabled={
+                                                                    savingQuickEditKey === getQuickEditKey(product, "name")
+                                                                }
+                                                                className="p-2 rounded-lg hover:bg-accent/10 text-muted-foreground hover:text-accent transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                                                title="Save product name"
+                                                            >
+                                                                {savingQuickEditKey === getQuickEditKey(product, "name") ? (
+                                                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                                                ) : (
+                                                                    <Save className="w-4 h-4" />
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-1.5">
+                                                            <p className="truncate font-medium text-foreground">
+                                                                {product.name}
+                                                            </p>
+                                                            <button
+                                                                onClick={() => openQuickEdit(product, "name")}
+                                                                className="shrink-0 p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+                                                                title="Edit product name"
+                                                            >
+                                                                <Edit className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                     <p className="text-xs text-muted-foreground">
                                                         {product.label || product.volume || ""}
                                                     </p>

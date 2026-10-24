@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart } from "lucide-react";
 import { useCartStore } from "@/store/useCartStore";
 import { cn } from "@/lib/utils";
+import { formatCurrency } from "@/lib/format";
 import { ProductInterface } from "@/interface/products";
 import { toast } from "sonner";
 
@@ -47,14 +48,12 @@ export function ProductCard({
       {/* Content Section */}
       <div className="flex flex-grow flex-col p-4">
         <div className="mb-3">
-          <div className="flex justify-between items-start gap-2 mb-1">
-            <h3 className="font-black text-base md:text-lg tracking-tight leading-tight group-hover:text-accent transition-colors">
-              {product.name}
-            </h3>
-            <span className="text-[10px] font-medium bg-muted px-2 py-0.5 rounded text-muted-foreground whitespace-nowrap">
-              {product.volume}
-            </span>
-          </div>
+          <h3 className="font-black text-base md:text-lg tracking-tight leading-tight group-hover:text-accent transition-colors">
+            {product.name}
+          </h3>
+          <p className="mt-2 text-[11px] font-medium tracking-[0.06em] text-muted-foreground/80 tabular-nums sm:text-xs">
+            {formatCurrency(product.price || 0)}
+          </p>
         </div>
 
         {/* Stock Bar Indicator */}
@@ -63,7 +62,7 @@ export function ProductCard({
             <span
               className={cn(
                 "text-[10px] font-bold uppercase tracking-widest",
-                isSoldOut ? "text-red-500" : "text-emerald-500",
+        isSoldOut ? "text-[#844B4B]" : "text-[#466456]",
               )}
             >
               {isSoldOut ? "Sold out" : "Available"}
@@ -73,7 +72,7 @@ export function ProductCard({
             <div
               className={cn(
                 "h-full transition-all duration-1000",
-                isSoldOut ? "bg-red-500" : "bg-emerald-500",
+        isSoldOut ? "bg-[#965A5A]" : "bg-[#5B7668]",
               )}
               style={{ width: "100%" }}
             />
