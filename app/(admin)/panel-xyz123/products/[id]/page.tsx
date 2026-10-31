@@ -17,6 +17,7 @@ const PRODUCT_FIELDS = [
     { key: "cost_of_goods", label: "COGS / Unit (IDR)", type: "number" },
     { key: "original_price", label: "Original Price (IDR)", type: "number" },
     { key: "stock", label: "Stock Quantity", type: "number", required: true },
+    { key: "product_type", label: "Tipe Produk" },
     { key: "usage_days", label: "Masa Pakai (Days)", type: "number" },
     { key: "volume", label: "Volume / Size" },
     { key: "purity", label: "Purity %" },
@@ -162,7 +163,19 @@ export default function EditProductPage({
                                         <span className="text-destructive ml-0.5">*</span>
                                     )}
                                 </label>
-                                {field.key === "category" ? (
+                                {field.key === "product_type" ? (
+                                    <select
+                                        value={form.product_type || "mainproduct"}
+                                        onChange={(e) => {
+                                            updateField("product_type", e.target.value);
+                                            if (e.target.value === "misc") updateField("usage_days", 0);
+                                        }}
+                                        className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                                    >
+                                        <option value="mainproduct">Peptides (mainproduct)</option>
+                                        <option value="misc">Perintilan (misc, tanpa masa pakai)</option>
+                                    </select>
+                                ) : field.key === "category" ? (
                                     <div className="space-y-2">
                                         <div className="flex flex-wrap gap-2">
                                             {(form.category || "").split(',').map((c: string) => c.trim()).filter(Boolean).map((cat: string, idx: number) => (
@@ -199,7 +212,8 @@ export default function EditProductPage({
                                         type={field.type || "text"}
                                         value={form[field.key] ?? ""}
                                         onChange={(e) => updateField(field.key, e.target.value)}
-                                        className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                                        disabled={field.key === "usage_days" && form.product_type === "misc"}
+                                        className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all disabled:opacity-50"
                                     />
                                 )}
                             </div>

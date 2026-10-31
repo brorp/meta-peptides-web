@@ -469,7 +469,9 @@ export default function AdminProductsPage() {
                                             )}
                                         </td>
                                         <td className="px-5 py-3 text-muted-foreground">
-                                            {product.usage_days || 0} days
+                                            {product.product_type === "misc"
+                                                ? "Misc."
+                                                : `${product.usage_days || 0} days`}
                                         </td>
                                         <td className="px-5 py-3 text-muted-foreground">
                                             {product.complimentary_product_name ? (

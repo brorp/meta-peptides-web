@@ -175,6 +175,10 @@ function formatDate(dateStr: string) {
     });
 }
 
+function getInvoiceNumber(order: any) {
+    return order.invoice_number || order.id.slice(0, 8).toUpperCase();
+}
+
 function getOrderItems(order: any) {
     return (order.order_items || []).map((item: any) => ({
         ...item,
@@ -218,7 +222,7 @@ export function InvoiceDocument({ order }: { order: any }) {
                     <View>
                         <Text style={styles.invoiceTitle}>INVOICE</Text>
                         <Text style={styles.invoiceMeta}>
-                            Invoice #{order.id.slice(0, 8).toUpperCase()}
+                            Invoice #{getInvoiceNumber(order)}
                             {"\n"}
                             Date: {formatDate(order.created_at)}
                         </Text>

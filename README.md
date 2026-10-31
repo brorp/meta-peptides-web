@@ -70,6 +70,12 @@
 
 ---
 
+## 🤖 Discord Sales Bot
+
+Command bot for the sales team (`!newleads`, `!invoice`, `!payment`, `!reorder`, ...) that calls the `/api/bot/*` routes. Setup, environment variables, and the full command onboarding are in [`discord-bot/README.md`](discord-bot/README.md).
+
+---
+
 ## 📂 Project Architecture
 
 ```text

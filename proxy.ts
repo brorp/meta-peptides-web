@@ -27,6 +27,7 @@ const STAFF_ADMIN_PANEL_PREFIXES = [
 const STAFF_ADMIN_API_PREFIXES = [
   "/api/admin/auth",
   "/api/admin/orders",
+  "/api/admin/payments",
   "/api/admin/customers",
   "/api/admin/users",
   "/api/admin/products",

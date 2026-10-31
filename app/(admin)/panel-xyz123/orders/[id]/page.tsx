@@ -300,7 +300,7 @@ export default function AdminOrderDetailPage({
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            link.download = `${type}-${id.slice(0, 8)}.pdf`;
+            link.download = `${type}-${order.invoice_number || id.slice(0, 8)}.pdf`;
             link.click();
             window.URL.revokeObjectURL(url);
 
@@ -372,7 +372,7 @@ export default function AdminOrderDetailPage({
                             Order Detail
                         </h1>
                         <p className="text-xs text-muted-foreground font-mono mt-0.5">
-                            {order.id}
+                            {order.invoice_number || order.id}
                         </p>
                     </div>
                 </div>
@@ -552,9 +552,32 @@ export default function AdminOrderDetailPage({
                                     <div className="flex justify-between">
                                         <span className="text-muted-foreground">Status</span>
                                         <span className="text-foreground capitalize">
-                                            {payment.status}
+                                            {payment.is_paid ? "paid" : payment.status}
                                         </span>
                                     </div>
+                                    {payment.payment_amount !== null &&
+                                        payment.payment_amount !== undefined && (
+                                            <div className="flex justify-between">
+                                                <span className="text-muted-foreground">
+                                                    Paid Amount
+                                                </span>
+                                                <span className="text-foreground">
+                                                    {formatCurrency(payment.payment_amount)}
+                                                </span>
+                                            </div>
+                                        )}
+                                    {payment.payment_date && (
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">
+                                                Payment Date
+                                            </span>
+                                            <span className="text-foreground">
+                                                {new Date(payment.payment_date).toLocaleDateString(
+                                                    "id-ID",
+                                                )}
+                                            </span>
+                                        </div>
+                                    )}
                                     {payment.receipt_url && (
                                         <a
                                             href={payment.receipt_url}

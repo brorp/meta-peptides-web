@@ -23,6 +23,8 @@ type ExpenseRecord = {
   vendor: string | null;
   payment_method: string | null;
   notes: string | null;
+  is_reimburse: boolean;
+  paid_by: "kas" | "rudi" | "rp" | null;
 };
 
 type ExpenseFormState = {
@@ -33,6 +35,8 @@ type ExpenseFormState = {
   vendor: string;
   payment_method: string;
   notes: string;
+  is_reimburse: boolean;
+  paid_by: "" | "kas" | "rudi" | "rp";
 };
 
 const todayLocalDate = () => {
@@ -51,6 +55,8 @@ const buildDefaultForm = (): ExpenseFormState => ({
   vendor: "",
   payment_method: "",
   notes: "",
+  is_reimburse: false,
+  paid_by: "",
 });
 
 const formatCurrency = (value: number) =>
@@ -95,7 +101,10 @@ export default function AdminExpensesPage() {
     setForm(buildDefaultForm());
   };
 
-  const updateForm = (key: keyof ExpenseFormState, value: string) => {
+  const updateForm = (
+    key: keyof ExpenseFormState,
+    value: string | boolean,
+  ) => {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
@@ -139,6 +148,8 @@ export default function AdminExpensesPage() {
       vendor: expense.vendor || "",
       payment_method: expense.payment_method || "",
       notes: expense.notes || "",
+      is_reimburse: expense.is_reimburse === true,
+      paid_by: expense.paid_by || "",
     });
   };
 
@@ -153,6 +164,8 @@ export default function AdminExpensesPage() {
       vendor: expense.vendor || "",
       payment_method: expense.payment_method || "",
       notes: expense.notes || "",
+      is_reimburse: expense.is_reimburse === true,
+      paid_by: expense.paid_by || "",
     });
   };
 
@@ -218,6 +231,37 @@ export default function AdminExpensesPage() {
               className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
               required
             />
+          </label>
+
+          <label className="space-y-2">
+            <span className="text-xs font-medium text-muted-foreground">
+              Paid By
+            </span>
+            <select
+              value={form.paid_by}
+              onChange={(e) =>
+                updateForm(
+                  "paid_by",
+                  e.target.value as ExpenseFormState["paid_by"],
+                )
+              }
+              className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
+            >
+              <option value="">Not specified</option>
+              <option value="kas">Kas</option>
+              <option value="rudi">Rudi</option>
+              <option value="rp">RP</option>
+            </select>
+          </label>
+
+          <label className="flex items-center gap-3 self-end rounded-xl border border-border bg-background px-4 py-2.5">
+            <input
+              type="checkbox"
+              checked={form.is_reimburse}
+              onChange={(e) => updateForm("is_reimburse", e.target.checked)}
+              className="h-4 w-4 rounded border-border accent-accent"
+            />
+            <span className="text-sm text-foreground">Needs reimbursement</span>
           </label>
 
           <label className="space-y-2">
@@ -352,20 +396,21 @@ export default function AdminExpensesPage() {
                 <th className="text-left px-5 py-3 font-medium">Date</th>
                 <th className="text-left px-5 py-3 font-medium">Vendor</th>
                 <th className="text-left px-5 py-3 font-medium">Amount</th>
+                <th className="text-left px-5 py-3 font-medium">Reimburse</th>
                 <th className="text-right px-5 py-3 font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center">
+                  <td colSpan={7} className="px-5 py-12 text-center">
                     <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
                   </td>
                 </tr>
               ) : expenses.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-5 py-12 text-center text-muted-foreground"
                   >
                     <ReceiptText className="w-8 h-8 mx-auto mb-2 opacity-30" />
@@ -397,6 +442,11 @@ export default function AdminExpensesPage() {
                     </td>
                     <td className="px-5 py-3 font-medium text-foreground">
                       {formatCurrency(expense.amount)}
+                    </td>
+                    <td className="px-5 py-3 text-muted-foreground">
+                      {expense.is_reimburse
+                        ? `Yes${expense.paid_by ? ` · ${expense.paid_by}` : ""}`
+                        : "No"}
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-1">

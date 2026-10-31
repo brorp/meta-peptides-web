@@ -4,7 +4,7 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { requireAdminApiSession } from "@/lib/admin-api";
 
 const ADMIN_EXPENSE_SELECT =
-  "id, title, category, amount, expense_date, vendor, payment_method, notes, created_at, updated_at";
+  "id, title, category, amount, expense_date, vendor, payment_method, notes, is_reimburse, paid_by, created_at, updated_at";
 
 const normalizeExpenseUpdate = (body: any) => {
   const updateData: Record<string, any> = {};
@@ -40,6 +40,21 @@ const normalizeExpenseUpdate = (body: any) => {
       updateData[nullableField] =
         String(body[nullableField] || "").trim() || null;
     }
+  }
+
+  if (body.is_reimburse !== undefined) {
+    if (typeof body.is_reimburse !== "boolean") {
+      return { error: "Is reimburse must be true or false" };
+    }
+    updateData.is_reimburse = body.is_reimburse;
+  }
+
+  if (body.paid_by !== undefined) {
+    const paidBy = String(body.paid_by || "").trim().toLowerCase();
+    if (paidBy && !["kas", "rudi", "rp"].includes(paidBy)) {
+      return { error: "Paid by must be kas, rudi, or rp" };
+    }
+    updateData.paid_by = paidBy || null;
   }
 
   if (Object.keys(updateData).length) {
@@ -87,6 +102,24 @@ export async function PUT(
     if (normalized.error) return errorResponse(normalized.error, 400);
     if (!normalized.data || !Object.keys(normalized.data).length) {
       return errorResponse("No expense changes were provided", 400);
+    }
+
+    if (
+      normalized.data.is_reimburse !== undefined ||
+      normalized.data.paid_by !== undefined
+    ) {
+      const { data: current, error: currentError } = await supabaseAdmin
+        .from("expenses")
+        .select("is_reimburse, paid_by")
+        .eq("id", id)
+        .single();
+      if (currentError || !current) return errorResponse("Expense not found", 404);
+
+      const isReimburse = normalized.data.is_reimburse ?? current.is_reimburse;
+      const paidBy = normalized.data.paid_by ?? current.paid_by;
+      if (isReimburse && (!paidBy || paidBy === "kas")) {
+        return errorResponse("Reimbursement requires paid by Rudi or RP", 400);
+      }
     }
 
     const { data, error } = await supabaseAdmin

@@ -1,7 +1,7 @@
 // Builds !help text from the command specs in commands.mjs so the help and
 // the parser always agree on field names.
 
-const GROUP_ORDER = ["Leads", "Order", "Reminder", "Report", "Bantuan"];
+const GROUP_ORDER = ["Leads", "Order", "Reminder", "Report", "Direksi", "Bantuan"];
 
 export function buildHelpIndex(specs) {
   const lines = [

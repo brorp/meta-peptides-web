@@ -12,7 +12,7 @@ function hideCostOfGoodsForStaffAdmin(product: any, role: string | null) {
 }
 
 const ADMIN_PRODUCT_SELECT =
-    "id, name, label, slug, price, cost_of_goods, original_price, stock, usage_days, image_url, image_urls, category, purity, volume, formula, cas, short_desc, overview, storage_instruction, usage_instruction, dosing, complimentary_product_id, complimentary_quantity, inventory_type, is_active, created_at, updated_at";
+    "id, name, label, slug, price, cost_of_goods, original_price, stock, usage_days, product_type, image_url, image_urls, category, purity, volume, formula, cas, short_desc, overview, storage_instruction, usage_instruction, dosing, complimentary_product_id, complimentary_quantity, inventory_type, is_active, created_at, updated_at";
 
 export async function GET(
     req: NextRequest,
@@ -72,7 +72,7 @@ export async function PUT(
 
         const updateData: any = {};
         const fields = [
-            "name", "label", "slug", "price", "original_price", "stock", "usage_days",
+            "name", "label", "slug", "price", "original_price", "stock", "usage_days", "product_type",
             "image_url", "image_urls", "category", "purity", "volume", "formula", "cas",
             "short_desc", "overview", "storage_instruction", "usage_instruction",
             "dosing", "complimentary_product_id", "complimentary_quantity",
@@ -123,6 +123,27 @@ export async function PUT(
                 0,
                 parseInt(updateData.usage_days) || 0,
             );
+        // product_type (mainproduct = peptides, misc = perintilan) is separate
+        // from category, which holds storefront tags, so category is never
+        // changed here. Misc products never have a usage life.
+        if (updateData.product_type !== undefined) {
+            if (!["mainproduct", "misc"].includes(updateData.product_type)) {
+                return errorResponse("Product type must be mainproduct or misc", 400);
+            }
+            if (updateData.product_type === "misc") updateData.usage_days = 0;
+        } else if (Number(updateData.usage_days) > 0) {
+            const { data: current } = await supabaseAdmin
+                .from("products")
+                .select("product_type")
+                .eq("id", id)
+                .maybeSingle();
+            if (current?.product_type === "misc") {
+                return errorResponse(
+                    "Misc products cannot have a usage life. Change the product type to mainproduct first.",
+                    400,
+                );
+            }
+        }
         if (updateData.complimentary_product_id === "")
             updateData.complimentary_product_id = null;
         if (updateData.complimentary_quantity !== undefined) {
@@ -141,7 +162,9 @@ export async function PUT(
                 ? updateData.inventory_type
                 : "product";
         }
-        if (!updateData.complimentary_product_id) {
+        // Reset the free-item quantity only when the free item is being removed,
+        // not on partial updates (e.g. the Inventory page saving stock).
+        if (body.complimentary_product_id !== undefined && !updateData.complimentary_product_id) {
             updateData.complimentary_quantity = 1;
         }
 

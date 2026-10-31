@@ -120,13 +120,13 @@ Server (misalnya EC2 yang sama dengan worthy-bot), pakai pm2 supaya bot hidup te
 git clone <repo> && cd meta-peptides-web/discord-bot
 npm ci
 cp env.example .env   # lalu isi
-npm install -g pm2
-pm2 start npm --name meta-wellness-bot -- start
+sudo npm install -g pm2
+pm2 start ecosystem.config.cjs
 pm2 save
 pm2 startup           # ikuti perintah yang muncul supaya bot nyala lagi setelah reboot
 ```
 
-Update bot: `git pull && npm ci && pm2 restart meta-wellness-bot`. Lihat log: `pm2 logs meta-wellness-bot`.
+Update bot: `git pull && cd discord-bot && npm ci && pm2 restart metawellness-discord-bot`. Lihat log: `pm2 logs metawellness-discord-bot`.
 
 Atau dengan Docker (dari root repo):
 

@@ -207,7 +207,9 @@ export function PackingSlipDocument({ order }: { order: any }) {
         (sum: number, item: any) => sum + Number(item.quantity || 0),
         0,
     );
-    const orderCode = sanitizeSlipText(order.id).slice(0, 8).toUpperCase();
+    const orderCode = order.invoice_number
+        ? sanitizeSlipText(order.invoice_number)
+        : sanitizeSlipText(order.id).slice(0, 8).toUpperCase();
     const isDenseOrder = orderItems.length > 6;
 
     return (

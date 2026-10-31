@@ -8,7 +8,7 @@ import {
 import { requireAdminApiSession } from "@/lib/admin-api";
 
 const ADMIN_EXPENSE_SELECT =
-  "id, title, category, amount, expense_date, vendor, payment_method, notes, created_at, updated_at";
+  "id, title, category, amount, expense_date, vendor, payment_method, notes, is_reimburse, paid_by, created_at, updated_at";
 
 const normalizeExpensePayload = (body: any) => {
   const title = String(body.title || "").trim();
@@ -24,6 +24,16 @@ const normalizeExpensePayload = (body: any) => {
   if (Number.isNaN(new Date(expenseDate).getTime())) {
     return { error: "Expense date is invalid" };
   }
+  const paidBy = body.paid_by
+    ? String(body.paid_by).trim().toLowerCase()
+    : null;
+  if (paidBy && !["kas", "rudi", "rp"].includes(paidBy)) {
+    return { error: "Paid by must be kas, rudi, or rp" };
+  }
+  const isReimburse = body.is_reimburse === true;
+  if (isReimburse && (!paidBy || paidBy === "kas")) {
+    return { error: "Reimbursement requires paid by Rudi or RP" };
+  }
 
   return {
     data: {
@@ -34,6 +44,8 @@ const normalizeExpensePayload = (body: any) => {
       vendor: String(body.vendor || "").trim() || null,
       payment_method: String(body.payment_method || "").trim() || null,
       notes: String(body.notes || "").trim() || null,
+      is_reimburse: isReimburse,
+      paid_by: paidBy,
     },
   };
 };

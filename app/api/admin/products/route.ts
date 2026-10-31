@@ -16,7 +16,7 @@ function hideCostOfGoodsForStaffAdmin(product: any, role: string | null) {
 }
 
 const ADMIN_PRODUCT_SELECT =
-    "id, name, label, slug, price, cost_of_goods, original_price, stock, usage_days, image_url, image_urls, category, purity, volume, formula, cas, short_desc, overview, storage_instruction, usage_instruction, dosing, complimentary_product_id, complimentary_quantity, inventory_type, is_active, created_at, updated_at";
+    "id, name, label, slug, price, cost_of_goods, original_price, stock, usage_days, product_type, image_url, image_urls, category, purity, volume, formula, cas, short_desc, overview, storage_instruction, usage_instruction, dosing, complimentary_product_id, complimentary_quantity, inventory_type, is_active, created_at, updated_at";
 
 export async function GET(req: NextRequest) {
     try {
@@ -122,6 +122,18 @@ export async function POST(req: NextRequest) {
             body.image_urls,
             body.image_url,
         );
+        const inventoryType = ["product", "packaging", "supply"].includes(
+            body.inventory_type,
+        )
+            ? body.inventory_type
+            : "product";
+        // mainproduct = peptides (has usage life), misc = perintilan. Packaging
+        // and supply rows default to misc.
+        const productType =
+            body.product_type === "misc" ||
+            (!body.product_type && inventoryType !== "product")
+                ? "misc"
+                : "mainproduct";
 
         if (!Number.isFinite(costOfGoods) || costOfGoods < 0) {
             return errorResponse("COGS must be a valid non-negative number", 400);
@@ -139,7 +151,11 @@ export async function POST(req: NextRequest) {
                     ? parseFloat(body.original_price)
                     : null,
                 stock: parseInt(body.stock) || 0,
-                usage_days: Math.max(0, parseInt(body.usage_days) || 0),
+                usage_days:
+                    productType === "misc"
+                        ? 0
+                        : Math.max(0, parseInt(body.usage_days) || 0),
+                product_type: productType,
                 image_url: imageUrls[0] || null,
                 image_urls: imageUrls,
                 category: body.category || null,
@@ -156,9 +172,7 @@ export async function POST(req: NextRequest) {
                 complimentary_quantity: body.complimentary_product_id
                     ? Math.max(1, parseInt(body.complimentary_quantity) || 1)
                     : 1,
-                inventory_type: ["product", "packaging", "supply"].includes(body.inventory_type)
-                    ? body.inventory_type
-                    : "product",
+                inventory_type: inventoryType,
                 is_active: body.is_active !== false,
             })
             .select(ADMIN_PRODUCT_SELECT)

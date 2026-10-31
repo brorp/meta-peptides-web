@@ -37,9 +37,9 @@ const ORDER_SORT_FIELDS = [
     "shipping_fee",
 ];
 const ADMIN_ORDER_LIST_SELECT =
-    "id, status, created_at, total_price, subtotal, voucher_discount_amount, marketplace_fee, shipping_name, shipping_email, customer_username, order_source, manual_reference, shipping_fee, shipment_type, order_items(id, quantity, price_at_purchase, products(name, image_url))";
+    "id, invoice_number, status, created_at, total_price, subtotal, voucher_discount_amount, marketplace_fee, shipping_name, shipping_email, customer_username, order_source, manual_reference, shipping_fee, shipment_type, is_paid, paid_at, order_items(id, quantity, price_at_purchase, usage_days_at_purchase, products(name, image_url))";
 const ADMIN_ORDER_DETAIL_SELECT =
-    "id, status, created_at, total_price, subtotal, voucher_code, voucher_discount_amount, marketplace_fee, shipping_name, shipping_phone, shipping_email, shipping_address, shipping_regional, shipping_zip, customer_username, note, tracking_number, order_source, manual_channel, manual_reference, shipping_fee, shipment_type, order_items(id, product_id, quantity, price_at_purchase, products(name, label, volume, image_url, slug)), payments(id, transaction_code, payment_type, status, receipt_url)";
+    "id, invoice_number, status, created_at, total_price, subtotal, voucher_code, voucher_discount_amount, marketplace_fee, shipping_name, shipping_phone, shipping_email, shipping_address, shipping_regional, shipping_zip, customer_username, note, tracking_number, order_source, manual_channel, manual_reference, shipping_fee, shipment_type, is_paid, paid_at, order_items(id, product_id, quantity, price_at_purchase, usage_days_at_purchase, products(name, label, volume, image_url, slug)), payments(id, transaction_code, payment_type, status, receipt_url, is_paid, payment_amount, payment_date)";
 const ADMIN_ORDER_DETAIL_SELECT_WITHOUT_TRACKING =
     withoutTrackingNumberSelect(ADMIN_ORDER_DETAIL_SELECT);
 const UUID_PATTERN =
@@ -296,7 +296,7 @@ export async function POST(req: NextRequest) {
         );
         const { data: products, error: productsError } = await supabaseAdmin
             .from("products")
-            .select("id, name, is_active, cost_of_goods")
+            .select("id, name, is_active, cost_of_goods, usage_days, product_type")
             .in("id", productIds);
 
         if (productsError) {
@@ -394,15 +394,21 @@ export async function POST(req: NextRequest) {
         const { error: itemsError } = await supabaseAdmin
             .from("order_items")
             .insert(
-                normalizedItems.map((item) => ({
-                    order_id: order.id,
-                    product_id: item.product_id,
-                    quantity: item.quantity,
-                    price_at_purchase: item.price_at_purchase,
-                    cogs_at_purchase: Number(
-                        productLookup.get(item.product_id)?.cost_of_goods || 0,
-                    ),
-                })),
+                normalizedItems.map((item) => {
+                    const product = productLookup.get(item.product_id);
+                    return {
+                        order_id: order.id,
+                        product_id: item.product_id,
+                        quantity: item.quantity,
+                        price_at_purchase: item.price_at_purchase,
+                        cogs_at_purchase: Number(product?.cost_of_goods || 0),
+                        // Usage life at purchase time drives reorder reminders.
+                        usage_days_at_purchase:
+                            product?.product_type === "misc"
+                                ? 0
+                                : Math.max(0, Number(product?.usage_days || 0)),
+                    };
+                }),
             );
 
         if (itemsError) {

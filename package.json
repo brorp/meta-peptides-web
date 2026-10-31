@@ -6,6 +6,10 @@
     "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
+    "bot:install": "npm --prefix discord-bot install",
+    "bot:start": "npm --prefix discord-bot start",
+    "bot:dev": "npm --prefix discord-bot run dev",
+    "bot:test": "npm --prefix discord-bot test",
     "lint": "next lint"
   },
   "dependencies": {
