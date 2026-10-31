@@ -1,0 +1,20 @@
+{
+  "name": "meta-wellness-discord-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Discord command bot (!newleads, !invoice, ...) for the Meta Wellness API",
+  "type": "module",
+  "main": "index.mjs",
+  "engines": {
+    "node": ">=22.9"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env index.mjs",
+    "dev": "node --watch --env-file-if-exists=.env index.mjs",
+    "test": "node --test",
+    "docs": "node gen-docs.mjs"
+  },
+  "dependencies": {
+    "discord.js": "14.28.0"
+  }
+}
