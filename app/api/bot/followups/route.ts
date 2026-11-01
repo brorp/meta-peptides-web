@@ -3,6 +3,7 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { authenticateDiscordBotRequest } from "@/lib/discord-bot-auth";
 import {
   BOT_LEAD_SELECT,
+  LEAD_FOLLOWUP_WINDOWS as FOLLOWUP_WINDOWS,
   LEAD_STATUSES,
   addUtcDays,
   isDateWithin,
@@ -10,12 +11,6 @@ import {
 } from "@/lib/discord-bot-data";
 import { fetchAllRows } from "@/lib/discord-bot-orders";
 import { supabaseAdmin } from "@/lib/supabase-server";
-
-const FOLLOWUP_WINDOWS = [
-  { key: "h1", label: "H+1", days: 1 },
-  { key: "h3", label: "H+3", days: 3 },
-  { key: "h7", label: "H+7", days: 7 },
-] as const;
 
 const statusRank = (status: string) => {
   const index = LEAD_STATUSES.indexOf(status as (typeof LEAD_STATUSES)[number]);

@@ -22,10 +22,12 @@ import {
   formatLeadCard,
   formatOrderLine,
   formatReorderSchedule,
+  isMarketplaceOrder,
   jakartaDate,
   leadInterest,
   numbered,
   oneLine,
+  orderTypeLabel,
   rupiah,
   statusLabel,
   waLink,
@@ -139,13 +141,18 @@ export const COMMAND_SPECS = {
         description: "`qty | produk` atau `qty | produk | harga custom`. Satu baris per produk, boleh banyak baris. Nama produk boleh singkat",
         example: ["2 | reta 10 mg", "1 | nad 1000"],
       },
-      { name: "discount", description: "Potongan dalam rupiah (angka). Default 0", example: "0" },
-      { name: "payment_type", description: `${PAYMENT_TEXT}. Default Bank Transfer`, example: "Bank Transfer" },
+      { name: "order_type", description: "`whatsapp` / `shopee` / `tokopedia` (sama dengan Order Source di panel). Default whatsapp", example: "whatsapp" },
+      { name: "marketplace_fee", description: "Khusus shopee/tokopedia: total fee/potongan dari platform (angka). Mengurangi total order, sama seperti di panel. Default 0" },
+      { name: "marketplace_order_no", description: "Khusus shopee/tokopedia: nomor pesanan dari Shopee/Tokopedia (opsional). Bisa dipakai untuk cari invoice, dan order dengan nomor yang sama ditolak supaya tidak dobel" },
+      { name: "discount", description: "Khusus whatsapp: potongan dalam rupiah (angka). Default 0", example: "0" },
+      { name: "payment_type", description: "Khusus whatsapp: Bank Transfer / QRIS. Default Bank Transfer. Order shopee/tokopedia otomatis Shopee/Tokopedia", example: "Bank Transfer" },
       { name: "notes", description: "Catatan internal (tidak tampil di invoice)", example: "Kirim sebelum jam 3" },
     ],
     freeText: ["notes", "address"],
     notes: [
       "Harga diambil dari harga produk saat ini, kecuali diisi harga custom. Harga 0 = gratis/bonus.",
+      "Order Shopee/Tokopedia: ganti jadi `order_type: shopee` (atau `tokopedia`), tambah `marketplace_fee` (dan `marketplace_order_no` kalau ada), lalu hapus baris `discount` dan `payment_type`. Total = subtotal - marketplace_fee.",
+      "Order Shopee/Tokopedia tidak dapat teks invoice WhatsApp, karena customer bayar dan dapat invoice dari marketplace. PDF tetap dikirim.",
       "Usage life tiap produk dicatat per item untuk reorder reminder (bisa beda-beda per produk).",
       "Output: PDF invoice (sama dengan panel) + teks invoice siap di-forward ke customer.",
     ],
@@ -177,7 +184,7 @@ export const COMMAND_SPECS = {
     example: { firstLine: "!updateshipping MW-20261031-01001" },
     fields: [
       { name: "shipment_type", required: true, description: "Kurir + layanan", example: "JNE REG" },
-      { name: "shipping_fee", required: true, description: "Ongkir yang kita bayar (angka). Dicatat sebagai expense, tidak menambah total invoice", example: "25000" },
+      { name: "shipping_fee", description: "Ongkir yang kita bayar (angka). Wajib untuk order WhatsApp: dicatat sebagai expense, tidak menambah total invoice. Order Shopee/Tokopedia boleh dikosongkan (ongkir diurus marketplace)", example: "25000" },
       { name: "tracking_number", required: true, description: "Nomor resi", example: "JP1234567890" },
     ],
     notes: ["Bot juga mengirim teks info resi siap di-forward ke customer."],
@@ -381,15 +388,32 @@ async function sendPdfReply(ctx, { content, path, type, fileName }) {
 }
 
 function invoiceSummary(order) {
+  const marketplace = isMarketplaceOrder(order);
+  const label = orderTypeLabel(order.order_source);
   const items = (order.order_items || [])
     .map((item) => `• ${item.quantity}x ${item.display_name} — ${Number(item.price_at_purchase) === 0 ? "GRATIS" : rupiah(item.quantity * item.price_at_purchase)}`)
     .join("\n");
+  const totals = [`Subtotal ${rupiah(order.subtotal)}`];
+  if (Number(order.voucher_discount_amount) > 0) totals.push(`Diskon -${rupiah(order.voucher_discount_amount)}`);
+  if (Number(order.marketplace_fee) > 0) totals.push(`Fee ${label} -${rupiah(order.marketplace_fee)}`);
+  totals.push(`**Total${marketplace ? " bersih" : ""} ${rupiah(order.total_price)}**`);
+  const orderNo =
+    marketplace && order.manual_reference && order.manual_reference !== order.invoice_number
+      ? ` • No. pesanan ${order.manual_reference}`
+      : "";
   return [
     `Customer: **${order.shipping_name}** • ${waLink(order.shipping_phone)}`,
     items,
-    `Subtotal ${rupiah(order.subtotal)}${Number(order.voucher_discount_amount) > 0 ? ` • Diskon -${rupiah(order.voucher_discount_amount)}` : ""} • **Total ${rupiah(order.total_price)}**`,
-    `Pembayaran: ${order.payment?.payment_type || "-"} • ${order.is_paid ? "LUNAS ✅" : "BELUM DIBAYAR"}`,
+    totals.join(" • "),
+    `${marketplace ? `Order ${label}${orderNo} • ` : ""}Pembayaran: ${order.payment?.payment_type || "-"} • ${order.is_paid ? "LUNAS ✅" : "BELUM DIBAYAR"}`,
   ].join("\n");
+}
+
+// Marketplace customers pay and get their invoice inside Shopee/Tokopedia.
+function customerTextNote(order) {
+  if (!isMarketplaceOrder(order)) return "👇 Teks invoice untuk di-forward ke customer ada di pesan berikut.";
+  const label = orderTypeLabel(order.order_source);
+  return `ℹ️ Order ${label}: customer bayar dan dapat invoice dari ${label}, jadi teks invoice WhatsApp tidak dikirim.`;
 }
 
 // --- handlers ------------------------------------------------------------
@@ -487,13 +511,19 @@ async function handleInvoice(ctx) {
     city: parsed.get("city"),
     zip: parsed.get("zip"),
     items: parseInvoiceItems(parsed.getAll("item")),
+    order_type: parsed.get("order_type"),
+    marketplace_fee: parseMoney(parsed.get("marketplace_fee"), "marketplace_fee"),
+    marketplace_order_no: parsed.get("marketplace_order_no"),
     discount: parseMoney(parsed.get("discount"), "discount") ?? 0,
-    payment_type: parsed.get("payment_type") || "Bank Transfer",
+    // Left out when not written: the API picks Bank Transfer, or Shopee/Tokopedia
+    // for marketplace orders.
+    payment_type: parsed.get("payment_type"),
     notes: parsed.get("notes"),
   };
 
   const order = await ctx.api.post("/api/bot/invoices", json);
   const reference = order.invoice_number || order.id;
+  const marketplace = isMarketplaceOrder(order);
   const schedule = formatReorderSchedule(order);
   await sendPdfReply(ctx, {
     path: `/api/bot/orders/${encodeURIComponent(reference)}/pdf`,
@@ -502,13 +532,13 @@ async function handleInvoice(ctx) {
     content: [
       order.duplicate
         ? `ℹ️ Invoice **${reference}** sudah dibuat dari pesan ini sebelumnya.`
-        : `✅ **Invoice ${reference} dibuat** • stok dipotong • lead ditandai customer`,
+        : `✅ **Invoice ${reference} dibuat**${marketplace ? ` (order ${orderTypeLabel(order.order_source)})` : ""} • stok dipotong • lead ditandai customer`,
       invoiceSummary(order),
       schedule,
-      "👇 Teks invoice untuk di-forward ke customer ada di pesan berikut.",
+      customerTextNote(order),
     ].filter(Boolean).join("\n\n"),
   });
-  await ctx.sendPlain(buildCustomerInvoiceText(order, ctx.config));
+  if (!marketplace) await ctx.sendPlain(buildCustomerInvoiceText(order, ctx.config));
 }
 
 async function handlePayment(ctx) {
@@ -536,11 +566,20 @@ async function handlePayment(ctx) {
   const reference = order.invoice_number || order.id;
   const payment = order.payment || {};
   const difference = Number(order.payment_difference || 0);
+  // Marketplace totals are net of the platform fee; the price before the fee
+  // is also a correct amount to record.
+  const grossAmount = Number(order.subtotal || 0) - Number(order.voucher_discount_amount || 0);
+  const paidGross =
+    isMarketplaceOrder(order) &&
+    Number(order.marketplace_fee) > 0 &&
+    Number(payment.payment_amount) === grossAmount;
   const differenceText = order.duplicate
     ? "ℹ️ Pembayaran ini sudah tercatat sebelumnya dari pesan yang sama."
     : difference === 0
       ? "Nominal sesuai total invoice ✅"
-      : difference < 0
+      : paidGross
+        ? `Nominal sesuai harga sebelum fee ${orderTypeLabel(order.order_source)} ✅ (total bersih setelah fee ${rupiah(order.total_price)})`
+        : difference < 0
         ? `⚠️ **Kurang bayar ${rupiah(-difference)}** dari total ${rupiah(order.total_price)}.`
         : `⚠️ **Lebih bayar ${rupiah(difference)}** dari total ${rupiah(order.total_price)}.`;
 
@@ -568,10 +607,17 @@ async function handleShipping(ctx) {
   });
 
   const reference = order.invoice_number || order.id;
+  const fee = Number(order.shipping_fee || 0);
+  const label = orderTypeLabel(order.order_source);
+  const feeText = isMarketplaceOrder(order)
+    ? fee > 0
+      ? `Ongkir: ${rupiah(fee)} (order ${label}, tidak dicatat sebagai expense)`
+      : `Ongkir: diurus ${label}`
+    : `Ongkir: ${rupiah(fee)}${order.shipping_expense_recorded ? " (dicatat sebagai expense)" : ""}`;
   await ctx.reply(
     [
       `🚚 **Pengiriman ${reference} diupdate**`,
-      `Kurir: ${order.shipment_type} • Ongkir: ${rupiah(order.shipping_fee)} (dicatat sebagai expense) • Resi: **${order.tracking_number}**`,
+      `Kurir: ${order.shipment_type} • ${feeText} • Resi: **${order.tracking_number}**`,
       order.previous_tracking_number && order.previous_tracking_number !== order.tracking_number
         ? `Resi sebelumnya: ${order.previous_tracking_number}`
         : null,
@@ -596,10 +642,10 @@ async function handleGetInvoice(ctx) {
       invoiceSummary(order),
       order.tracking_number ? `Resi: ${order.shipment_type || "-"} ${order.tracking_number}` : null,
       formatReorderSchedule(order),
-      "👇 Teks invoice untuk customer ada di pesan berikut.",
+      customerTextNote(order),
     ].filter(Boolean).join("\n\n"),
   });
-  await ctx.sendPlain(buildCustomerInvoiceText(order, ctx.config));
+  if (!isMarketplaceOrder(order)) await ctx.sendPlain(buildCustomerInvoiceText(order, ctx.config));
 }
 
 async function handleAftersales(ctx) {

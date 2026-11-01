@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { readDiscordBotJson } from "@/lib/discord-bot-auth";
-import { resolveOrderIdentifier } from "@/lib/discord-bot-data";
+import { isMarketplaceOrderSource, resolveOrderIdentifier } from "@/lib/discord-bot-data";
 import { loadBotOrderDetail } from "@/lib/discord-bot-orders";
 import {
   normalizeShipmentType,
@@ -10,7 +10,9 @@ import {
 import { supabaseAdmin } from "@/lib/supabase-server";
 
 // !updateshipping <invoice>: courier, shipping cost (becomes an expense, not
-// part of the invoice total), and tracking number.
+// part of the invoice total), and tracking number. Shopee/Tokopedia handle
+// their own shipping, so the cost is optional there and never an expense
+// (same as the panel).
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ identifier: string }> },
@@ -32,14 +34,17 @@ export async function PATCH(
     }
 
     const body = auth.body || {};
+    const isMarketplace = isMarketplaceOrderSource(order.order_source);
+    const feeMissing =
+      body.shipping_fee === undefined || body.shipping_fee === null || body.shipping_fee === "";
     const shipmentType = normalizeShipmentType(body.shipment_type);
-    const shippingFee = Number(body.shipping_fee);
+    const shippingFee = feeMissing ? 0 : Number(body.shipping_fee);
     const trackingNumber = String(body.tracking_number ?? "").trim();
 
     if (!shipmentType || shipmentType.length > 100) {
       return errorResponse("shipment_type wajib diisi (contoh JNE REG)", 400);
     }
-    if (body.shipping_fee === undefined || !Number.isFinite(shippingFee) || shippingFee < 0) {
+    if ((feeMissing && !isMarketplace) || !Number.isFinite(shippingFee) || shippingFee < 0) {
       return errorResponse("shipping_fee wajib diisi angka >= 0 (contoh 25000)", 400);
     }
     if (!trackingNumber || trackingNumber.length > 160) {
@@ -78,7 +83,11 @@ export async function PATCH(
 
     const detailResult = await loadBotOrderDetail(order.id);
     return successResponse(
-      { ...detailResult.data, previous_tracking_number: previous.tracking_number },
+      {
+        ...detailResult.data,
+        previous_tracking_number: previous.tracking_number,
+        shipping_expense_recorded: !isMarketplace && shippingFee > 0,
+      },
       "Pengiriman diubah",
     );
   } catch {

@@ -3,12 +3,29 @@ import test from "node:test";
 import {
   buildCustomerInvoiceText,
   formatDateId,
+  formatOrderLine,
   jakartaDate,
+  orderTypeLabel,
   productLabel,
   rupiah,
   splitMessage,
   waLink,
 } from "./format.mjs";
+
+test("reminder lines tag Shopee/Tokopedia orders", () => {
+  const entry = {
+    customer: { name: "Budi", phone: "6281234567890" },
+    due_date: "2026-11-01",
+    items: [{ name: "Retatrutide 10mg", quantity: 1 }],
+    invoice_number: "MW-20261031-01001",
+    order_date: "2026-10-31",
+    lead: { status: "hot", origin: "shopee", rejection: null, pic: "cs_ana", notes: null },
+  };
+  assert.match(formatOrderLine({ ...entry, order_source: "shopee" }), /Invoice MW-20261031-01001 \(Shopee\) • order 2026-10-31/);
+  assert.match(formatOrderLine({ ...entry, order_source: "manual_whatsapp" }), /Invoice MW-20261031-01001 • order 2026-10-31/);
+  assert.equal(orderTypeLabel("tokopedia"), "Tokopedia");
+  assert.equal(orderTypeLabel("manual_whatsapp"), "WhatsApp");
+});
 
 test("formats rupiah and dates", () => {
   assert.equal(rupiah(1750000), "Rp1.750.000");

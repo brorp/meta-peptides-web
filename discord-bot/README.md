@@ -30,13 +30,14 @@ Keamanan:
 
 ### 1. Jalankan migration Supabase dulu
 
-Jalankan 3 file ini **berurutan** di Supabase (SQL Editor, atau `supabase db push`), **sebelum** deploy kode baru ke Vercel:
+Jalankan file ini **berurutan** di Supabase (SQL Editor, atau `supabase db push`), **sebelum** deploy kode baru ke Vercel:
 
 1. `supabase/migrations/20261031100000_add_discord_sales_crm_schema.sql`
 2. `supabase/migrations/20261031100500_backfill_discord_sales_crm_data.sql`
 3. `supabase/migrations/20261031101000_add_discord_sales_crm_functions.sql`
+4. `supabase/migrations/20261101090000_add_order_type_to_discord_invoice.sql` (order Shopee/Tokopedia + marketplace fee di `!invoice`)
 
-> ⚠️ Kalau kode di-deploy sebelum migration, halaman order di panel ikut error karena kolom baru (`invoice_number`, `is_paid`, dll.) belum ada.
+> ⚠️ Kalau kode di-deploy sebelum migration, halaman order di panel ikut error karena kolom baru (`invoice_number`, `is_paid`, dll.) belum ada. Khusus file nomor 4: tanpa file ini `!invoice` WhatsApp tetap jalan, tapi `!invoice` Shopee/Tokopedia ditolak dengan pesan untuk menjalankan migration.
 
 Yang dibuat migration:
 - Tabel `leads` (RLS aktif, tanpa akses publik) dan log request bot.
@@ -177,6 +178,7 @@ Butuh Node.js 22.9 atau lebih baru. Kalau berhasil, log menampilkan `[bot] Onlin
 | Sore / akhir hari | `!dailyreport` |
 | Direksi | `!addexpense`, `!reimbursement`, `!updateproduct` |
 | Bantuan | `!lead <wa>`, `!product <nama>`, `!getinvoice <invoice>`, `!help` |
+| Lihat semua lead, filter, atau koreksi data | Panel admin → menu **Leads** (`/panel-xyz123/leads`) |
 
 Teks untuk customer (invoice dan info resi) dikirim sebagai pesan terpisah tanpa format Discord, jadi bisa langsung **Copy Text** lalu paste ke WhatsApp (`*tebal*` mengikuti format WhatsApp).
 
@@ -283,6 +285,7 @@ city: Kota Tangerang, Banten
 zip: 15147
 item: 2 | reta 10 mg
 item: 1 | nad 1000
+order_type: whatsapp
 discount: 0
 payment_type: Bank Transfer
 notes: Kirim sebelum jam 3
@@ -295,11 +298,16 @@ notes: Kirim sebelum jam 3
 | `city` | **ya** | Kota/kabupaten, provinsi |
 | `zip` | - | Kode pos |
 | `item` | **ya** | `qty \| produk` atau `qty \| produk \| harga custom`. Satu baris per produk, boleh banyak baris. Nama produk boleh singkat |
-| `discount` | - | Potongan dalam rupiah (angka). Default 0 |
-| `payment_type` | - | Bank Transfer / QRIS / Shopee / Tokopedia. Default Bank Transfer |
+| `order_type` | - | `whatsapp` / `shopee` / `tokopedia` (sama dengan Order Source di panel). Default whatsapp |
+| `marketplace_fee` | - | Khusus shopee/tokopedia: total fee/potongan dari platform (angka). Mengurangi total order, sama seperti di panel. Default 0 |
+| `marketplace_order_no` | - | Khusus shopee/tokopedia: nomor pesanan dari Shopee/Tokopedia (opsional). Bisa dipakai untuk cari invoice, dan order dengan nomor yang sama ditolak supaya tidak dobel |
+| `discount` | - | Khusus whatsapp: potongan dalam rupiah (angka). Default 0 |
+| `payment_type` | - | Khusus whatsapp: Bank Transfer / QRIS. Default Bank Transfer. Order shopee/tokopedia otomatis Shopee/Tokopedia |
 | `notes` | - | Catatan internal (tidak tampil di invoice) |
 
 - Harga diambil dari harga produk saat ini, kecuali diisi harga custom. Harga 0 = gratis/bonus.
+- Order Shopee/Tokopedia: ganti jadi `order_type: shopee` (atau `tokopedia`), tambah `marketplace_fee` (dan `marketplace_order_no` kalau ada), lalu hapus baris `discount` dan `payment_type`. Total = subtotal - marketplace_fee.
+- Order Shopee/Tokopedia tidak dapat teks invoice WhatsApp, karena customer bayar dan dapat invoice dari marketplace. PDF tetap dikirim.
 - Usage life tiap produk dicatat per item untuk reorder reminder (bisa beda-beda per produk).
 - Output: PDF invoice (sama dengan panel) + teks invoice siap di-forward ke customer.
 
@@ -342,7 +350,7 @@ tracking_number: JP1234567890
 | Field | Wajib | Isi |
 | --- | --- | --- |
 | `shipment_type` | **ya** | Kurir + layanan |
-| `shipping_fee` | **ya** | Ongkir yang kita bayar (angka). Dicatat sebagai expense, tidak menambah total invoice |
+| `shipping_fee` | - | Ongkir yang kita bayar (angka). Wajib untuk order WhatsApp: dicatat sebagai expense, tidak menambah total invoice. Order Shopee/Tokopedia boleh dikosongkan (ongkir diurus marketplace) |
 | `tracking_number` | **ya** | Nomor resi |
 
 - Bot juga mengirim teks info resi siap di-forward ke customer.

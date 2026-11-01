@@ -17,6 +17,7 @@ import {
     ChevronRight,
     ReceiptText,
     Warehouse,
+    Magnet,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
@@ -27,6 +28,7 @@ type AdminRole = "root" | "admin";
 const ROOT_NAV_ITEMS = [
     { label: "Dashboard", href: "/panel-xyz123", icon: LayoutDashboard },
     { label: "Users", href: "/panel-xyz123/users", icon: Users },
+    { label: "Leads", href: "/panel-xyz123/leads", icon: Magnet },
     { label: "Customers", href: "/panel-xyz123/customers", icon: Users },
     { label: "Products", href: "/panel-xyz123/products", icon: Package },
     { label: "Inventory", href: "/panel-xyz123/inventory", icon: Warehouse },
@@ -39,6 +41,7 @@ const ROOT_NAV_ITEMS = [
 
 const ADMIN_NAV_ITEMS = [
     { label: "Orders", href: "/panel-xyz123/orders", icon: ShoppingCart },
+    { label: "Leads", href: "/panel-xyz123/leads", icon: Magnet },
     { label: "Customers", href: "/panel-xyz123/customers", icon: Users },
     { label: "Users", href: "/panel-xyz123/users", icon: Users },
     { label: "Products", href: "/panel-xyz123/products", icon: Package },
@@ -143,6 +146,7 @@ function AdminHeader({
         if (pathname === "/panel-xyz123") return "Dashboard";
         if (pathname.includes("/daily-tasks")) return "Daily Tasks";
         if (pathname.includes("/users")) return "Users";
+        if (pathname.includes("/leads")) return "Leads";
         if (pathname.includes("/customers")) return "Customers";
         if (pathname.includes("/products")) return "Products";
         if (pathname.includes("/inventory")) return "Inventory";

@@ -91,6 +91,22 @@ function itemLine(item) {
 
 // Plain text the team can copy straight into WhatsApp (*bold* is WhatsApp
 // formatting). Sent as its own message so "Copy Text" copies only this.
+const ORDER_TYPE_LABELS = {
+  manual_whatsapp: "WhatsApp",
+  shopee: "Shopee",
+  tokopedia: "Tokopedia",
+  checkout: "Website",
+};
+
+export function orderTypeLabel(source) {
+  return ORDER_TYPE_LABELS[source] || source || "-";
+}
+
+// Shopee/Tokopedia orders: the customer pays and gets invoiced in the marketplace.
+export function isMarketplaceOrder(order) {
+  return order?.order_source === "shopee" || order?.order_source === "tokopedia";
+}
+
 export function buildCustomerInvoiceText(order, { brandName, paymentInfo } = {}) {
   const discount = Number(order.voucher_discount_amount || 0);
   const address = [order.shipping_address, order.shipping_regional, order.shipping_zip]
@@ -170,7 +186,7 @@ export function formatOrderLine(entry, { showUsage = false } = {}) {
   const lines = [
     `**${entry.customer?.name || "-"}** • ${waLink(entry.customer?.phone)} • due ${entry.due_date}`,
     `Beli: ${items || "-"}`,
-    `Invoice ${entry.invoice_number} • order ${entry.order_date}${entry.tracking_number ? ` • resi ${entry.tracking_number}` : ""}`,
+    `Invoice ${entry.invoice_number}${isMarketplaceOrder(entry) ? ` (${orderTypeLabel(entry.order_source)})` : ""} • order ${entry.order_date}${entry.tracking_number ? ` • resi ${entry.tracking_number}` : ""}`,
   ];
   if (lead) {
     lines.push(

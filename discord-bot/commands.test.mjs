@@ -197,7 +197,10 @@ discount: 0`,
     { quantity: 2, query: "reta 10 mg", price: null },
     { quantity: 1, query: "bpc", price: 0 },
   ]);
-  assert.equal(calls[0].json.payment_type, "Bank Transfer");
+  // Not written, so the API picks the default (Bank Transfer for WhatsApp).
+  assert.equal(calls[0].json.payment_type, undefined);
+  assert.equal(calls[0].json.order_type, undefined);
+  assert.equal(calls[0].json.marketplace_fee, undefined);
   assert.deepEqual(calls[1], {
     method: "FILE",
     path: "/api/bot/orders/MW-20261031-01001/pdf",
@@ -208,6 +211,93 @@ discount: 0`,
   assert.match(replies[0].text, /Retatrutide 10mg → 26 Des 2026 \(56 hari/);
   assert.match(replies[0].text, /Belum ada usage_life: BPC-157 10 mg/);
   assert.match(plains[0], /^\*INVOICE MW-20261031-01001\*/);
+});
+
+const SHOPEE_ORDER = {
+  ...ORDER,
+  order_source: "shopee",
+  manual_reference: "2411010ABC123",
+  marketplace_fee: 175000,
+  total_price: 3325000,
+  payment: { payment_type: "Shopee" },
+};
+
+test("!invoice Shopee sends order type and fee, shows net total, skips WhatsApp text", async () => {
+  const { calls, replies, plains } = await run(
+    `!invoice
+lead: 081234567890
+address: Jl. Mawar 1
+city: Tangerang
+item: 2 | reta 10 mg
+order_type: shopee
+marketplace_fee: 175rb
+marketplace_order_no: 2411010ABC123`,
+    { "POST /api/bot/invoices": SHOPEE_ORDER },
+  );
+  assert.equal(calls[0].json.order_type, "shopee");
+  assert.equal(calls[0].json.marketplace_fee, 175000);
+  assert.equal(calls[0].json.marketplace_order_no, "2411010ABC123");
+  assert.equal(calls[0].json.payment_type, undefined);
+  assert.equal(calls[0].json.discount, 0);
+  assert.equal(replies[0].files.length, 1, "PDF still attached");
+  assert.match(replies[0].text, /Invoice MW-20261031-01001 dibuat\*\* \(order Shopee\)/);
+  assert.match(replies[0].text, /Subtotal Rp3\.500\.000 • Fee Shopee -Rp175\.000 • \*\*Total bersih Rp3\.325\.000\*\*/);
+  assert.match(replies[0].text, /Order Shopee • No\. pesanan 2411010ABC123 • Pembayaran: Shopee/);
+  assert.match(replies[0].text, /teks invoice WhatsApp tidak dikirim/);
+  assert.equal(plains.length, 0, "no WhatsApp text for marketplace orders");
+});
+
+test("!updateshipping lets Shopee orders skip shipping_fee", async () => {
+  const { calls, replies } = await run(
+    "!updateshipping MW-20261031-01001\nshipment_type: SPX Standard\ntracking_number: SPXID123",
+    {
+      "PATCH /api/bot/orders/MW-20261031-01001/shipping": {
+        ...SHOPEE_ORDER,
+        shipment_type: "SPX Standard",
+        shipping_fee: 0,
+        tracking_number: "SPXID123",
+        shipping_expense_recorded: false,
+      },
+    },
+  );
+  assert.equal(calls[0].json.shipping_fee, undefined);
+  assert.match(replies[0].text, /Ongkir: diurus Shopee/);
+  assert.doesNotMatch(replies[0].text, /dicatat sebagai expense/);
+});
+
+test("!updateshipping says when the shipping cost became an expense", async () => {
+  const { replies } = await run(
+    "!updateshipping MW-20261031-01001\nshipment_type: JNE REG\nshipping_fee: 25000\ntracking_number: JP1",
+    {
+      "PATCH /api/bot/orders/MW-20261031-01001/shipping": {
+        ...ORDER,
+        order_source: "manual_whatsapp",
+        shipment_type: "JNE REG",
+        shipping_fee: 25000,
+        tracking_number: "JP1",
+        shipping_expense_recorded: true,
+      },
+    },
+  );
+  assert.match(replies[0].text, /Ongkir: Rp25\.000 \(dicatat sebagai expense\)/);
+});
+
+test("!payment on a Shopee order accepts the price before the fee", async () => {
+  const image = { contentType: "image/png", url: "https://cdn.discordapp.com/b.png", size: 1000 };
+  const { replies } = await run(
+    "!payment MW-20261031-01001\namount: 3500000\npayment_type: Shopee",
+    {
+      "POST /api/bot/orders/MW-20261031-01001/payment": {
+        ...SHOPEE_ORDER,
+        is_paid: true,
+        payment: { payment_type: "Shopee", payment_amount: 3500000, payment_date: "2026-10-31T03:00:00+00:00" },
+        payment_difference: 175000,
+      },
+    },
+    [image],
+  );
+  assert.match(replies[0].text, /Nominal sesuai harga sebelum fee Shopee ✅ \(total bersih setelah fee Rp3\.325\.000\)/);
+  assert.doesNotMatch(replies[0].text, /Lebih bayar/);
 });
 
 test("!payment requires an image and warns about underpayment", async () => {

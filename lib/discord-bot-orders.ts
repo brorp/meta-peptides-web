@@ -43,7 +43,8 @@ export async function loadPaidCustomerOrders(fromDate: string, toDate: string) {
       .from("orders")
       .select(CUSTOMER_ORDER_SELECT)
       .neq("status", "cancelled")
-      .not("order_source", "in", `(${MARKETPLACE_ORDER_SOURCES.join(",")})`)
+      // Panel-made Shopee/Tokopedia orders are skipped; bot orders (with a lead) stay.
+      .or(`order_source.not.in.(${MARKETPLACE_ORDER_SOURCES.join(",")}),lead_id.not.is.null`)
       .gte("created_at", jakartaDayStart(fromDate))
       .lte("created_at", jakartaDayEnd(toDate))
       .order("created_at", { ascending: true })

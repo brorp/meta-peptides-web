@@ -2,6 +2,9 @@ import { NextRequest } from "next/server";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { readDiscordBotJson } from "@/lib/discord-bot-auth";
 import {
+  isMarketplaceOrderSource,
+  marketplaceLabel,
+  normalizeOrderType,
   normalizePaymentType,
   resolveLeadIdentifier,
   translateDatabaseError,
@@ -20,8 +23,12 @@ type InvoiceItemInput = {
   price?: unknown;
 };
 
-// !invoice: same result as the manual order form in the panel, plus it marks
-// the lead as a customer and snapshots each product's usage life.
+const isBlank = (value: unknown) =>
+  value === undefined || value === null || String(value).trim() === "";
+
+// !invoice: same result as the manual order form in the panel (WhatsApp,
+// Shopee or Tokopedia order), plus it marks the lead as a customer and
+// snapshots each product's usage life.
 export async function POST(req: NextRequest) {
   try {
     const auth = await readDiscordBotJson(req, { maxRequestsPerMinute: 20 });
@@ -47,7 +54,11 @@ export async function POST(req: NextRequest) {
     const discountAmount = body.discount === undefined || body.discount === null
       ? 0
       : Number(body.discount);
-    const paymentType = normalizePaymentType(body.payment_type ?? "Bank Transfer");
+    const requestedPayment = isBlank(body.payment_type)
+      ? null
+      : normalizePaymentType(body.payment_type);
+    const marketplaceFee = isBlank(body.marketplace_fee) ? 0 : Number(body.marketplace_fee);
+    const marketplaceOrderNo = String(body.marketplace_order_no ?? "").trim();
     const rawItems = Array.isArray(body.items) ? (body.items as InvoiceItemInput[]) : [];
 
     if (!leadIdentifier) return errorResponse("lead wajib diisi (nomor WA lead)", 400);
@@ -62,8 +73,59 @@ export async function POST(req: NextRequest) {
     if (!Number.isFinite(discountAmount) || discountAmount < 0) {
       return errorResponse("discount harus angka >= 0", 400);
     }
-    if (!paymentType) {
-      return errorResponse("payment_type harus Bank Transfer, QRIS, Shopee, atau Tokopedia", 400);
+    if (!isBlank(body.payment_type) && !requestedPayment) {
+      return errorResponse("payment_type harus Bank Transfer atau QRIS (order Shopee/Tokopedia otomatis)", 400);
+    }
+
+    // Same choices as "Order Source" in the panel. Without order_type, paying
+    // through Shopee/Tokopedia means it is a Shopee/Tokopedia order.
+    let orderSource: string | null = "manual_whatsapp";
+    if (!isBlank(body.order_type)) {
+      orderSource = normalizeOrderType(body.order_type);
+      if (!orderSource) {
+        return errorResponse("order_type harus whatsapp, shopee, atau tokopedia", 400);
+      }
+    } else if (requestedPayment === "Shopee" || requestedPayment === "Tokopedia") {
+      orderSource = requestedPayment.toLowerCase();
+    }
+    const isMarketplace = isMarketplaceOrderSource(orderSource);
+    const label = marketplaceLabel(orderSource);
+
+    let paymentType = requestedPayment || "Bank Transfer";
+    if (isMarketplace) {
+      if (requestedPayment && requestedPayment !== label) {
+        return errorResponse(
+          `Order ${label} dibayar lewat ${label}. Hapus baris payment_type (otomatis ${label}).`,
+          400,
+        );
+      }
+      paymentType = label;
+    } else if (requestedPayment === "Shopee" || requestedPayment === "Tokopedia") {
+      return errorResponse(
+        `payment_type ${requestedPayment} hanya untuk order ${requestedPayment}. Tulis order_type: ${requestedPayment.toLowerCase()} kalau ini order ${requestedPayment}.`,
+        400,
+      );
+    }
+
+    // Like the panel: the marketplace fee is only for Shopee/Tokopedia and
+    // comes off the total; a manual discount is only for WhatsApp orders.
+    if (!Number.isFinite(marketplaceFee) || marketplaceFee < 0) {
+      return errorResponse("marketplace_fee harus angka >= 0 (contoh 175000)", 400);
+    }
+    if (!isMarketplace && marketplaceFee > 0) {
+      return errorResponse("marketplace_fee hanya untuk order_type shopee atau tokopedia", 400);
+    }
+    if (isMarketplace && discountAmount > 0) {
+      return errorResponse(
+        `discount hanya untuk order WhatsApp. Untuk order ${label}, tulis harga jual di item (harga custom) dan potongan platform di marketplace_fee.`,
+        400,
+      );
+    }
+    if (marketplaceOrderNo && !isMarketplace) {
+      return errorResponse("marketplace_order_no hanya untuk order_type shopee atau tokopedia", 400);
+    }
+    if (marketplaceOrderNo.length > 100) {
+      return errorResponse("marketplace_order_no maksimal 100 karakter", 400);
     }
     if (!rawItems.length || rawItems.length > 25) {
       return errorResponse("Invoice wajib berisi 1-25 baris item", 400);
@@ -119,21 +181,36 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const rpcArgs: Record<string, unknown> = {
+      p_lead_id: leadResult.data.id,
+      p_shipping_address: shippingAddress,
+      p_shipping_regional: shippingRegional,
+      p_shipping_zip: shippingZip || null,
+      p_items: Array.from(merged.values()),
+      p_discount_amount: discountAmount,
+      p_payment_type: paymentType,
+      p_note: note || null,
+      p_discord_message_id: auth.context!.messageId,
+    };
+    // Sent only for Shopee/Tokopedia, so WhatsApp invoices keep working even
+    // before the 20261101090000 migration runs.
+    if (isMarketplace) {
+      rpcArgs.p_order_source = orderSource;
+      rpcArgs.p_marketplace_fee = marketplaceFee;
+      rpcArgs.p_marketplace_order_no = marketplaceOrderNo || null;
+    }
+
     const { data: result, error: createError } = await supabaseAdmin.rpc(
       "create_discord_invoice",
-      {
-        p_lead_id: leadResult.data.id,
-        p_shipping_address: shippingAddress,
-        p_shipping_regional: shippingRegional,
-        p_shipping_zip: shippingZip || null,
-        p_items: Array.from(merged.values()),
-        p_discount_amount: discountAmount,
-        p_payment_type: paymentType,
-        p_note: note || null,
-        p_discord_message_id: auth.context!.messageId,
-      },
+      rpcArgs,
     );
 
+    if (createError?.code === "PGRST202") {
+      return errorResponse(
+        "Database belum di-update untuk order Shopee/Tokopedia. Jalankan migration 20261101090000_add_order_type_to_discord_invoice.sql di Supabase.",
+        503,
+      );
+    }
     if (createError || !result?.order_id) {
       return errorResponse(
         translateDatabaseError(createError?.message, "Gagal membuat invoice"),

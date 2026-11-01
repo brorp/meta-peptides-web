@@ -19,6 +19,12 @@ export const LEAD_REJECTIONS = [
   "produk_tidak_ada",
   "ghosting",
 ] as const;
+// Follow-up days after chat_date, used by !followup and the panel Leads page.
+export const LEAD_FOLLOWUP_WINDOWS = [
+  { key: "h1", label: "H+1", days: 1 },
+  { key: "h3", label: "H+3", days: 3 },
+  { key: "h7", label: "H+7", days: 7 },
+] as const;
 export const EXPENSE_PAID_BY = ["kas", "rudi", "rp"] as const;
 export const BOT_PAYMENT_TYPES = [
   "Shopee",
@@ -27,9 +33,38 @@ export const BOT_PAYMENT_TYPES = [
   "Bank Transfer",
 ] as const;
 
-// Orders from these sources are handled inside the marketplace, so they are
-// left out of aftersales and reorder reminders.
+// Shopee/Tokopedia orders made in the panel are handled inside the marketplace
+// (usually no WhatsApp contact), so they are left out of aftersales and reorder
+// reminders. Marketplace orders made with !invoice belong to a lead with a
+// WhatsApp number, so they stay in.
 export const MARKETPLACE_ORDER_SOURCES = ["shopee", "tokopedia"] as const;
+
+// Order types the team can type in !invoice, mapped to orders.order_source
+// (the same values as "Order Source" in the panel's order form).
+const ORDER_TYPE_ALIASES: Record<string, "manual_whatsapp" | "shopee" | "tokopedia"> = {
+  whatsapp: "manual_whatsapp",
+  wa: "manual_whatsapp",
+  manual_whatsapp: "manual_whatsapp",
+  shopee: "shopee",
+  tokopedia: "tokopedia",
+  tokped: "tokopedia",
+};
+
+export function normalizeOrderType(value: unknown) {
+  const key = String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+  return ORDER_TYPE_ALIASES[key] || null;
+}
+
+export function isMarketplaceOrderSource(source: unknown) {
+  return MARKETPLACE_ORDER_SOURCES.includes(source as (typeof MARKETPLACE_ORDER_SOURCES)[number]);
+}
+
+export function marketplaceLabel(source: unknown) {
+  return source === "tokopedia" ? "Tokopedia" : "Shopee";
+}
 
 export const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -244,6 +279,11 @@ export function translateDatabaseError(message: unknown, fallback: string) {
   const stock = text.match(/^Insufficient stock for (.+)\. Available (-?\d+), needed (\d+)$/);
   if (stock) {
     return `Stok ${stock[1]} tidak cukup (tersedia ${stock[2]}, dibutuhkan ${stock[3]}). Cek stok di panel Inventory.`;
+  }
+  const duplicateOrderNo = text.match(/orders_(shopee|tokopedia)_manual_reference_unique_idx/);
+  if (duplicateOrderNo) {
+    const label = marketplaceLabel(duplicateOrderNo[1]);
+    return `Nomor pesanan ${label} ini sudah tercatat di order lain. Cek menu Orders di panel supaya tidak dobel.`;
   }
   return text || fallback;
 }

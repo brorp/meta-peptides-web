@@ -18,6 +18,7 @@ const STAFF_ADMIN_DEFAULT_PATH = "/panel-xyz123/orders";
 
 const STAFF_ADMIN_PANEL_PREFIXES = [
   "/panel-xyz123/orders",
+  "/panel-xyz123/leads",
   "/panel-xyz123/customers",
   "/panel-xyz123/users",
   "/panel-xyz123/products",
@@ -28,6 +29,7 @@ const STAFF_ADMIN_API_PREFIXES = [
   "/api/admin/auth",
   "/api/admin/orders",
   "/api/admin/payments",
+  "/api/admin/leads",
   "/api/admin/customers",
   "/api/admin/users",
   "/api/admin/products",
