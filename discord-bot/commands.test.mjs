@@ -349,6 +349,12 @@ test("!updateproduct sends the product query in the body", async () => {
   assert.match(replies[0].text, /Usage life: 0 → \*\*56 hari\*\*/);
 });
 
+test("only the finance commands are limited to the directors channel", () => {
+  const directorsOnly = Object.keys(COMMAND_SPECS).filter((name) => COMMAND_SPECS[name].directorsOnly);
+  assert.deepEqual(directorsOnly, ["!addexpense", "!reimbursement"]);
+  assert.match(buildHelpIndex(COMMAND_SPECS), /\*\*Produk\*\*\n`!updateproduct <produk>`/);
+});
+
 test("!dailyreport shows every origin row", async () => {
   const byOrigin = { ads: { total: 2, hot: 1, warm: 1, cold: 0, skip: 0 } };
   const { replies } = await run("!dailyreport 2026-10-31", {

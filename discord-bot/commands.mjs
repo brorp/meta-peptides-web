@@ -246,6 +246,25 @@ export const COMMAND_SPECS = {
     notes: ["Lead dihitung berdasarkan chat_date."],
     handler: handleDailyReport,
   },
+  "!updateproduct": {
+    group: "Produk",
+    usage: "!updateproduct <produk>",
+    summary: "Ubah harga, usage_life, atau tipe produk",
+    argument: "nama produk, boleh singkat (contoh: reta 10 mg)",
+    example: { firstLine: "!updateproduct reta 10 mg" },
+    fields: [
+      { name: "price", description: "Harga jual baru (angka)", example: "1750000" },
+      { name: "usage_life", description: "Masa pakai: `56 hari`, `8 minggu`, `8 weeks`, atau `2 bulan`", example: "8 minggu" },
+      { name: "type", description: "mainproduct (peptides) / misc (perintilan, tanpa usage_life)", example: "mainproduct" },
+    ],
+    notes: [
+      "Isi minimal satu field.",
+      "price langsung mengubah harga jual di website dan harga default di !invoice. Untuk harga khusus satu customer, jangan ubah di sini: tulis harganya di baris item !invoice (contoh `item: 2 | reta 10 mg | 1700000`).",
+      "type: misc otomatis membuat usage_life = 0.",
+      "Kategori storefront (tag di website) tidak berubah.",
+    ],
+    handler: handleUpdateProduct,
+  },
   "!addexpense": {
     group: "Direksi",
     usage: "!addexpense",
@@ -276,25 +295,6 @@ export const COMMAND_SPECS = {
     example: { firstLine: "!reimbursement 2026-10-01 2026-10-31" },
     fields: [],
     handler: handleReimbursement,
-  },
-  "!updateproduct": {
-    group: "Direksi",
-    usage: "!updateproduct <produk>",
-    summary: "Ubah harga, usage_life, atau tipe produk",
-    directorsOnly: true,
-    argument: "nama produk, boleh singkat (contoh: reta 10 mg)",
-    example: { firstLine: "!updateproduct reta 10 mg" },
-    fields: [
-      { name: "price", description: "Harga jual baru (angka)", example: "1750000" },
-      { name: "usage_life", description: "Masa pakai: `56 hari`, `8 minggu`, `8 weeks`, atau `2 bulan`", example: "8 minggu" },
-      { name: "type", description: "mainproduct (peptides) / misc (perintilan, tanpa usage_life)", example: "mainproduct" },
-    ],
-    notes: [
-      "Isi minimal satu field.",
-      "type: misc otomatis membuat usage_life = 0.",
-      "Kategori storefront (tag di website) tidak berubah.",
-    ],
-    handler: handleUpdateProduct,
   },
   "!product": {
     group: "Bantuan",

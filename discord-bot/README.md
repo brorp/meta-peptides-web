@@ -46,7 +46,7 @@ Yang dibuat migration:
 - Function `create_discord_invoice`, `mark_discord_order_paid`, `record_discord_bot_request` (hanya bisa dipanggil server).
 - Bucket privat `payment-proofs`.
 
-**Setelah migration, isi usage_life produk peptide.** Reorder reminder hanya muncul untuk produk yang punya usage_life. Isi lewat panel (Products → Edit → Masa Pakai) atau dari channel direksi:
+**Setelah migration, isi usage_life produk peptide.** Reorder reminder hanya muncul untuk produk yang punya usage_life. Isi lewat panel (Products → Edit → Masa Pakai) atau lewat bot:
 
 ```text
 !updateproduct reta 10 mg
@@ -176,7 +176,8 @@ Butuh Node.js 22.9 atau lebih baru. Kalau berhasil, log menampilkan `[bot] Onlin
 | Customer kirim bukti bayar | `!payment <invoice>` + upload foto bukti → packing slip untuk gudang |
 | Gudang sudah kirim | `!updateshipping <invoice>` → forward teks resi ke customer |
 | Sore / akhir hari | `!dailyreport` |
-| Direksi | `!addexpense`, `!reimbursement`, `!updateproduct` |
+| Harga, usage_life, atau tipe produk berubah | `!updateproduct <produk>` |
+| Direksi | `!addexpense`, `!reimbursement` |
 | Bantuan | `!lead <wa>`, `!product <nama>`, `!getinvoice <invoice>`, `!help` |
 | Lihat semua lead, filter, atau koreksi data | Panel admin → menu **Leads** (`/panel-xyz123/leads`) |
 
@@ -416,6 +417,30 @@ Setelah nama command: tanggal YYYY-MM-DD, kosong = hari ini.
 
 - Lead dihitung berdasarkan chat_date.
 
+### `!updateproduct`
+
+Ubah harga, usage_life, atau tipe produk.
+
+Setelah nama command: nama produk, boleh singkat (contoh: reta 10 mg).
+
+```text
+!updateproduct reta 10 mg
+price: 1750000
+usage_life: 8 minggu
+type: mainproduct
+```
+
+| Field | Wajib | Isi |
+| --- | --- | --- |
+| `price` | - | Harga jual baru (angka) |
+| `usage_life` | - | Masa pakai: `56 hari`, `8 minggu`, `8 weeks`, atau `2 bulan` |
+| `type` | - | mainproduct (peptides) / misc (perintilan, tanpa usage_life) |
+
+- Isi minimal satu field.
+- price langsung mengubah harga jual di website dan harga default di !invoice. Untuk harga khusus satu customer, jangan ubah di sini: tulis harganya di baris item !invoice (contoh `item: 2 | reta 10 mg | 1700000`).
+- type: misc otomatis membuat usage_life = 0.
+- Kategori storefront (tag di website) tidak berubah.
+
 ### `!addexpense` 🔒 direksi
 
 Tambah expense (sama seperti form expense di panel).
@@ -456,29 +481,6 @@ Setelah nama command: `<dari> <sampai>` format YYYY-MM-DD (boleh pakai `-` atau 
 ```text
 !reimbursement 2026-10-01 2026-10-31
 ```
-
-### `!updateproduct` 🔒 direksi
-
-Ubah harga, usage_life, atau tipe produk.
-
-Setelah nama command: nama produk, boleh singkat (contoh: reta 10 mg).
-
-```text
-!updateproduct reta 10 mg
-price: 1750000
-usage_life: 8 minggu
-type: mainproduct
-```
-
-| Field | Wajib | Isi |
-| --- | --- | --- |
-| `price` | - | Harga jual baru (angka) |
-| `usage_life` | - | Masa pakai: `56 hari`, `8 minggu`, `8 weeks`, atau `2 bulan` |
-| `type` | - | mainproduct (peptides) / misc (perintilan, tanpa usage_life) |
-
-- Isi minimal satu field.
-- type: misc otomatis membuat usage_life = 0.
-- Kategori storefront (tag di website) tidak berubah.
 
 ### `!product`
 

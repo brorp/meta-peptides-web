@@ -42,8 +42,8 @@ export async function loadBotProducts(
     .from("products")
     .select(BOT_PRODUCT_SELECT);
 
-  // Customer-facing commands must not resolve internal packaging rows. The
-  // directors-only product command opts in so it can maintain those rows.
+  // Customer-facing commands must not resolve internal packaging rows.
+  // !product and !updateproduct opt in so those rows can be checked and edited.
   if (!options.includeInventoryRows) query = query.eq("inventory_type", "product");
 
   if (!options.includeInactive) query = query.eq("is_active", true);

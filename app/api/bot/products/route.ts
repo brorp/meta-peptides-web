@@ -80,14 +80,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// !updateproduct <query> (directors channel only): price, usage_life, type.
+// !updateproduct <query> (any bot channel): price, usage_life, type.
 // products.category (storefront tags) is never touched here.
 export async function PATCH(req: NextRequest) {
   try {
-    const auth = await readDiscordBotJson(req, {
-      directorsOnly: true,
-      maxRequestsPerMinute: 20,
-    });
+    const auth = await readDiscordBotJson(req, { maxRequestsPerMinute: 20 });
     if (auth.response) return auth.response;
 
     const body = auth.body || {};

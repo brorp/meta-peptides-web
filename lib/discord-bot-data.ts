@@ -187,7 +187,7 @@ export function isOrderPaid(order: {
 
 // Usage life for one purchased line. Uses the value captured at purchase;
 // when none was captured (0/NULL), falls back to the product's current usage
-// life so reminders start working once a director fills it in.
+// life so reminders start working once someone fills it in.
 export function getEffectiveUsageDays(item: {
   usage_days_at_purchase?: number | null;
   products?: { usage_days?: number | null; product_type?: string | null } | null;
