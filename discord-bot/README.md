@@ -36,8 +36,9 @@ Jalankan file ini **berurutan** di Supabase (SQL Editor, atau `supabase db push`
 2. `supabase/migrations/20261031100500_backfill_discord_sales_crm_data.sql`
 3. `supabase/migrations/20261031101000_add_discord_sales_crm_functions.sql`
 4. `supabase/migrations/20261101090000_add_order_type_to_discord_invoice.sql` (order Shopee/Tokopedia + marketplace fee di `!invoice`)
+5. `supabase/migrations/20261103090000_allow_marketplace_invoice_without_lead.sql` (order Shopee/Tokopedia tanpa lead / tanpa nomor WA)
 
-> ⚠️ Kalau kode di-deploy sebelum migration, halaman order di panel ikut error karena kolom baru (`invoice_number`, `is_paid`, dll.) belum ada. Khusus file nomor 4: tanpa file ini `!invoice` WhatsApp tetap jalan, tapi `!invoice` Shopee/Tokopedia ditolak dengan pesan untuk menjalankan migration.
+> ⚠️ Kalau kode di-deploy sebelum migration, halaman order di panel ikut error karena kolom baru (`invoice_number`, `is_paid`, dll.) belum ada. Khusus file nomor 4 dan 5: tanpa file ini `!invoice` WhatsApp tetap jalan, tapi `!invoice` Shopee/Tokopedia (nomor 4) atau Shopee/Tokopedia tanpa lead (nomor 5) ditolak dengan pesan untuk menjalankan migration.
 
 Yang dibuat migration:
 - Tabel `leads` (RLS aktif, tanpa akses publik) dan log request bot.
@@ -173,6 +174,7 @@ Butuh Node.js 22.9 atau lebih baru. Kalau berhasil, log menampilkan `[bot] Onlin
 | Tambah notes/domicile/goal, atau status/alasan berubah | `!updateleads <wa>` |
 | Tiap pagi | `!followup` (H+1/H+3/H+7), `!aftersales` (H+1/H+7/H+14), `!reorder`, `!reorderlast` |
 | Customer setuju beli (closing) | `!invoice` → forward PDF + teks invoice ke customer |
+| Ada order masuk di Shopee/Tokopedia | `!invoice` dengan `order_type: shopee` / `tokopedia`. Pembeli bukan lead: ganti baris `lead` dengan `name: <nama pembeli>` |
 | Customer kirim bukti bayar | `!payment <invoice>` + upload foto bukti → packing slip untuk gudang |
 | Gudang sudah kirim | `!updateshipping <invoice>` → forward teks resi ke customer |
 | Sore / akhir hari | `!dailyreport` |
@@ -294,7 +296,8 @@ notes: Kirim sebelum jam 3
 
 | Field | Wajib | Isi |
 | --- | --- | --- |
-| `lead` | **ya** | Nomor WA lead (harus sudah dibuat dengan !newleads) |
+| `lead` | ya, untuk order whatsapp | Nomor WA lead (harus sudah dibuat dengan !newleads). Order shopee/tokopedia boleh tanpa lead: hapus baris ini dan isi `name` |
+| `name` | ya, untuk order shopee/tokopedia tanpa lead | Nama pembeli dari pesanan Shopee/Tokopedia. Hanya dipakai kalau tidak ada lead (nama lead dipakai kalau ada `lead`) |
 | `address` | **ya** | Alamat lengkap pengiriman |
 | `city` | **ya** | Kota/kabupaten, provinsi |
 | `zip` | - | Kode pos |
@@ -308,6 +311,7 @@ notes: Kirim sebelum jam 3
 
 - Harga diambil dari harga produk saat ini, kecuali diisi harga custom. Harga 0 = gratis/bonus.
 - Order Shopee/Tokopedia: ganti jadi `order_type: shopee` (atau `tokopedia`), tambah `marketplace_fee` (dan `marketplace_order_no` kalau ada), lalu hapus baris `discount` dan `payment_type`. Total = subtotal - marketplace_fee.
+- Pembeli Shopee/Tokopedia yang bukan lead (nomor WA-nya tidak ada): hapus baris `lead`, tulis `name: <nama pembeli>`. Order tetap tercatat dan stok dipotong, tapi tidak membuat customer dan tidak masuk !aftersales / !reorder.
 - Order Shopee/Tokopedia tidak dapat teks invoice WhatsApp, karena customer bayar dan dapat invoice dari marketplace. PDF tetap dikirim.
 - Usage life tiap produk dicatat per item untuk reorder reminder (bisa beda-beda per produk).
 - Output: PDF invoice (sama dengan panel) + teks invoice siap di-forward ke customer.
@@ -354,7 +358,7 @@ tracking_number: JP1234567890
 | `shipping_fee` | - | Ongkir yang kita bayar (angka). Wajib untuk order WhatsApp: dicatat sebagai expense, tidak menambah total invoice. Order Shopee/Tokopedia boleh dikosongkan (ongkir diurus marketplace) |
 | `tracking_number` | **ya** | Nomor resi |
 
-- Bot juga mengirim teks info resi siap di-forward ke customer.
+- Bot juga mengirim teks info resi siap di-forward ke customer, kecuali order tanpa nomor WA (pembeli Shopee/Tokopedia yang bukan lead).
 
 ### `!getinvoice`
 

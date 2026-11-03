@@ -3,13 +3,14 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { COMMAND_SPECS, getCommandSpec } from "./commands.mjs";
 import { syncReadme } from "./gen-docs.mjs";
-import { buildHelpIndex, buildTemplate } from "./help.mjs";
+import { buildCommandHelp, buildHelpIndex, buildTemplate } from "./help.mjs";
 import { CommandInputError, assertKnownFields, parseCommandMessage } from "./parser.mjs";
 
 const ORDER = {
   id: "11111111-1111-4111-8111-111111111111",
   invoice_number: "MW-20261031-01001",
   order_date: "2026-10-31",
+  lead_id: "22222222-2222-4222-8222-222222222222",
   shipping_name: "Budi",
   shipping_phone: "6281234567890",
   shipping_address: "Jl. Mawar 1",
@@ -207,7 +208,8 @@ discount: 0`,
     query: { type: "invoice" },
   });
   assert.equal(replies[0].files.length, 1);
-  assert.match(replies[0].text, /Invoice MW-20261031-01001 dibuat/);
+  assert.match(replies[0].text, /Invoice MW-20261031-01001 dibuat\*\* • stok dipotong • lead ditandai customer/);
+  assert.match(replies[0].text, /Customer: \*\*Budi\*\* • <https:\/\/wa\.me\/6281234567890>/);
   assert.match(replies[0].text, /Retatrutide 10mg → 26 Des 2026 \(56 hari/);
   assert.match(replies[0].text, /Belum ada usage_life: BPC-157 10 mg/);
   assert.match(plains[0], /^\*INVOICE MW-20261031-01001\*/);
@@ -247,6 +249,68 @@ marketplace_order_no: 2411010ABC123`,
   assert.equal(plains.length, 0, "no WhatsApp text for marketplace orders");
 });
 
+// Tokopedia buyer who is not a lead: saved with "-" as the phone.
+const TOKOPEDIA_NO_LEAD_ORDER = {
+  ...ORDER,
+  lead_id: null,
+  shipping_name: "Siti Rahma",
+  shipping_phone: "-",
+  order_source: "tokopedia",
+  manual_reference: "INV/20261103/MPL/123",
+  marketplace_fee: 175000,
+  total_price: 3325000,
+  payment: { payment_type: "Tokopedia" },
+  reminders_enabled: false,
+};
+
+test("!invoice Tokopedia without a lead sends the buyer name instead", async () => {
+  const { calls, replies, plains } = await run(
+    `!invoice
+order_type: tokopedia
+name: Siti Rahma
+address: Jl. Melati 2
+city: Bandung
+item: 2 | reta 10 mg
+marketplace_fee: 175rb
+marketplace_order_no: INV/20261103/MPL/123`,
+    { "POST /api/bot/invoices": TOKOPEDIA_NO_LEAD_ORDER },
+  );
+  assert.equal(calls[0].json.lead, undefined);
+  assert.equal(calls[0].json.name, "Siti Rahma");
+  assert.equal(calls[0].json.order_type, "tokopedia");
+  assert.equal(calls[0].json.marketplace_order_no, "INV/20261103/MPL/123");
+  assert.match(replies[0].text, /Invoice MW-20261031-01001 dibuat\*\* \(order Tokopedia\) • stok dipotong\n/);
+  assert.doesNotMatch(replies[0].text, /lead ditandai customer/);
+  assert.match(replies[0].text, /Customer: \*\*Siti Rahma\*\* • tanpa nomor WA/);
+  assert.match(replies[0].text, /tidak masuk !aftersales dan !reorder/);
+  assert.doesNotMatch(replies[0].text, /Jadwal reorder reminder/);
+  assert.equal(plains.length, 0, "no WhatsApp text");
+});
+
+test("!updateshipping skips the resi text when the buyer has no WhatsApp number", async () => {
+  const { replies, plains } = await run(
+    "!updateshipping MW-20261031-01001\nshipment_type: J&T Express\ntracking_number: JX123",
+    {
+      "PATCH /api/bot/orders/MW-20261031-01001/shipping": {
+        ...TOKOPEDIA_NO_LEAD_ORDER,
+        shipment_type: "J&T Express",
+        shipping_fee: 0,
+        tracking_number: "JX123",
+        shipping_expense_recorded: false,
+      },
+    },
+  );
+  assert.match(replies[0].text, /Pembeli tanpa nomor WA: resi terlihat di Tokopedia, jadi teks info resi tidak dikirim/);
+  assert.equal(plains.length, 0);
+});
+
+test("!help invoice says when lead and name are required", () => {
+  const help = buildCommandHelp("!invoice", COMMAND_SPECS["!invoice"]);
+  assert.match(help, /\*\*Wajib:\*\* `lead` \(untuk order whatsapp\), `name` \(untuk order shopee\/tokopedia tanpa lead\), `address`/);
+  assert.doesNotMatch(help, /\*\*Opsional:\*\*[^\n]*`lead`/);
+  assert.match(help, /• `lead` \(wajib untuk order whatsapp\) — /);
+});
+
 test("!updateshipping lets Shopee orders skip shipping_fee", async () => {
   const { calls, replies } = await run(
     "!updateshipping MW-20261031-01001\nshipment_type: SPX Standard\ntracking_number: SPXID123",
@@ -266,7 +330,7 @@ test("!updateshipping lets Shopee orders skip shipping_fee", async () => {
 });
 
 test("!updateshipping says when the shipping cost became an expense", async () => {
-  const { replies } = await run(
+  const { replies, plains } = await run(
     "!updateshipping MW-20261031-01001\nshipment_type: JNE REG\nshipping_fee: 25000\ntracking_number: JP1",
     {
       "PATCH /api/bot/orders/MW-20261031-01001/shipping": {
@@ -280,6 +344,8 @@ test("!updateshipping says when the shipping cost became an expense", async () =
     },
   );
   assert.match(replies[0].text, /Ongkir: Rp25\.000 \(dicatat sebagai expense\)/);
+  assert.match(replies[0].text, /Teks info resi untuk customer ada di pesan berikut/);
+  assert.equal(plains.length, 1, "WhatsApp orders still get the resi text");
 });
 
 test("!payment on a Shopee order accepts the price before the fee", async () => {

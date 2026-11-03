@@ -28,7 +28,9 @@ const isBlank = (value: unknown) =>
 
 // !invoice: same result as the manual order form in the panel (WhatsApp,
 // Shopee or Tokopedia order), plus it marks the lead as a customer and
-// snapshots each product's usage life.
+// snapshots each product's usage life. A Shopee/Tokopedia buyer does not have
+// to be a lead (marketplaces hide the phone number): then only the buyer's
+// name is saved, like the panel's Shopee label import.
 export async function POST(req: NextRequest) {
   try {
     const auth = await readDiscordBotJson(req, { maxRequestsPerMinute: 20 });
@@ -47,6 +49,7 @@ export async function POST(req: NextRequest) {
 
     const body = auth.body || {};
     const leadIdentifier = String(body.lead ?? "").trim();
+    const buyerName = String(body.name ?? "").trim();
     const shippingAddress = String(body.address ?? "").trim();
     const shippingRegional = String(body.city ?? "").trim();
     const shippingZip = String(body.zip ?? "").trim();
@@ -61,7 +64,6 @@ export async function POST(req: NextRequest) {
     const marketplaceOrderNo = String(body.marketplace_order_no ?? "").trim();
     const rawItems = Array.isArray(body.items) ? (body.items as InvoiceItemInput[]) : [];
 
-    if (!leadIdentifier) return errorResponse("lead wajib diisi (nomor WA lead)", 400);
     if (!shippingAddress || shippingAddress.length > 1000) {
       return errorResponse("address wajib diisi (maksimal 1000 karakter)", 400);
     }
@@ -127,6 +129,29 @@ export async function POST(req: NextRequest) {
     if (marketplaceOrderNo.length > 100) {
       return errorResponse("marketplace_order_no maksimal 100 karakter", 400);
     }
+
+    // WhatsApp orders need a lead. A Shopee/Tokopedia buyer may have no lead:
+    // then the buyer's name is required instead.
+    if (!leadIdentifier) {
+      if (!isMarketplace) {
+        return errorResponse(
+          "lead wajib diisi untuk order WhatsApp (nomor WA lead). Order Shopee/Tokopedia boleh tanpa lead: tulis order_type dan name (nama pembeli).",
+          400,
+        );
+      }
+      if (!buyerName) {
+        return errorResponse(
+          `name wajib diisi untuk order ${label} tanpa lead (nama pembeli dari pesanan ${label})`,
+          400,
+        );
+      }
+    } else if (buyerName) {
+      return errorResponse(
+        "name hanya untuk order Shopee/Tokopedia tanpa lead. Kalau pakai lead, nama diambil dari lead (ubah lewat !updateleads).",
+        400,
+      );
+    }
+    if (buyerName.length > 200) return errorResponse("name maksimal 200 karakter", 400);
     if (!rawItems.length || rawItems.length > 25) {
       return errorResponse("Invoice wajib berisi 1-25 baris item", 400);
     }
@@ -150,8 +175,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const leadResult = await resolveLeadIdentifier(leadIdentifier);
-    if (!leadResult.data) return errorResponse(leadResult.error, 404);
+    let leadId: string | null = null;
+    if (leadIdentifier) {
+      const leadResult = await resolveLeadIdentifier(leadIdentifier);
+      if (!leadResult.data) {
+        const hint = isMarketplace
+          ? `. Kalau pembeli ${label} ini bukan lead, hapus baris lead dan tulis name (nama pembeli).`
+          : "";
+        return errorResponse(`${leadResult.error}${hint}`, 404);
+      }
+      leadId = leadResult.data.id;
+    }
 
     const products = await loadBotProducts();
     const resolvedItems = [];
@@ -182,7 +216,7 @@ export async function POST(req: NextRequest) {
     }
 
     const rpcArgs: Record<string, unknown> = {
-      p_lead_id: leadResult.data.id,
+      p_lead_id: leadId,
       p_shipping_address: shippingAddress,
       p_shipping_regional: shippingRegional,
       p_shipping_zip: shippingZip || null,
@@ -192,13 +226,14 @@ export async function POST(req: NextRequest) {
       p_note: note || null,
       p_discord_message_id: auth.context!.messageId,
     };
-    // Sent only for Shopee/Tokopedia, so WhatsApp invoices keep working even
-    // before the 20261101090000 migration runs.
+    // Extra arguments are sent only when needed, so orders that do not use
+    // them keep working on a database that has not run the newest migration.
     if (isMarketplace) {
       rpcArgs.p_order_source = orderSource;
       rpcArgs.p_marketplace_fee = marketplaceFee;
       rpcArgs.p_marketplace_order_no = marketplaceOrderNo || null;
     }
+    if (!leadId) rpcArgs.p_buyer_name = buyerName;
 
     const { data: result, error: createError } = await supabaseAdmin.rpc(
       "create_discord_invoice",
@@ -207,7 +242,7 @@ export async function POST(req: NextRequest) {
 
     if (createError?.code === "PGRST202") {
       return errorResponse(
-        "Database belum di-update untuk order Shopee/Tokopedia. Jalankan migration 20261101090000_add_order_type_to_discord_invoice.sql di Supabase.",
+        `Database belum di-update untuk order ${label}${leadId ? "" : " tanpa lead"}. Jalankan migration 20261103090000_allow_marketplace_invoice_without_lead.sql di Supabase.`,
         503,
       );
     }

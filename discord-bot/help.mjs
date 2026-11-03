@@ -38,9 +38,16 @@ export function buildTemplate(spec) {
   return lines.join("\n");
 }
 
+// requiredWhen marks a field that is required only in some cases (checked by
+// the API), e.g. `lead` only for WhatsApp orders.
+function requiredLabel(field) {
+  if (field.required) return "wajib";
+  return field.requiredWhen ? `wajib ${field.requiredWhen}` : "";
+}
+
 export function buildCommandHelp(name, spec) {
-  const required = (spec.fields || []).filter((field) => field.required);
-  const optional = (spec.fields || []).filter((field) => !field.required);
+  const required = (spec.fields || []).filter((field) => field.required || field.requiredWhen);
+  const optional = (spec.fields || []).filter((field) => !field.required && !field.requiredWhen);
   const lines = [`**${name}** — ${spec.summary}`];
 
   if (spec.directorsOnly) lines.push("🔒 Hanya bisa dipakai di channel direksi.");
@@ -50,7 +57,11 @@ export function buildCommandHelp(name, spec) {
 
   if (spec.argument) lines.push(`**Setelah nama command:** ${spec.argument}`);
   if (required.length) {
-    lines.push(`**Wajib:** ${required.map((field) => `\`${field.name}\``).join(", ")}`);
+    lines.push(
+      `**Wajib:** ${required
+        .map((field) => `\`${field.name}\`${field.requiredWhen ? ` (${field.requiredWhen})` : ""}`)
+        .join(", ")}`,
+    );
   }
   if (optional.length) {
     lines.push(`**Opsional:** ${optional.map((field) => `\`${field.name}\``).join(", ")}`);
@@ -59,7 +70,8 @@ export function buildCommandHelp(name, spec) {
   if (spec.fields?.length) {
     lines.push("", "**Keterangan field**");
     for (const field of spec.fields) {
-      lines.push(`• \`${field.name}\`${field.required ? " (wajib)" : ""} — ${field.description}`);
+      const label = requiredLabel(field);
+      lines.push(`• \`${field.name}\`${label ? ` (${label})` : ""} — ${field.description}`);
     }
   }
 

@@ -19,7 +19,8 @@ export function renderCommandDocs() {
     if (spec.fields?.length) {
       out.push("| Field | Wajib | Isi |", "| --- | --- | --- |");
       for (const field of spec.fields) {
-        out.push(`| \`${field.name}\` | ${field.required ? "**ya**" : "-"} | ${field.description.replace(/\|/g, "\\|")} |`);
+        const required = field.required ? "**ya**" : field.requiredWhen ? `ya, ${field.requiredWhen}` : "-";
+        out.push(`| \`${field.name}\` | ${required} | ${field.description.replace(/\|/g, "\\|")} |`);
       }
       out.push("");
     }

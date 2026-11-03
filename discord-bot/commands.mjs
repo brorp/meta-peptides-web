@@ -22,6 +22,7 @@ import {
   formatLeadCard,
   formatOrderLine,
   formatReorderSchedule,
+  hasWhatsapp,
   isMarketplaceOrder,
   jakartaDate,
   leadInterest,
@@ -131,7 +132,8 @@ export const COMMAND_SPECS = {
     summary: "Closing: buat order + invoice PDF, potong stok, lead jadi customer",
     positional: false,
     fields: [
-      { name: "lead", required: true, description: "Nomor WA lead (harus sudah dibuat dengan !newleads)", example: "081234567890" },
+      { name: "lead", requiredWhen: "untuk order whatsapp", description: "Nomor WA lead (harus sudah dibuat dengan !newleads). Order shopee/tokopedia boleh tanpa lead: hapus baris ini dan isi `name`", example: "081234567890" },
+      { name: "name", requiredWhen: "untuk order shopee/tokopedia tanpa lead", description: "Nama pembeli dari pesanan Shopee/Tokopedia. Hanya dipakai kalau tidak ada lead (nama lead dipakai kalau ada `lead`)" },
       { name: "address", required: true, description: "Alamat lengkap pengiriman", example: "Metland Puri Blok F5 No 21" },
       { name: "city", required: true, description: "Kota/kabupaten, provinsi", example: "Kota Tangerang, Banten" },
       { name: "zip", description: "Kode pos", example: "15147" },
@@ -152,6 +154,7 @@ export const COMMAND_SPECS = {
     notes: [
       "Harga diambil dari harga produk saat ini, kecuali diisi harga custom. Harga 0 = gratis/bonus.",
       "Order Shopee/Tokopedia: ganti jadi `order_type: shopee` (atau `tokopedia`), tambah `marketplace_fee` (dan `marketplace_order_no` kalau ada), lalu hapus baris `discount` dan `payment_type`. Total = subtotal - marketplace_fee.",
+      "Pembeli Shopee/Tokopedia yang bukan lead (nomor WA-nya tidak ada): hapus baris `lead`, tulis `name: <nama pembeli>`. Order tetap tercatat dan stok dipotong, tapi tidak membuat customer dan tidak masuk !aftersales / !reorder.",
       "Order Shopee/Tokopedia tidak dapat teks invoice WhatsApp, karena customer bayar dan dapat invoice dari marketplace. PDF tetap dikirim.",
       "Usage life tiap produk dicatat per item untuk reorder reminder (bisa beda-beda per produk).",
       "Output: PDF invoice (sama dengan panel) + teks invoice siap di-forward ke customer.",
@@ -187,7 +190,7 @@ export const COMMAND_SPECS = {
       { name: "shipping_fee", description: "Ongkir yang kita bayar (angka). Wajib untuk order WhatsApp: dicatat sebagai expense, tidak menambah total invoice. Order Shopee/Tokopedia boleh dikosongkan (ongkir diurus marketplace)", example: "25000" },
       { name: "tracking_number", required: true, description: "Nomor resi", example: "JP1234567890" },
     ],
-    notes: ["Bot juga mengirim teks info resi siap di-forward ke customer."],
+    notes: ["Bot juga mengirim teks info resi siap di-forward ke customer, kecuali order tanpa nomor WA (pembeli Shopee/Tokopedia yang bukan lead)."],
     handler: handleShipping,
   },
   "!getinvoice": {
@@ -402,11 +405,24 @@ function invoiceSummary(order) {
       ? ` • No. pesanan ${order.manual_reference}`
       : "";
   return [
-    `Customer: **${order.shipping_name}** • ${waLink(order.shipping_phone)}`,
+    customerLine(order),
     items,
     totals.join(" • "),
     `${marketplace ? `Order ${label}${orderNo} • ` : ""}Pembayaran: ${order.payment?.payment_type || "-"} • ${order.is_paid ? "LUNAS ✅" : "BELUM DIBAYAR"}`,
   ].join("\n");
+}
+
+// Shopee/Tokopedia buyers who are not leads have no WhatsApp number.
+function customerLine(order) {
+  const contact = hasWhatsapp(order) ? waLink(order.shipping_phone) : "tanpa nomor WA";
+  return `Customer: **${order.shipping_name}** • ${contact}`;
+}
+
+function shippingTextNote(order) {
+  if (hasWhatsapp(order)) return "👇 Teks info resi untuk customer ada di pesan berikut.";
+  if (!isMarketplaceOrder(order)) return "ℹ️ Order ini tidak punya nomor WA, jadi teks info resi tidak dikirim.";
+  const label = orderTypeLabel(order.order_source);
+  return `ℹ️ Pembeli tanpa nomor WA: resi terlihat di ${label}, jadi teks info resi tidak dikirim.`;
 }
 
 // Marketplace customers pay and get their invoice inside Shopee/Tokopedia.
@@ -507,6 +523,7 @@ async function handleInvoice(ctx) {
   const { parsed } = ctx;
   const json = {
     lead: parsed.get("lead"),
+    name: parsed.get("name"),
     address: parsed.get("address"),
     city: parsed.get("city"),
     zip: parsed.get("zip"),
@@ -532,7 +549,7 @@ async function handleInvoice(ctx) {
     content: [
       order.duplicate
         ? `ℹ️ Invoice **${reference}** sudah dibuat dari pesan ini sebelumnya.`
-        : `✅ **Invoice ${reference} dibuat**${marketplace ? ` (order ${orderTypeLabel(order.order_source)})` : ""} • stok dipotong • lead ditandai customer`,
+        : `✅ **Invoice ${reference} dibuat**${marketplace ? ` (order ${orderTypeLabel(order.order_source)})` : ""} • stok dipotong${order.lead_id ? " • lead ditandai customer" : ""}`,
       invoiceSummary(order),
       schedule,
       customerTextNote(order),
@@ -589,7 +606,7 @@ async function handlePayment(ctx) {
     fileName: `packing-slip-${reference}.pdf`,
     content: [
       `💰 **Pembayaran ${reference} dicatat** — ${rupiah(payment.payment_amount)} via ${payment.payment_type} (${formatDateId(jakartaDate(payment.payment_date))})`,
-      `Customer: **${order.shipping_name}** • ${waLink(order.shipping_phone)}`,
+      customerLine(order),
       differenceText,
       "📦 Packing slip terlampir untuk gudang.",
     ].join("\n"),
@@ -622,10 +639,10 @@ async function handleShipping(ctx) {
         ? `Resi sebelumnya: ${order.previous_tracking_number}`
         : null,
       order.is_paid ? null : "⚠️ Invoice ini belum tercatat lunas.",
-      "👇 Teks info resi untuk customer ada di pesan berikut.",
+      shippingTextNote(order),
     ].filter(Boolean).join("\n"),
   );
-  await ctx.sendPlain(buildShippingText(order, ctx.config));
+  if (hasWhatsapp(order)) await ctx.sendPlain(buildShippingText(order, ctx.config));
 }
 
 async function handleGetInvoice(ctx) {

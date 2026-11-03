@@ -5,6 +5,7 @@ import {
   getEffectiveUsageDays,
   getJakartaDate,
   isOrderPaid,
+  isReminderOrder,
   jakartaDayEnd,
   jakartaDayStart,
   normalizeBotPhone,
@@ -43,7 +44,8 @@ export async function loadPaidCustomerOrders(fromDate: string, toDate: string) {
       .from("orders")
       .select(CUSTOMER_ORDER_SELECT)
       .neq("status", "cancelled")
-      // Panel-made Shopee/Tokopedia orders are skipped; bot orders (with a lead) stay.
+      // Shopee/Tokopedia orders without a lead (no WhatsApp number) are
+      // skipped; ones linked to a lead stay. Same rule as isReminderOrder.
       .or(`order_source.not.in.(${MARKETPLACE_ORDER_SOURCES.join(",")}),lead_id.not.is.null`)
       .gte("created_at", jakartaDayStart(fromDate))
       .lte("created_at", jakartaDayEnd(toDate))
@@ -106,6 +108,7 @@ export function decorateBotOrder(order: any) {
     order_date: orderDate,
     payments,
     payment: payments[0] || null,
+    reminders_enabled: isReminderOrder(order),
     order_items: (order.order_items || []).map((item: any) => {
       const usageDays = getEffectiveUsageDays(item);
       const isMisc = item.products?.product_type === "misc";

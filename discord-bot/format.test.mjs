@@ -4,6 +4,7 @@ import {
   buildCustomerInvoiceText,
   formatDateId,
   formatOrderLine,
+  hasWhatsapp,
   jakartaDate,
   orderTypeLabel,
   productLabel,
@@ -25,6 +26,12 @@ test("reminder lines tag Shopee/Tokopedia orders", () => {
   assert.match(formatOrderLine({ ...entry, order_source: "manual_whatsapp" }), /Invoice MW-20261031-01001 • order 2026-10-31/);
   assert.equal(orderTypeLabel("tokopedia"), "Tokopedia");
   assert.equal(orderTypeLabel("manual_whatsapp"), "WhatsApp");
+});
+
+test("orders saved with '-' as the phone have no WhatsApp number", () => {
+  assert.equal(hasWhatsapp({ shipping_phone: "-" }), false);
+  assert.equal(hasWhatsapp({ shipping_phone: "" }), false);
+  assert.equal(hasWhatsapp({ shipping_phone: "6281234567890" }), true);
 });
 
 test("formats rupiah and dates", () => {

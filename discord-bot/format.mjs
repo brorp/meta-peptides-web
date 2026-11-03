@@ -107,6 +107,11 @@ export function isMarketplaceOrder(order) {
   return order?.order_source === "shopee" || order?.order_source === "tokopedia";
 }
 
+// Shopee/Tokopedia buyers who are not leads are saved with "-" as the phone.
+export function hasWhatsapp(order) {
+  return String(order?.shipping_phone || "").replace(/\D/g, "").length >= 8;
+}
+
 export function buildCustomerInvoiceText(order, { brandName, paymentInfo } = {}) {
   const discount = Number(order.voucher_discount_amount || 0);
   const address = [order.shipping_address, order.shipping_regional, order.shipping_zip]
@@ -154,6 +159,10 @@ export function buildShippingText(order, { brandName } = {}) {
 
 // Internal summary of reorder dates captured on an invoice.
 export function formatReorderSchedule(order) {
+  // Shopee/Tokopedia buyers without a lead have no WhatsApp number to remind.
+  if (order.reminders_enabled === false) {
+    return "ℹ️ Pembeli tanpa lead (tidak ada nomor WA): order ini tidak masuk !aftersales dan !reorder.";
+  }
   const scheduled = (order.order_items || []).filter((item) => item.reorder_date);
   const missing = (order.order_items || []).filter((item) => item.missing_usage_life);
   const lines = [];
