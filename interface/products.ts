@@ -15,7 +15,6 @@ export type ProductInterface = {
   overview: string;
   storage_instruction: string;
   usage_instruction: string;
-  cas: string;
   short_desc: string;
   dosing: string;
   complimentary_product_id?: string | null;

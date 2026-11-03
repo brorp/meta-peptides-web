@@ -16,7 +16,7 @@ function hideCostOfGoodsForStaffAdmin(product: any, role: string | null) {
 }
 
 const ADMIN_PRODUCT_SELECT =
-    "id, name, label, slug, price, cost_of_goods, original_price, stock, usage_days, product_type, image_url, image_urls, category, purity, volume, formula, cas, short_desc, overview, storage_instruction, usage_instruction, dosing, complimentary_product_id, complimentary_quantity, inventory_type, is_active, created_at, updated_at";
+    "id, name, label, slug, price, cost_of_goods, original_price, stock, usage_days, product_type, image_url, image_urls, category, purity, volume, formula, short_desc, overview, storage_instruction, usage_instruction, dosing, complimentary_product_id, complimentary_quantity, inventory_type, is_active, created_at, updated_at";
 
 export async function GET(req: NextRequest) {
     try {
@@ -162,7 +162,6 @@ export async function POST(req: NextRequest) {
                 purity: body.purity || null,
                 volume: body.volume || null,
                 formula: body.formula || null,
-                cas: body.cas || null,
                 short_desc: body.short_desc || null,
                 overview: body.overview || null,
                 storage_instruction: body.storage_instruction || null,

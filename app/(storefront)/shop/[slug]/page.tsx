@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const title = `${product.name} (${product.label}) | MetaPeptides Indonesia`;
-  const description = `${product.short_desc} Purity: ${product.purity}. CAS: ${product.cas}. Verified laboratory grade sequence.`;
+  const description = `${product.short_desc} Purity: ${product.purity}. Verified laboratory grade sequence.`;
 
   return {
     title: title,
@@ -70,7 +70,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     keywords: [
       product.name,
       product.label,
-      product.cas,
       "Peptide Indonesia",
       "MetaPeptides",
     ],

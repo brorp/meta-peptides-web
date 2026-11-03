@@ -10,7 +10,6 @@ export const products = [
     volume: "20mg",
     stock: 12,
     formula: "C₁₈₇H₂₉₁N₄₅O₅₉",
-    cas: "910463-68-2",
     shortDesc:
       "GLP-1 receptor agonist designed for metabolic research and glucose signaling analysis.",
     overview:
@@ -31,7 +30,6 @@ export const products = [
     volume: "30mg",
     stock: 8,
     formula: "C₂₂₅H₃₄₈N₄₈O₆₈",
-    cas: "2023788-19-2",
     shortDesc:
       "Dual GIP and GLP-1 receptor agonist sequence for advanced adipocyte research.",
     overview:
@@ -51,7 +49,6 @@ export const products = [
     volume: "30mg",
     stock: 15,
     formula: "C₂₂₁H₃₄₂N₄₆O₆₈",
-    cas: "2381089-83-2",
     shortDesc:
       "Triple-agonist (GIP/GLP-1/Glucagon) peptide sequence for intensive metabolic studies.",
     overview:
@@ -72,7 +69,6 @@ export const products = [
     volume: "5mg",
     stock: 18,
     formula: "C₆₂H₉₈N₁₆O₂₂",
-    cas: "137525-51-0",
     shortDesc:
       "Pentadecapeptide sequence verified for localized tissue regeneration research.",
     overview:
@@ -93,7 +89,6 @@ export const products = [
     volume: "500mg",
     stock: 20,
     formula: "C₂₁H₂₇N₇O₁₄P₂",
-    cas: "53-84-9",
     shortDesc:
       "Essential coenzyme for mitochondrial function and cellular redox signaling research.",
     overview:

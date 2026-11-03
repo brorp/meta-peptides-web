@@ -161,17 +161,6 @@ export default function ProductDetailComponent({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-2xl border border-border bg-white shadow-sm">
-                <p className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mb-1">
-                  CAS Number
-                </p>
-                <p className="text-sm font-bold tracking-tight">
-                  {product?.cas || "N/A"}
-                </p>
-              </div>
-            </div>
-
             <div className="pt-6 space-y-6">
               <div className="flex items-end gap-3">
                 <span className="text-4xl font-black tracking-tighter">

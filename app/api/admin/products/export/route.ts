@@ -23,7 +23,6 @@ const BASE_PRODUCT_SELECT = [
   "purity",
   "volume",
   "formula",
-  "cas",
   "short_desc",
   "overview",
   "storage_instruction",
@@ -143,7 +142,6 @@ function createProductsWorkbook(
     { header: "Volume / Size", key: "volume", width: 16 },
     { header: "Purity", key: "purity", width: 12 },
     { header: "Formula", key: "formula", width: 18 },
-    { header: "CAS Number", key: "cas", width: 18 },
     { header: "Complimentary Product", key: "complimentary_product", width: 25 },
     { header: "Complimentary Qty", key: "complimentary_quantity", width: 18 },
     { header: "Status", key: "status", width: 12 },
@@ -184,7 +182,6 @@ function createProductsWorkbook(
       volume: product.volume || "",
       purity: product.purity || "",
       formula: product.formula || "",
-      cas: product.cas || "",
       complimentary_product: product.complimentary_product_id
         ? complimentaryNames.get(product.complimentary_product_id) || ""
         : "",

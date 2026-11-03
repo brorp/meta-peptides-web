@@ -21,7 +21,6 @@ const PRODUCT_FIELDS = [
     { key: "volume", label: "Volume / Size" },
     { key: "purity", label: "Purity %" },
     { key: "formula", label: "Chemical Formula" },
-    { key: "cas", label: "CAS Number" },
     { key: "category", label: "Category" },
 ];
 
