@@ -20,6 +20,7 @@ import {
   dateRangeLabel,
   formatDateId,
   formatLeadCard,
+  formatLeadOrderLine,
   formatOrderLine,
   formatReorderSchedule,
   hasWhatsapp,
@@ -40,6 +41,8 @@ const REJECTION_TEXT = "harga / company / cara_penggunaan / perizinan / produk_t
 const PAYMENT_TEXT = "Bank Transfer / QRIS / Shopee / Tokopedia";
 const DATE_RANGE_ARGUMENT =
   "`<dari> <sampai>` format YYYY-MM-DD (boleh pakai `-` atau `sampai` di tengah). Satu tanggal = hari itu saja, kosong = hari ini";
+const CUSTOMER_RULE_TEXT =
+  "Otomatis true begitu ada order lunas dengan nomor WA yang sama, dari !invoice, panel, atau website.";
 
 // Filled when the lead is created with !newleads.
 const NEW_LEAD_FIELDS = [
@@ -52,13 +55,13 @@ const NEW_LEAD_FIELDS = [
   { name: "chat_date", description: "Tanggal mulai chat (YYYY-MM-DD). Boleh tidak ditulis: otomatis tanggal hari ini (WIB). Dasar hitungan !followup" },
 ];
 
-// Only through !updateleads. is_customer starts as false (it becomes true
-// after !invoice).
+// Only through !updateleads. is_customer is set by the database: true once an
+// order on the lead's WhatsApp number is paid (!invoice, panel or website).
 const UPDATE_ONLY_LEAD_FIELDS = [
   { name: "domicile", description: "Kota domisili", example: "Tangerang" },
   { name: "goal", description: "Tujuan pemakaian / keluhan", example: "turun berat badan 10 kg" },
   { name: "notes", description: "Catatan bebas, boleh lebih dari satu baris", example: "Tanya dosis, minta dikabari pas gajian" },
-  { name: "is_customer", description: "true / false. Otomatis true setelah !invoice. Isi true kalau customer beli di luar !invoice supaya tidak muncul di !followup" },
+  { name: "is_customer", description: `true / false. ${CUSTOMER_RULE_TEXT} Isi true kalau customer beli tanpa nomor WA yang sama (misal lewat Shopee) supaya tidak muncul di !followup` },
 ];
 const UPDATE_ONLY_FIELD_NAMES = UPDATE_ONLY_LEAD_FIELDS.map((field) => field.name);
 const UPDATE_LEAD_EXAMPLES = { status: "warm", rejection: "harga" };
@@ -78,7 +81,7 @@ export const COMMAND_SPECS = {
     fields: required(["wa", "name", "origin", "status"], NEW_LEAD_FIELDS),
     notes: [
       "chat_date boleh tidak ditulis: otomatis tanggal hari ini (WIB). Tulis `chat_date: YYYY-MM-DD` kalau lead sebenarnya mulai chat di hari lain.",
-      "is_customer otomatis false (jadi true setelah !invoice).",
+      "is_customer tidak perlu ditulis. Kalau nomor WA ini sudah pernah punya order lunas, lead langsung jadi customer dan tidak masuk !followup.",
       "domicile, goal, dan notes diisi lewat !updateleads setelah lead dibuat.",
       "Satu nomor WA = satu lead. Kalau nomor sudah ada, pakai !updateleads.",
       "Kalau interest cocok ke beberapa produk (misal `reta`), tetap disimpan sebagai teks dan bot menampilkan pilihannya.",
@@ -111,6 +114,9 @@ export const COMMAND_SPECS = {
     argument: "nomor WA lead (atau ID lead)",
     example: { firstLine: "!lead 081234567890" },
     fields: [],
+    notes: [
+      "Invoice terakhir = invoice dari !invoice + order dari panel/website dengan nomor WA yang sama (ditandai `dari panel` / `dari website`).",
+    ],
     handler: handleLeadLookup,
   },
   "!followup": {
@@ -121,7 +127,7 @@ export const COMMAND_SPECS = {
     example: { firstLine: "!followup 2026-11-01 2026-11-07" },
     fields: [],
     notes: [
-      "Lead yang sudah is_customer = true (sudah beli) tidak muncul.",
+      "Lead yang sudah beli (is_customer = true) tidak muncul: mereka masuk !aftersales. Lead otomatis jadi customer begitu ada order lunas dengan nomor WA yang sama, dari !invoice, panel, atau website.",
       "Urutan: hot → warm → cold → skip. Nomor WA bisa diklik langsung.",
     ],
     handler: handleFollowup,
@@ -210,8 +216,8 @@ export const COMMAND_SPECS = {
     example: { firstLine: "!aftersales 2026-11-01 2026-11-07" },
     fields: [],
     notes: [
-      "Hanya order yang sudah lunas. Order Shopee/Tokopedia tidak ikut.",
-      "Menampilkan sifat lead (status, origin, rejection, notes) dan produk yang dibeli.",
+      "Hanya order yang sudah lunas, dari !invoice, panel, atau website. Order Shopee/Tokopedia tanpa nomor WA tidak ikut.",
+      "Menampilkan sifat lead (status, origin, rejection, notes) dan produk yang dibeli. Order dari panel/website memakai data lead dengan nomor WA yang sama.",
     ],
     handler: handleAftersales,
   },
@@ -226,6 +232,7 @@ export const COMMAND_SPECS = {
       "Dihitung per produk: beli Reta (8 minggu) + NAD (2 minggu) = dua reminder di tanggal berbeda.",
       "Produk misc (perintilan) dan produk tanpa usage_life tidak muncul.",
       "Otomatis dilewati kalau customer sudah beli produk yang sama lagi.",
+      "Order dari panel/website ikut, dengan data lead dari nomor WA yang sama (kalau ada).",
     ],
     handler: (ctx) => handleReorder(ctx, "first"),
   },
@@ -447,7 +454,7 @@ async function handleNewLead(ctx) {
       hints.push(`${laterFields.join(", ")} diisi lewat \`!updateleads <wa>\` setelah lead dibuat.`);
     }
     if (misplaced.includes("is_customer")) {
-      hints.push("is_customer otomatis false (jadi true setelah !invoice), tidak perlu ditulis.");
+      hints.push("is_customer diisi otomatis (true kalau nomor WA ini sudah punya order lunas), tidak perlu ditulis.");
     }
     throw new CommandInputError(
       `Hapus baris ${misplaced.join(", ")} dari !newleads.\n${hints.join("\n")}`,
@@ -458,8 +465,11 @@ async function handleNewLead(ctx) {
 
   const json = pickFields(parsed, NEW_LEAD_FIELDS.map((field) => field.name));
   const data = await ctx.api.post("/api/bot/leads", json);
+  const customerNote = data.lead.is_customer
+    ? "\nℹ️ Nomor ini sudah pernah punya order lunas, jadi lead ini langsung jadi customer: tidak masuk !followup, follow up lewat !aftersales / !reorder."
+    : "";
   await ctx.reply(
-    `✅ **Lead baru tersimpan**\n${formatLeadCard(data.lead)}${interestWarningText(data)}\n` +
+    `✅ **Lead baru tersimpan**\n${formatLeadCard(data.lead)}${interestWarningText(data)}${customerNote}\n` +
       `Tambah domicile/goal/notes: \`!updateleads ${data.lead.whatsapp_phone}\``,
   );
 }
@@ -487,9 +497,7 @@ async function handleLeadLookup(ctx) {
   checkFields(ctx, { requireAll: false });
   const data = await ctx.api.get(`/api/bot/leads/${encodeURIComponent(identifier)}`);
   const orders = data.orders.length
-    ? data.orders
-        .map((order) => `• ${order.invoice_number || order.id.slice(0, 8)} • ${jakartaDate(order.created_at)} • ${rupiah(order.total_price)} • ${order.status === "cancelled" ? "BATAL" : order.is_paid ? "lunas" : "belum bayar"}${order.tracking_number ? ` • resi ${order.tracking_number}` : ""}`)
-        .join("\n")
+    ? data.orders.map(formatLeadOrderLine).join("\n")
     : "Belum ada invoice.";
   await ctx.reply(`${formatLeadCard(data.lead)}\n\n**Invoice terakhir**\n${orders}`);
 }

@@ -18,7 +18,9 @@ const statusRank = (status: string) => {
 };
 
 // !followup <from> <to>: leads due on H+1/H+3/H+7 after chat_date.
-// Leads that already bought (is_customer = true) are excluded.
+// Leads that already bought (is_customer = true) are excluded; they belong in
+// !aftersales. The database sets is_customer once an order on the lead's
+// WhatsApp number is paid, from any source (migration 20261103100000).
 export async function GET(req: NextRequest) {
   try {
     const auth = await authenticateDiscordBotRequest(req);

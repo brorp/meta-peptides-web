@@ -6,6 +6,7 @@ import {
 } from "@/lib/discord-bot-auth";
 import { BOT_LEAD_SELECT, resolveLeadIdentifier } from "@/lib/discord-bot-data";
 import { LeadInputError, normalizeLeadInput } from "@/lib/discord-bot-leads";
+import { loadLeadOrders } from "@/lib/discord-bot-orders";
 import { supabaseAdmin } from "@/lib/supabase-server";
 
 type RouteParams = { params: Promise<{ identifier: string }> };
@@ -20,17 +21,12 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
     const leadResult = await resolveLeadIdentifier(decodeURIComponent(identifier));
     if (!leadResult.data) return errorResponse(leadResult.error, 404);
 
-    const { data: orders } = await supabaseAdmin
-      .from("orders")
-      .select("id, invoice_number, created_at, total_price, is_paid, status, tracking_number")
-      .eq("lead_id", leadResult.data.id)
-      .order("created_at", { ascending: false })
-      .limit(5);
-
-    return successResponse(
-      { lead: leadResult.data, orders: orders || [] },
-      "Lead ditemukan",
+    // !invoice orders plus panel/website orders on the same WhatsApp number.
+    const orders = await loadLeadOrders(
+      leadResult.data as { id: string; whatsapp_phone: string },
     );
+
+    return successResponse({ lead: leadResult.data, orders }, "Lead ditemukan");
   } catch {
     return errorResponse("Gagal memuat lead", 500);
   }

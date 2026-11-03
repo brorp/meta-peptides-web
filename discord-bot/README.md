@@ -37,14 +37,16 @@ Jalankan file ini **berurutan** di Supabase (SQL Editor, atau `supabase db push`
 3. `supabase/migrations/20261031101000_add_discord_sales_crm_functions.sql`
 4. `supabase/migrations/20261101090000_add_order_type_to_discord_invoice.sql` (order Shopee/Tokopedia + marketplace fee di `!invoice`)
 5. `supabase/migrations/20261103090000_allow_marketplace_invoice_without_lead.sql` (order Shopee/Tokopedia tanpa lead / tanpa nomor WA)
+6. `supabase/migrations/20261103100000_mark_leads_customer_from_paid_orders.sql` (lead otomatis jadi customer begitu ada order lunas dengan nomor WA yang sama, dari `!invoice`, panel, atau website, jadi tidak muncul lagi di `!followup`)
 
-> ⚠️ Kalau kode di-deploy sebelum migration, halaman order di panel ikut error karena kolom baru (`invoice_number`, `is_paid`, dll.) belum ada. Khusus file nomor 4 dan 5: tanpa file ini `!invoice` WhatsApp tetap jalan, tapi `!invoice` Shopee/Tokopedia (nomor 4) atau Shopee/Tokopedia tanpa lead (nomor 5) ditolak dengan pesan untuk menjalankan migration.
+> ⚠️ Kalau kode di-deploy sebelum migration, halaman order di panel ikut error karena kolom baru (`invoice_number`, `is_paid`, dll.) belum ada. Khusus file nomor 4 dan 5: tanpa file ini `!invoice` WhatsApp tetap jalan, tapi `!invoice` Shopee/Tokopedia (nomor 4) atau Shopee/Tokopedia tanpa lead (nomor 5) ditolak dengan pesan untuk menjalankan migration. File nomor 6 tidak membuat apa pun error kalau belum dijalankan: lead yang beli lewat panel/website saja yang masih muncul di `!followup`. Begitu dijalankan, lead lama yang sudah punya order lunas langsung ikut diubah jadi customer.
 
 Yang dibuat migration:
 - Tabel `leads` (RLS aktif, tanpa akses publik) dan log request bot.
 - Kolom baru: `orders.invoice_number / lead_id / is_paid / paid_at / tracking_number`, `order_items.usage_days_at_purchase`, `payments.is_paid / payment_amount / payment_date / proof_storage_path`, `expenses.is_reimburse / paid_by`, `products.product_type`.
 - `products.product_type`: `mainproduct` (peptides, punya usage_life) atau `misc` (perintilan). Produk seperti bac water, syringe, swab, needle, pen set, vial case, acetic acid, dan service otomatis jadi `misc`; sisanya `mainproduct`. Ini **terpisah** dari `category` (tag kategori di website), yang tidak diubah.
 - Function `create_discord_invoice`, `mark_discord_order_paid`, `record_discord_bot_request` (hanya bisa dipanggil server).
+- Trigger yang menandai lead sebagai customer (`is_customer = true`) begitu order dengan nomor WA yang sama lunas: order dari panel, website, atau `!invoice` setelah `!payment`. Lead baru yang nomornya sudah pernah punya order lunas juga langsung jadi customer. Lead tidak pernah dikembalikan ke prospek otomatis (misal order dibatalkan): ubah manual dengan `!updateleads <wa>` + `is_customer: false`.
 - Bucket privat `payment-proofs`.
 
 **Setelah migration, isi usage_life produk peptide.** Reorder reminder hanya muncul untuk produk yang punya usage_life. Isi lewat panel (Products → Edit → Masa Pakai) atau lewat bot:
@@ -227,7 +229,7 @@ rejection: -
 | `chat_date` | - | Tanggal mulai chat (YYYY-MM-DD). Boleh tidak ditulis: otomatis tanggal hari ini (WIB). Dasar hitungan !followup |
 
 - chat_date boleh tidak ditulis: otomatis tanggal hari ini (WIB). Tulis `chat_date: YYYY-MM-DD` kalau lead sebenarnya mulai chat di hari lain.
-- is_customer otomatis false (jadi true setelah !invoice).
+- is_customer tidak perlu ditulis. Kalau nomor WA ini sudah pernah punya order lunas, lead langsung jadi customer dan tidak masuk !followup.
 - domicile, goal, dan notes diisi lewat !updateleads setelah lead dibuat.
 - Satu nomor WA = satu lead. Kalau nomor sudah ada, pakai !updateleads.
 - Kalau interest cocok ke beberapa produk (misal `reta`), tetap disimpan sebagai teks dan bot menampilkan pilihannya.
@@ -258,7 +260,7 @@ notes: Tanya dosis, minta dikabari pas gajian
 | `domicile` | - | Kota domisili |
 | `goal` | - | Tujuan pemakaian / keluhan |
 | `notes` | - | Catatan bebas, boleh lebih dari satu baris |
-| `is_customer` | - | true / false. Otomatis true setelah !invoice. Isi true kalau customer beli di luar !invoice supaya tidak muncul di !followup |
+| `is_customer` | - | true / false. Otomatis true begitu ada order lunas dengan nomor WA yang sama, dari !invoice, panel, atau website. Isi true kalau customer beli tanpa nomor WA yang sama (misal lewat Shopee) supaya tidak muncul di !followup |
 | `wa` | - | Ganti nomor WhatsApp lead |
 
 - Minimal satu field. Field lain tidak berubah.
@@ -274,6 +276,8 @@ Setelah nama command: nomor WA lead (atau ID lead).
 !lead 081234567890
 ```
 
+- Invoice terakhir = invoice dari !invoice + order dari panel/website dengan nomor WA yang sama (ditandai `dari panel` / `dari website`).
+
 ### `!followup`
 
 Lead yang perlu di-follow up H+1, H+3, H+7 dari chat_date.
@@ -284,7 +288,7 @@ Setelah nama command: `<dari> <sampai>` format YYYY-MM-DD (boleh pakai `-` atau 
 !followup 2026-11-01 2026-11-07
 ```
 
-- Lead yang sudah is_customer = true (sudah beli) tidak muncul.
+- Lead yang sudah beli (is_customer = true) tidak muncul: mereka masuk !aftersales. Lead otomatis jadi customer begitu ada order lunas dengan nomor WA yang sama, dari !invoice, panel, atau website.
 - Urutan: hot → warm → cold → skip. Nomor WA bisa diklik langsung.
 
 ### `!invoice`
@@ -391,8 +395,8 @@ Setelah nama command: `<dari> <sampai>` format YYYY-MM-DD (boleh pakai `-` atau 
 !aftersales 2026-11-01 2026-11-07
 ```
 
-- Hanya order yang sudah lunas. Order Shopee/Tokopedia tidak ikut.
-- Menampilkan sifat lead (status, origin, rejection, notes) dan produk yang dibeli.
+- Hanya order yang sudah lunas, dari !invoice, panel, atau website. Order Shopee/Tokopedia tanpa nomor WA tidak ikut.
+- Menampilkan sifat lead (status, origin, rejection, notes) dan produk yang dibeli. Order dari panel/website memakai data lead dengan nomor WA yang sama.
 
 ### `!reorder`
 
@@ -407,6 +411,7 @@ Setelah nama command: `<dari> <sampai>` format YYYY-MM-DD (boleh pakai `-` atau 
 - Dihitung per produk: beli Reta (8 minggu) + NAD (2 minggu) = dua reminder di tanggal berbeda.
 - Produk misc (perintilan) dan produk tanpa usage_life tidak muncul.
 - Otomatis dilewati kalau customer sudah beli produk yang sama lagi.
+- Order dari panel/website ikut, dengan data lead dari nomor WA yang sama (kalau ada).
 
 ### `!reorderlast`
 

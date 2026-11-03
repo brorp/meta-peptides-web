@@ -569,8 +569,9 @@ export default function AdminLeadsPage() {
           <p className="text-sm text-muted-foreground">
             Leads from Discord{" "}
             <code className="rounded bg-muted px-1 py-0.5 text-xs">!newleads</code>. A
-            lead becomes a customer after{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">!invoice</code>.
+            lead becomes a customer once an order on the same WhatsApp number is paid
+            (<code className="rounded bg-muted px-1 py-0.5 text-xs">!invoice</code>, the
+            panel, or the website).
           </p>
         </div>
         <button
@@ -1129,7 +1130,8 @@ export default function AdminLeadsPage() {
                       <span>
                         <span className="block text-sm text-foreground">Already a customer</span>
                         <span className="block text-xs text-muted-foreground">
-                          Set automatically by !invoice. Customers no longer show in !followup.
+                          Set automatically once an order on this WhatsApp number is paid
+                          (!invoice, panel, or website). Customers no longer show in !followup.
                         </span>
                       </span>
                     </label>

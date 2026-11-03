@@ -81,6 +81,7 @@ export function isEmptyBotValue(value: unknown) {
   return EMPTY_VALUES.has(normalizeEnumValue(value));
 }
 
+// Keep in sync with public.normalize_wa_phone (migration 20261103100000).
 export function normalizeBotPhone(value: unknown) {
   const digits = String(value || "").replace(/\D/g, "");
   if (!digits) return "";
@@ -176,6 +177,8 @@ export function jakartaDayEnd(date: string) {
 
 // Bot orders are paid when !payment ran. Orders created elsewhere (panel or
 // website) have no payment step, so an accepted status counts as paid.
+// Keep in sync with public.order_counts_as_paid (migration 20261103100000),
+// which marks leads as customers.
 export function isOrderPaid(order: {
   is_paid?: boolean | null;
   lead_id?: string | null;

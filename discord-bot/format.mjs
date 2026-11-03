@@ -203,9 +203,29 @@ export function formatOrderLine(entry, { showUsage = false } = {}) {
       `Notes: ${oneLine(lead.notes)}${lead.goal ? ` • Goal: ${oneLine(lead.goal, 80)}` : ""}`,
     );
   } else {
-    lines.push(`Sumber order: ${entry.order_source} (bukan dari !invoice, tanpa data lead)`);
+    // Panel/website orders get the lead with the same WhatsApp number, so
+    // this only shows when no lead has that number.
+    lines.push(
+      `Lead: belum terdaftar (nomor WA ini belum ada di !newleads) • sumber order ${orderTypeLabel(entry.order_source)}`,
+    );
   }
   return lines.join("\n");
+}
+
+// One line per order in !lead. Panel and website orders have no !payment step,
+// so the API's `paid` flag (same rule as !aftersales) decides "lunas".
+export function formatLeadOrderLine(order) {
+  const fromBot = order.from_bot !== false;
+  const paid = order.paid ?? order.is_paid;
+  let state = paid ? "lunas" : "belum bayar";
+  if (order.status === "cancelled") state = "BATAL";
+  else if (order.status === "reject") state = "DITOLAK";
+  else if (!paid && !fromBot && order.status === "pending_review") state = "menunggu konfirmasi";
+
+  const source = fromBot ? "" : ` • dari ${order.order_source === "checkout" ? "website" : "panel"}`;
+  const label = order.invoice_label || order.invoice_number || order.id.slice(0, 8);
+  const tracking = order.tracking_number ? ` • resi ${order.tracking_number}` : "";
+  return `• ${label} • ${jakartaDate(order.created_at)} • ${rupiah(order.total_price)} • ${state}${source}${tracking}`;
 }
 
 // Splits long text into Discord-sized messages (limit 2000), preferring

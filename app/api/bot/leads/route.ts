@@ -6,7 +6,9 @@ import { LeadInputError, normalizeLeadInput } from "@/lib/discord-bot-leads";
 import { supabaseAdmin } from "@/lib/supabase-server";
 
 // Fields accepted when a lead is created. domicile, goal, and notes are only
-// set through !updateleads; is_customer always starts false.
+// set through !updateleads. is_customer is inserted as false, but the database
+// turns it true when the number already has a paid order (migration
+// 20261103100000).
 const NEW_LEAD_KEYS = ["wa", "whatsapp_phone", "name", "full_name", "origin", "status", "interest", "rejection", "chat_date"];
 
 // !newleads

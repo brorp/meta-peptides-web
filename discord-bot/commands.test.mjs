@@ -120,6 +120,47 @@ rejection: -`,
   assert.doesNotMatch(replies[0].text, /Notes:|Domisili:/, "empty optional lines are hidden");
   assert.match(replies[0].text, /Pilihan: Retatrutide 10mg \| Retatrutide 20mg/);
   assert.match(replies[0].text, /Tambah domicile\/goal\/notes: `!updateleads 6281234567890`/);
+  assert.doesNotMatch(replies[0].text, /langsung jadi customer/);
+});
+
+test("!newleads says when the number already bought (lead starts as customer)", async () => {
+  const lead = {
+    full_name: "Sari", whatsapp_phone: "6281200000001", status: "warm", origin: "fnf",
+    chat_date: "2026-11-03", is_customer: true, interest_text: null, product: null,
+  };
+  const { replies } = await run("!newleads\nwa: 081200000001\nname: Sari\norigin: fnf\nstatus: warm", {
+    "POST /api/bot/leads": { lead },
+  });
+  assert.match(replies[0].text, /Customer: ya ✅/);
+  assert.match(replies[0].text, /sudah pernah punya order lunas, jadi lead ini langsung jadi customer: tidak masuk !followup/);
+  assert.match(replies[0].text, /!aftersales \/ !reorder/);
+});
+
+test("!lead lists !invoice orders and panel orders on the same number", async () => {
+  const lead = {
+    full_name: "Sari", whatsapp_phone: "6281200000001", status: "warm", origin: "fnf",
+    chat_date: "2026-11-01", is_customer: true, interest_text: null, product: null,
+  };
+  const { replies } = await run("!lead 081200000001", {
+    "GET /api/bot/leads/081200000001": {
+      lead,
+      orders: [
+        {
+          id: "o1", invoice_number: null, invoice_label: "WA-PANEL-77", created_at: "2026-11-02T03:00:00Z",
+          total_price: 500000, is_paid: false, paid: true, from_bot: false, status: "processing",
+          order_source: "manual_whatsapp", tracking_number: null,
+        },
+        {
+          id: "o2", invoice_number: "MW-20261101-01001", invoice_label: "MW-20261101-01001", created_at: "2026-11-01T03:00:00Z",
+          total_price: 1750000, is_paid: true, paid: true, from_bot: true, status: "processing",
+          order_source: "manual_whatsapp", tracking_number: "JP1",
+        },
+      ],
+    },
+  });
+  const text = replies[0].text;
+  assert.match(text, /Customer: ya ✅/);
+  assert.match(text, /\*\*Invoice terakhir\*\*\n• WA-PANEL-77 • 2026-11-02 • Rp500\.000 • lunas • dari panel\n• MW-20261101-01001 • 2026-11-01 • Rp1\.750\.000 • lunas • resi JP1/);
 });
 
 test("!newleads points update-only fields to !updateleads", async () => {
@@ -133,7 +174,7 @@ test("!newleads points update-only fields to !updateleads", async () => {
   });
   await assert.rejects(run(`${base}is_customer: false`), (error) => {
     assert.match(error.message, /Hapus baris is_customer/);
-    assert.match(error.message, /is_customer otomatis false/);
+    assert.match(error.message, /is_customer diisi otomatis \(true kalau nomor WA ini sudah punya order lunas\)/);
     assert.doesNotMatch(error.message, /!updateleads/);
     return true;
   });
@@ -389,6 +430,32 @@ test("!payment requires an image and warns about underpayment", async () => {
   assert.equal(calls[1].query.type, "packing-slip");
   assert.match(replies[0].text, /Kurang bayar Rp500\.000/);
   assert.match(replies[0].text, /31 Okt 2026/);
+});
+
+test("help explains that buyers leave !followup automatically", () => {
+  const followup = buildCommandHelp("!followup", COMMAND_SPECS["!followup"]);
+  assert.match(followup, /Lead yang sudah beli \(is_customer = true\) tidak muncul: mereka masuk !aftersales/);
+  assert.match(followup, /order lunas dengan nomor WA yang sama, dari !invoice, panel, atau website/);
+
+  const updateLeads = buildCommandHelp("!updateleads", COMMAND_SPECS["!updateleads"]);
+  assert.match(updateLeads, /`is_customer` — true \/ false\. Otomatis true begitu ada order lunas dengan nomor WA yang sama/);
+  assert.doesNotMatch(updateLeads, /Otomatis true setelah !invoice\./);
+
+  const newLeads = buildCommandHelp("!newleads", COMMAND_SPECS["!newleads"]);
+  assert.match(newLeads, /sudah pernah punya order lunas, lead langsung jadi customer/);
+  assert.doesNotMatch(newLeads, /is_customer otomatis false/);
+});
+
+test("help explains panel/website orders in !lead, !aftersales and !reorder", () => {
+  const lead = buildCommandHelp("!lead", COMMAND_SPECS["!lead"]);
+  assert.match(lead, /order dari panel\/website dengan nomor WA yang sama \(ditandai `dari panel` \/ `dari website`\)/);
+
+  const aftersales = buildCommandHelp("!aftersales", COMMAND_SPECS["!aftersales"]);
+  assert.match(aftersales, /Hanya order yang sudah lunas, dari !invoice, panel, atau website\. Order Shopee\/Tokopedia tanpa nomor WA tidak ikut\./);
+  assert.match(aftersales, /Order dari panel\/website memakai data lead dengan nomor WA yang sama/);
+
+  const reorder = buildCommandHelp("!reorder", COMMAND_SPECS["!reorder"]);
+  assert.match(reorder, /Order dari panel\/website ikut, dengan data lead dari nomor WA yang sama/);
 });
 
 test("date-range commands default to one day", async () => {

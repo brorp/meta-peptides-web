@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   buildCustomerInvoiceText,
   formatDateId,
+  formatLeadOrderLine,
   formatOrderLine,
   hasWhatsapp,
   jakartaDate,
@@ -26,6 +27,45 @@ test("reminder lines tag Shopee/Tokopedia orders", () => {
   assert.match(formatOrderLine({ ...entry, order_source: "manual_whatsapp" }), /Invoice MW-20261031-01001 • order 2026-10-31/);
   assert.equal(orderTypeLabel("tokopedia"), "Tokopedia");
   assert.equal(orderTypeLabel("manual_whatsapp"), "WhatsApp");
+});
+
+test("reminder lines without a lead say the number is not a lead yet", () => {
+  const entry = {
+    customer: { name: "Rina", phone: "081277778888" },
+    due_date: "2026-11-01",
+    items: [{ name: "Retatrutide 10mg", quantity: 1 }],
+    invoice_number: "PANEL-001",
+    order_date: "2026-10-31",
+    order_source: "checkout",
+    lead: null,
+  };
+  const text = formatOrderLine(entry);
+  assert.match(text, /Lead: belum terdaftar \(nomor WA ini belum ada di !newleads\) • sumber order Website/);
+  assert.doesNotMatch(text, /bukan dari !invoice/);
+});
+
+test("!lead order lines use the paid rule and mark panel/website orders", () => {
+  const base = { id: "bbbbbbbb-0000", created_at: "2026-11-01T03:00:00Z", total_price: 1750000, tracking_number: null };
+  // Old API response (no paid/from_bot/invoice_label) still works.
+  assert.equal(
+    formatLeadOrderLine({ ...base, invoice_number: "MW-20261101-01001", is_paid: true, status: "processing" }),
+    "• MW-20261101-01001 • 2026-11-01 • Rp1.750.000 • lunas",
+  );
+  assert.equal(
+    formatLeadOrderLine({ ...base, invoice_number: "MW-20261101-01002", is_paid: false, status: "processing", paid: false, from_bot: true }),
+    "• MW-20261101-01002 • 2026-11-01 • Rp1.750.000 • belum bayar",
+  );
+  // Panel order: is_paid stays false, the API's paid flag says lunas.
+  assert.equal(
+    formatLeadOrderLine({ ...base, invoice_number: null, invoice_label: "WA-PANEL-77", is_paid: false, paid: true, from_bot: false, status: "completed", order_source: "manual_whatsapp", tracking_number: "JP123" }),
+    "• WA-PANEL-77 • 2026-11-01 • Rp1.750.000 • lunas • dari panel • resi JP123",
+  );
+  assert.equal(
+    formatLeadOrderLine({ ...base, invoice_label: "BBBBBBBB", is_paid: false, paid: false, from_bot: false, status: "pending_review", order_source: "checkout" }),
+    "• BBBBBBBB • 2026-11-01 • Rp1.750.000 • menunggu konfirmasi • dari website",
+  );
+  assert.match(formatLeadOrderLine({ ...base, invoice_label: "X", paid: false, from_bot: false, status: "reject", order_source: "checkout" }), /• DITOLAK • dari website$/);
+  assert.match(formatLeadOrderLine({ ...base, invoice_label: "X", paid: true, from_bot: false, status: "cancelled", order_source: "manual_whatsapp" }), /• BATAL • dari panel$/);
 });
 
 test("orders saved with '-' as the phone have no WhatsApp number", () => {
