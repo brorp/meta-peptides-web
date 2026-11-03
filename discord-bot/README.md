@@ -128,7 +128,18 @@ pm2 save
 pm2 startup           # ikuti perintah yang muncul supaya bot nyala lagi setelah reboot
 ```
 
-Update bot: `git pull && cd discord-bot && npm ci && pm2 restart metawellness-discord-bot`. Lihat log: `pm2 logs metawellness-discord-bot`.
+Untuk VPS Ubuntu production, gunakan unit systemd yang ikut di repo supaya
+systemd memonitor `pm2-runtime` secara langsung:
+
+```bash
+sudo install -m 0644 metawellness-discord-bot.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now metawellness-discord-bot
+```
+
+Update VPS systemd: `git pull && cd discord-bot && npm ci && sudo systemctl restart metawellness-discord-bot`. Lihat log: `journalctl -u metawellness-discord-bot -f`.
+
+Kalau memakai PM2 tanpa unit systemd: `pm2 restart metawellness-discord-bot`. Lihat log: `pm2 logs metawellness-discord-bot`.
 
 Atau dengan Docker (dari root repo):
 

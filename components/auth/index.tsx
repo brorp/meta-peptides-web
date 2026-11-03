@@ -67,7 +67,7 @@ const getAuthSchema = (mode: AuthMode) => {
       password: z.string().min(8, "Password must be at least 8 characters"),
       confirmPassword: z.string().min(1, "Please confirm your access key"),
       acceptTerms: z.literal(true, {
-        errorMap: () => ({ message: "You must accept the terms to proceed" }),
+        error: "You must accept the terms to proceed",
       }),
     })
     .refine((data) => data.confirmPassword === data.password, {
