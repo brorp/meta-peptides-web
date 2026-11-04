@@ -2,7 +2,7 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { getAdminSessionFromCookies } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase-server";
 
-const PRODUCT_OPTION_SELECT = "id, name, label, price, stock";
+const PRODUCT_OPTION_SELECT = "id, name, label, price, stock, is_active";
 
 export async function GET() {
   try {
@@ -12,6 +12,9 @@ export async function GET() {
     const { data, error } = await supabaseAdmin
       .from("products")
       .select(PRODUCT_OPTION_SELECT)
+      // Hidden products are listed too (hidden only means off /shop);
+      // packaging/supply rows are not for sale.
+      .eq("inventory_type", "product")
       .order("name", { ascending: true })
       .limit(1000);
 

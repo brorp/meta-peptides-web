@@ -146,7 +146,7 @@ export const COMMAND_SPECS = {
       {
         name: "item",
         required: true,
-        description: "`qty | produk` atau `qty | produk | harga custom`. Satu baris per produk, boleh banyak baris. Nama produk boleh singkat",
+        description: "`qty | produk` atau `qty | produk | harga custom`. Satu baris per produk, boleh banyak baris. Nama produk boleh singkat. Produk yang Hidden (tidak tampil di /shop) tetap bisa",
         example: ["2 | reta 10 mg", "1 | nad 1000"],
       },
       { name: "order_type", description: "`whatsapp` / `shopee` / `tokopedia` (sama dengan Order Source di panel). Default whatsapp", example: "whatsapp" },
@@ -159,6 +159,7 @@ export const COMMAND_SPECS = {
     freeText: ["notes", "address"],
     notes: [
       "Harga diambil dari harga produk saat ini, kecuali diisi harga custom. Harga 0 = gratis/bonus.",
+      "Produk yang di-Hide di panel (tidak tampil di /shop, misalnya syringe) tetap bisa di-invoice. Kalau nama yang ditulis cocok ke produk yang tampil dan yang Hidden sekaligus, yang tampil dipakai.",
       "Customer lama (sudah pernah order lewat panel/website sebelum ada bot) tidak perlu !newleads: tulis nomornya di `lead`, bot membuat lead-nya otomatis dari data lama (nama dan domisili dari data customer/order terakhir, status hot, PIC = yang menjalankan !invoice). Origin diambil dari order pertama: shopee / tokopedia / website, atau `existing` kalau order pertamanya order WhatsApp di panel. Bisa diubah lewat !updateleads.",
       "Order Shopee/Tokopedia: ganti jadi `order_type: shopee` (atau `tokopedia`), tambah `marketplace_fee` (dan `marketplace_order_no` kalau ada), lalu hapus baris `discount` dan `payment_type`. Total = subtotal - marketplace_fee.",
       "Pembeli Shopee/Tokopedia yang bukan lead (nomor WA-nya tidak ada): hapus baris `lead`, tulis `name: <nama pembeli>`. Order tetap tercatat dan stok dipotong, tapi tidak membuat customer dan tidak masuk !aftersales / !reorder.",

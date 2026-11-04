@@ -38,18 +38,26 @@ export async function POST(req: NextRequest) {
     const parsed = await parseShopeeLabelPdf(await file.arrayBuffer());
     const { data: products, error: productsError } = await supabaseAdmin
       .from("products")
-      .select("id, name, label, volume, price")
-      .eq("is_active", true);
+      .select("id, name, label, volume, price, is_active")
+      .eq("inventory_type", "product");
 
     if (productsError) {
       return errorResponse("Failed to match PDF products", 400);
     }
 
+    // Hidden products (off /shop only) are sold on Shopee too. They are tried
+    // only when no visible product fits, so existing matches stay the same.
+    const visibleProducts = (products || []).filter(
+      (product: any) => product.is_active !== false,
+    ) as ShopeeLabelProductRecord[];
+    const hiddenProducts = (products || []).filter(
+      (product: any) => product.is_active === false,
+    ) as ShopeeLabelProductRecord[];
+
     const matchedItems = parsed.items.map((item) => {
-      const matchedProduct = matchShopeeLabelProduct(
-        item.name,
-        (products || []) as ShopeeLabelProductRecord[],
-      );
+      const matchedProduct =
+        matchShopeeLabelProduct(item.name, visibleProducts) ||
+        matchShopeeLabelProduct(item.name, hiddenProducts);
 
       return {
         raw_name: item.name,

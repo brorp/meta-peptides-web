@@ -17,6 +17,7 @@ import {
 import { loadBotOrderDetail } from "@/lib/discord-bot-orders";
 import {
   ProductMatchError,
+  getProductDisplayName,
   loadBotProducts,
   resolveProductQuery,
 } from "@/lib/discord-bot-products";
@@ -208,11 +209,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const products = await loadBotProducts();
+    // Hidden products (off /shop only) can be invoiced too; visible ones win
+    // when both fit.
+    const products = await loadBotProducts({ includeInactive: true });
     const resolvedItems = [];
     for (const item of parsedItems) {
       try {
-        const product = await resolveProductQuery(item.query, { products });
+        const product = await resolveProductQuery(item.query, {
+          products,
+          includeInactive: true,
+          visibleFirst: true,
+        });
         resolvedItems.push({ ...item, product });
       } catch (error) {
         if (error instanceof ProductMatchError) {
@@ -290,6 +297,18 @@ export async function POST(req: NextRequest) {
     if (createError?.code === "PGRST202") {
       return errorResponse(
         `Database belum di-update untuk order ${label}${leadId ? "" : " tanpa lead"}. Jalankan migration 20261103090000_allow_marketplace_invoice_without_lead.sql di Supabase.${leadNote}`,
+        503,
+      );
+    }
+    // Before 20261104110000 the database refuses products hidden from /shop.
+    const hiddenItems = resolvedItems.filter((item) => item.product.is_active === false);
+    if (
+      hiddenItems.length &&
+      String(createError?.message || "").includes("tidak ditemukan atau tidak aktif")
+    ) {
+      const names = Array.from(new Set(hiddenItems.map((item) => getProductDisplayName(item.product))));
+      return errorResponse(
+        `${names.join(", ")} sedang Hidden (tidak tampil di /shop), dan database belum di-update untuk menerima produk Hidden. Jalankan migration 20261104110000_allow_hidden_products_in_orders.sql di Supabase.${leadNote}`,
         503,
       );
     }

@@ -296,7 +296,7 @@ export async function POST(req: NextRequest) {
         );
         const { data: products, error: productsError } = await supabaseAdmin
             .from("products")
-            .select("id, name, is_active, cost_of_goods, usage_days, product_type")
+            .select("id, name, inventory_type, cost_of_goods, usage_days, product_type")
             .in("id", productIds);
 
         if (productsError) {
@@ -316,9 +316,11 @@ export async function POST(req: NextRequest) {
             if (!product) {
                 return errorResponse("Some selected products were not found", 400);
             }
-            if (product.is_active === false) {
+            // Hidden products (is_active false) are only off /shop and can
+            // still be ordered here. Packaging/supply rows are not for sale.
+            if (product.inventory_type && product.inventory_type !== "product") {
                 return errorResponse(
-                    `${product.name || "Selected product"} is inactive`,
+                    `${product.name || "Selected product"} is a ${product.inventory_type} item, not a product for sale`,
                     400,
                 );
             }

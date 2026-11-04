@@ -7,6 +7,7 @@ export type MatchableProduct = {
   label?: string | null;
   volume?: string | null;
   slug?: string | null;
+  is_active?: boolean | null;
 };
 
 export type ProductMatchResult<T extends MatchableProduct> =
@@ -176,4 +177,27 @@ export function matchProduct<T extends MatchableProduct>(
     .map((item) => item.product);
 
   return { status: "not_found", suggestions };
+}
+
+// Products hidden from the storefront (is_active false, the panel's "Hidden")
+// are only off /shop: the team still sells them through WhatsApp and the
+// marketplaces. They are tried only when no visible product fits, so a name or
+// SKU label that already found a visible product keeps finding it, even when a
+// hidden row shares it (BACW3 is both "Bac Water 3ml" and the hidden
+// "BAC WATER S").
+export function matchProductVisibleFirst<T extends MatchableProduct>(
+  rawQuery: string,
+  products: T[],
+): ProductMatchResult<T> {
+  const visible = products.filter((product) => product.is_active !== false);
+  const hidden = products.filter((product) => product.is_active === false);
+  const result = matchProduct(rawQuery, visible);
+  if (result.status !== "not_found" || !hidden.length) return result;
+
+  const fallback = matchProduct(rawQuery, hidden);
+  if (fallback.status !== "not_found") return fallback;
+  return {
+    status: "not_found",
+    suggestions: [...result.suggestions, ...fallback.suggestions].slice(0, 5),
+  };
 }

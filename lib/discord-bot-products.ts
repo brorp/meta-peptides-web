@@ -3,6 +3,7 @@ import { UUID_PATTERN } from "@/lib/discord-bot-data";
 import {
   getProductDisplayName,
   matchProduct,
+  matchProductVisibleFirst,
 } from "@/lib/discord-bot-product-match";
 
 export { getProductDisplayName } from "@/lib/discord-bot-product-match";
@@ -55,12 +56,15 @@ export async function loadBotProducts(
 
 // Resolves free text such as "reta 10 mg" to one product. Throws with a list
 // of candidates when the text is ambiguous or matches nothing.
+// visibleFirst (!invoice): hidden products are matched only when no visible
+// product fits (see matchProductVisibleFirst).
 export async function resolveProductQuery(
   rawQuery: string,
   options: {
     includeInactive?: boolean;
     includeInventoryRows?: boolean;
     products?: BotProduct[];
+    visibleFirst?: boolean;
   } = {},
 ) {
   const query = String(rawQuery || "").trim();
@@ -82,7 +86,9 @@ export async function resolveProductQuery(
   }
 
   const products = options.products || (await loadBotProducts(options));
-  const result = matchProduct(query, products);
+  const result = options.visibleFirst
+    ? matchProductVisibleFirst(query, products)
+    : matchProduct(query, products);
 
   if (result.status === "matched") return result.product;
   if (result.status === "ambiguous") {

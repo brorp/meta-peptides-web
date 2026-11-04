@@ -40,8 +40,9 @@ Jalankan file ini **berurutan** di Supabase (SQL Editor, atau `supabase db push`
 6. `supabase/migrations/20261103100000_mark_leads_customer_from_paid_orders.sql` (lead otomatis jadi customer begitu ada order lunas dengan nomor WA yang sama, dari `!invoice`, panel, atau website, jadi tidak muncul lagi di `!followup`)
 7. `supabase/migrations/20261104090000_auto_paid_marketplace_invoices.sql` (`!invoice` Shopee/Tokopedia langsung lunas, ongkir 0, resi `-`: tidak perlu `!payment` dan `!updateshipping`)
 8. `supabase/migrations/20261104100000_add_existing_lead_origin.sql` (origin lead baru `existing` untuk customer lama dari sebelum ada bot, dipakai saat `!invoice` membuat lead otomatis)
+9. `supabase/migrations/20261104110000_allow_hidden_products_in_orders.sql` (produk yang di-Hide di panel tetap bisa di-`!invoice`: Hide hanya menyembunyikan dari /shop. Sebelum migration ini dijalankan, `!invoice` dengan produk Hidden ditolak dengan pesan untuk menjalankannya)
 
-> ⚠️ Kalau kode di-deploy sebelum migration, halaman order di panel ikut error karena kolom baru (`invoice_number`, `is_paid`, dll.) belum ada. Khusus file nomor 4 dan 5: tanpa file ini `!invoice` WhatsApp tetap jalan, tapi `!invoice` Shopee/Tokopedia (nomor 4) atau Shopee/Tokopedia tanpa lead (nomor 5) ditolak dengan pesan untuk menjalankan migration. File nomor 6 tidak membuat apa pun error kalau belum dijalankan: lead yang beli lewat panel/website saja yang masih muncul di `!followup`. Begitu dijalankan, lead lama yang sudah punya order lunas langsung ikut diubah jadi customer. File nomor 7 juga tidak membuat error kalau belum dijalankan: `!invoice` Shopee/Tokopedia masih tercatat belum lunas dan bot menampilkan peringatan untuk menjalankan migration. Order Shopee/Tokopedia lama dari `!invoice` ikut diubah jadi lunas (resi asli yang sudah dicatat tidak diganti). File nomor 8 juga tidak membuat error kalau belum dijalankan: customer lama yang order pertamanya lewat Shopee/Tokopedia/website tetap otomatis dibuatkan lead, tapi yang order pertamanya order WhatsApp di panel ditolak dengan pesan untuk menjalankan migration (atau buat dulu dengan `!newleads`).
+> ⚠️ Kalau kode di-deploy sebelum migration, halaman order di panel ikut error karena kolom baru (`invoice_number`, `is_paid`, dll.) belum ada. Khusus file nomor 4 dan 5: tanpa file ini `!invoice` WhatsApp tetap jalan, tapi `!invoice` Shopee/Tokopedia (nomor 4) atau Shopee/Tokopedia tanpa lead (nomor 5) ditolak dengan pesan untuk menjalankan migration. File nomor 6 tidak membuat apa pun error kalau belum dijalankan: lead yang beli lewat panel/website saja yang masih muncul di `!followup`. Begitu dijalankan, lead lama yang sudah punya order lunas langsung ikut diubah jadi customer. File nomor 7 juga tidak membuat error kalau belum dijalankan: `!invoice` Shopee/Tokopedia masih tercatat belum lunas dan bot menampilkan peringatan untuk menjalankan migration. Order Shopee/Tokopedia lama dari `!invoice` ikut diubah jadi lunas (resi asli yang sudah dicatat tidak diganti). File nomor 8 juga tidak membuat error kalau belum dijalankan: customer lama yang order pertamanya lewat Shopee/Tokopedia/website tetap otomatis dibuatkan lead, tapi yang order pertamanya order WhatsApp di panel ditolak dengan pesan untuk menjalankan migration (atau buat dulu dengan `!newleads`). File nomor 9 juga tidak membuat error kalau belum dijalankan: `!invoice` dengan produk Hidden saja yang ditolak dengan pesan untuk menjalankannya. Order panel dengan produk Hidden sudah bisa tanpa migration ini.
 
 Yang dibuat migration:
 - Tabel `leads` (RLS aktif, tanpa akses publik) dan log request bot.
@@ -51,6 +52,7 @@ Yang dibuat migration:
 - Trigger yang menandai lead sebagai customer (`is_customer = true`) begitu order dengan nomor WA yang sama lunas: order dari panel, website, atau `!invoice` setelah `!payment`. Lead baru yang nomornya sudah pernah punya order lunas juga langsung jadi customer. Lead tidak pernah dikembalikan ke prospek otomatis (misal order dibatalkan): ubah manual dengan `!updateleads <wa>` + `is_customer: false`.
 - Order Shopee/Tokopedia dari `!invoice` disimpan langsung lunas (payment `success` dengan nominal = total bersih setelah fee), tanpa kurir, ongkir 0, dan resi `-`.
 - Origin lead `existing` (customer lama dari sebelum ada bot). Tidak ada lead lama yang diubah.
+- `create_discord_invoice` menerima produk yang Hidden (tidak tampil di /shop). Baris packaging/supply tetap ditolak.
 - Bucket privat `payment-proofs`.
 
 **Setelah migration, isi usage_life produk peptide.** Reorder reminder hanya muncul untuk produk yang punya usage_life. Isi lewat panel (Products → Edit → Masa Pakai) atau lewat bot:
@@ -321,7 +323,7 @@ notes: Kirim sebelum jam 3
 | `address` | **ya** | Alamat lengkap pengiriman |
 | `city` | **ya** | Kota/kabupaten, provinsi |
 | `zip` | - | Kode pos |
-| `item` | **ya** | `qty \| produk` atau `qty \| produk \| harga custom`. Satu baris per produk, boleh banyak baris. Nama produk boleh singkat |
+| `item` | **ya** | `qty \| produk` atau `qty \| produk \| harga custom`. Satu baris per produk, boleh banyak baris. Nama produk boleh singkat. Produk yang Hidden (tidak tampil di /shop) tetap bisa |
 | `order_type` | - | `whatsapp` / `shopee` / `tokopedia` (sama dengan Order Source di panel). Default whatsapp |
 | `marketplace_fee` | - | Khusus shopee/tokopedia: total fee/potongan dari platform (angka). Mengurangi total order, sama seperti di panel. Default 0 |
 | `marketplace_order_no` | - | Khusus shopee/tokopedia: nomor pesanan dari Shopee/Tokopedia (opsional). Bisa dipakai untuk cari invoice, dan order dengan nomor yang sama ditolak supaya tidak dobel |
@@ -330,6 +332,7 @@ notes: Kirim sebelum jam 3
 | `notes` | - | Catatan internal (tidak tampil di invoice) |
 
 - Harga diambil dari harga produk saat ini, kecuali diisi harga custom. Harga 0 = gratis/bonus.
+- Produk yang di-Hide di panel (tidak tampil di /shop, misalnya syringe) tetap bisa di-invoice. Kalau nama yang ditulis cocok ke produk yang tampil dan yang Hidden sekaligus, yang tampil dipakai.
 - Customer lama (sudah pernah order lewat panel/website sebelum ada bot) tidak perlu !newleads: tulis nomornya di `lead`, bot membuat lead-nya otomatis dari data lama (nama dan domisili dari data customer/order terakhir, status hot, PIC = yang menjalankan !invoice). Origin diambil dari order pertama: shopee / tokopedia / website, atau `existing` kalau order pertamanya order WhatsApp di panel. Bisa diubah lewat !updateleads.
 - Order Shopee/Tokopedia: ganti jadi `order_type: shopee` (atau `tokopedia`), tambah `marketplace_fee` (dan `marketplace_order_no` kalau ada), lalu hapus baris `discount` dan `payment_type`. Total = subtotal - marketplace_fee.
 - Pembeli Shopee/Tokopedia yang bukan lead (nomor WA-nya tidak ada): hapus baris `lead`, tulis `name: <nama pembeli>`. Order tetap tercatat dan stok dipotong, tapi tidak membuat customer dan tidak masuk !aftersales / !reorder.
