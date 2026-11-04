@@ -265,7 +265,18 @@ const SHOPEE_ORDER = {
   payment: { payment_type: "Shopee" },
 };
 
-test("!invoice Shopee sends order type and fee, shows net total, skips WhatsApp text", async () => {
+// What the database returns for a Shopee/Tokopedia !invoice: already paid,
+// shipped by the marketplace (fee 0, resi "-").
+const PAID_SHOPEE_ORDER = {
+  ...SHOPEE_ORDER,
+  is_paid: true,
+  shipping_fee: 0,
+  tracking_number: "-",
+  payment: { payment_type: "Shopee", payment_amount: 3325000 },
+  setup_warning: null,
+};
+
+test("!invoice Shopee is paid right away and sends invoice + packing slip", async () => {
   const { calls, replies, plains } = await run(
     `!invoice
 lead: 081234567890
@@ -275,19 +286,51 @@ item: 2 | reta 10 mg
 order_type: shopee
 marketplace_fee: 175rb
 marketplace_order_no: 2411010ABC123`,
-    { "POST /api/bot/invoices": SHOPEE_ORDER },
+    { "POST /api/bot/invoices": PAID_SHOPEE_ORDER },
   );
   assert.equal(calls[0].json.order_type, "shopee");
   assert.equal(calls[0].json.marketplace_fee, 175000);
   assert.equal(calls[0].json.marketplace_order_no, "2411010ABC123");
   assert.equal(calls[0].json.payment_type, undefined);
   assert.equal(calls[0].json.discount, 0);
-  assert.equal(replies[0].files.length, 1, "PDF still attached");
-  assert.match(replies[0].text, /Invoice MW-20261031-01001 dibuat\*\* \(order Shopee\)/);
-  assert.match(replies[0].text, /Subtotal Rp3\.500\.000 • Fee Shopee -Rp175\.000 • \*\*Total bersih Rp3\.325\.000\*\*/);
-  assert.match(replies[0].text, /Order Shopee • No\. pesanan 2411010ABC123 • Pembayaran: Shopee/);
-  assert.match(replies[0].text, /teks invoice WhatsApp tidak dikirim/);
+  assert.deepEqual(
+    calls.slice(1).map((call) => [call.method, call.path, call.query.type]),
+    [
+      ["FILE", "/api/bot/orders/MW-20261031-01001/pdf", "invoice"],
+      ["FILE", "/api/bot/orders/MW-20261031-01001/pdf", "packing-slip"],
+    ],
+  );
+  assert.deepEqual(
+    replies[0].files.map((file) => file.name),
+    ["invoice-MW-20261031-01001.pdf", "packing-slip-MW-20261031-01001.pdf"],
+  );
+  const text = replies[0].text;
+  assert.match(text, /Invoice MW-20261031-01001 dibuat\*\* \(order Shopee\)/);
+  assert.match(text, /Subtotal Rp3\.500\.000 • Fee Shopee -Rp175\.000 • \*\*Total bersih Rp3\.325\.000\*\*/);
+  assert.match(text, /Order Shopee • No\. pesanan 2411010ABC123 • Pembayaran: Shopee • LUNAS ✅/);
+  assert.match(text, /🛍️ Order Shopee: sudah dibayar dan dikirim lewat Shopee \(ongkir Rp0, resi -\), jadi tidak perlu !payment dan !updateshipping\. Teks invoice WhatsApp tidak dikirim/);
+  assert.match(text, /📦 Packing slip terlampir untuk gudang\./);
+  assert.doesNotMatch(text, /Database belum di-update/);
   assert.equal(plains.length, 0, "no WhatsApp text for marketplace orders");
+});
+
+test("!invoice Shopee on a database without the new migration warns and still sends the packing slip", async () => {
+  const { replies } = await run(
+    "!invoice\nlead: 081234567890\naddress: Jl. Mawar 1\ncity: Tangerang\nitem: 2 | reta 10 mg\norder_type: shopee",
+    {
+      "POST /api/bot/invoices": {
+        ...SHOPEE_ORDER,
+        setup_warning: "Database belum di-update: order Shopee ini belum otomatis lunas. Jalankan migration 20261104090000_auto_paid_marketplace_invoices.sql di Supabase (order ini ikut diperbaiki).",
+      },
+    },
+  );
+  const text = replies[0].text;
+  assert.equal(replies[0].files.length, 2);
+  assert.match(text, /Pembayaran: Shopee • BELUM DIBAYAR/);
+  assert.match(text, /⚠️ Database belum di-update: order Shopee ini belum otomatis lunas\. Jalankan migration 20261104090000/);
+  assert.match(text, /customer bayar dan dapat invoice dari Shopee, jadi teks invoice WhatsApp tidak dikirim/);
+  assert.match(text, /📦 Packing slip terlampir untuk gudang\./);
+  assert.doesNotMatch(text, /tidak perlu !payment/);
 });
 
 // Tokopedia buyer who is not a lead: saved with "-" as the phone.
@@ -325,6 +368,7 @@ marketplace_order_no: INV/20261103/MPL/123`,
   assert.match(replies[0].text, /Customer: \*\*Siti Rahma\*\* • tanpa nomor WA/);
   assert.match(replies[0].text, /tidak masuk !aftersales dan !reorder/);
   assert.doesNotMatch(replies[0].text, /Jadwal reorder reminder/);
+  assert.equal(replies[0].files.length, 2, "invoice + packing slip");
   assert.equal(plains.length, 0, "no WhatsApp text");
 });
 
@@ -407,9 +451,34 @@ test("!payment on a Shopee order accepts the price before the fee", async () => 
   assert.doesNotMatch(replies[0].text, /Lebih bayar/);
 });
 
+test("!payment on a Shopee/Tokopedia invoice says it is already paid (no proof asked)", async () => {
+  const paidTokopedia = { ...TOKOPEDIA_NO_LEAD_ORDER, is_paid: true, tracking_number: "-", shipping_fee: 0 };
+  // Only the GET is mocked: posting a payment would fail with "Unexpected API call".
+  await assert.rejects(
+    run("!payment MW-20261031-01001", { "GET /api/bot/orders/MW-20261031-01001": paidTokopedia }),
+    (error) => {
+      assert.ok(error instanceof CommandInputError);
+      assert.equal(
+        error.message,
+        "Invoice MW-20261031-01001 adalah order Tokopedia: sudah otomatis lunas saat !invoice (dibayar di Tokopedia), jadi tidak perlu !payment. Packing slip juga sudah dikirim waktu !invoice.",
+      );
+      return true;
+    },
+  );
+
+  await assert.rejects(
+    run("!payment MW-20261031-01001\npayment_type: QRIS", {
+      "GET /api/bot/orders/MW-20261031-01001": { ...ORDER, is_paid: true },
+    }),
+    /Invoice MW-20261031-01001 sudah lunas\. Kalau ada koreksi, ubah lewat panel\./,
+  );
+});
+
 test("!payment requires an image and warns about underpayment", async () => {
   await assert.rejects(
-    run("!payment MW-20261031-01001\namount: 3000000\npayment_type: QRIS"),
+    run("!payment MW-20261031-01001\namount: 3000000\npayment_type: QRIS", {
+      "GET /api/bot/orders/MW-20261031-01001": ORDER,
+    }),
     /Upload foto bukti pembayaran/,
   );
 
@@ -444,6 +513,24 @@ test("help explains that buyers leave !followup automatically", () => {
   const newLeads = buildCommandHelp("!newleads", COMMAND_SPECS["!newleads"]);
   assert.match(newLeads, /sudah pernah punya order lunas, lead langsung jadi customer/);
   assert.doesNotMatch(newLeads, /is_customer otomatis false/);
+});
+
+test("!getinvoice shows marketplace shipping instead of an empty resi", async () => {
+  const { replies } = await run("!getinvoice MW-20261031-01001", {
+    "GET /api/bot/orders/MW-20261031-01001": PAID_SHOPEE_ORDER,
+  });
+  assert.match(replies[0].text, /Pengiriman: diurus Shopee/);
+  assert.doesNotMatch(replies[0].text, /Resi:/);
+});
+
+test("help says Shopee/Tokopedia invoices skip !payment and !updateshipping", () => {
+  const invoice = buildCommandHelp("!invoice", COMMAND_SPECS["!invoice"]);
+  assert.match(invoice, /Order Shopee\/Tokopedia langsung lunas \(dibayar di marketplace\) dan pengiriman diurus marketplace \(ongkir 0, resi -\), jadi tidak perlu !payment dan !updateshipping\. Bot langsung kirim PDF invoice \+ packing slip untuk gudang\./);
+  assert.match(invoice, /Order Shopee\/Tokopedia: PDF invoice \+ packing slip\./);
+  const payment = buildCommandHelp("!payment", COMMAND_SPECS["!payment"]);
+  assert.match(payment, /Tidak perlu untuk order Shopee\/Tokopedia: sudah otomatis lunas saat !invoice/);
+  const shipping = buildCommandHelp("!updateshipping", COMMAND_SPECS["!updateshipping"]);
+  assert.match(shipping, /Tidak perlu untuk order Shopee\/Tokopedia: pengiriman diurus marketplace \(otomatis ongkir 0, resi -\)\. Boleh dipakai kalau mau mencatat resi asli/);
 });
 
 test("help explains panel/website orders in !lead, !aftersales and !reorder", () => {

@@ -5,6 +5,7 @@ import {
   formatDateId,
   formatLeadOrderLine,
   formatOrderLine,
+  hasTrackingNumber,
   hasWhatsapp,
   jakartaDate,
   orderTypeLabel,
@@ -66,6 +67,30 @@ test("!lead order lines use the paid rule and mark panel/website orders", () => 
   );
   assert.match(formatLeadOrderLine({ ...base, invoice_label: "X", paid: false, from_bot: false, status: "reject", order_source: "checkout" }), /• DITOLAK • dari website$/);
   assert.match(formatLeadOrderLine({ ...base, invoice_label: "X", paid: true, from_bot: false, status: "cancelled", order_source: "manual_whatsapp" }), /• BATAL • dari panel$/);
+});
+
+test("'-' as the tracking number (marketplace ships it) is not shown as a resi", () => {
+  assert.equal(hasTrackingNumber("-"), false);
+  assert.equal(hasTrackingNumber(" - "), false);
+  assert.equal(hasTrackingNumber(""), false);
+  assert.equal(hasTrackingNumber(null), false);
+  assert.equal(hasTrackingNumber("SPXID001"), true);
+  const entry = {
+    customer: { name: "Siti", phone: "6281234567890" },
+    due_date: "2026-11-05",
+    items: [{ name: "Retatrutide 10mg", quantity: 1 }],
+    invoice_number: "MW-20261104-01001",
+    order_date: "2026-11-04",
+    order_source: "tokopedia",
+    tracking_number: "-",
+    lead: { status: "hot", origin: "tokopedia", rejection: null, pic: "cs_ana", notes: null },
+  };
+  assert.match(formatOrderLine(entry), /Invoice MW-20261104-01001 \(Tokopedia\) • order 2026-11-04\n/);
+  assert.match(formatOrderLine({ ...entry, tracking_number: "TKP123" }), /• order 2026-11-04 • resi TKP123\n/);
+  assert.equal(
+    formatLeadOrderLine({ id: "x", invoice_label: "MW-20261104-01001", created_at: "2026-11-04T03:00:00Z", total_price: 100000, paid: true, from_bot: true, status: "processing", tracking_number: "-" }),
+    "• MW-20261104-01001 • 2026-11-04 • Rp100.000 • lunas",
+  );
 });
 
 test("orders saved with '-' as the phone have no WhatsApp number", () => {

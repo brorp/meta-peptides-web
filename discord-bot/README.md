@@ -38,8 +38,9 @@ Jalankan file ini **berurutan** di Supabase (SQL Editor, atau `supabase db push`
 4. `supabase/migrations/20261101090000_add_order_type_to_discord_invoice.sql` (order Shopee/Tokopedia + marketplace fee di `!invoice`)
 5. `supabase/migrations/20261103090000_allow_marketplace_invoice_without_lead.sql` (order Shopee/Tokopedia tanpa lead / tanpa nomor WA)
 6. `supabase/migrations/20261103100000_mark_leads_customer_from_paid_orders.sql` (lead otomatis jadi customer begitu ada order lunas dengan nomor WA yang sama, dari `!invoice`, panel, atau website, jadi tidak muncul lagi di `!followup`)
+7. `supabase/migrations/20261104090000_auto_paid_marketplace_invoices.sql` (`!invoice` Shopee/Tokopedia langsung lunas, ongkir 0, resi `-`: tidak perlu `!payment` dan `!updateshipping`)
 
-> ⚠️ Kalau kode di-deploy sebelum migration, halaman order di panel ikut error karena kolom baru (`invoice_number`, `is_paid`, dll.) belum ada. Khusus file nomor 4 dan 5: tanpa file ini `!invoice` WhatsApp tetap jalan, tapi `!invoice` Shopee/Tokopedia (nomor 4) atau Shopee/Tokopedia tanpa lead (nomor 5) ditolak dengan pesan untuk menjalankan migration. File nomor 6 tidak membuat apa pun error kalau belum dijalankan: lead yang beli lewat panel/website saja yang masih muncul di `!followup`. Begitu dijalankan, lead lama yang sudah punya order lunas langsung ikut diubah jadi customer.
+> ⚠️ Kalau kode di-deploy sebelum migration, halaman order di panel ikut error karena kolom baru (`invoice_number`, `is_paid`, dll.) belum ada. Khusus file nomor 4 dan 5: tanpa file ini `!invoice` WhatsApp tetap jalan, tapi `!invoice` Shopee/Tokopedia (nomor 4) atau Shopee/Tokopedia tanpa lead (nomor 5) ditolak dengan pesan untuk menjalankan migration. File nomor 6 tidak membuat apa pun error kalau belum dijalankan: lead yang beli lewat panel/website saja yang masih muncul di `!followup`. Begitu dijalankan, lead lama yang sudah punya order lunas langsung ikut diubah jadi customer. File nomor 7 juga tidak membuat error kalau belum dijalankan: `!invoice` Shopee/Tokopedia masih tercatat belum lunas dan bot menampilkan peringatan untuk menjalankan migration. Order Shopee/Tokopedia lama dari `!invoice` ikut diubah jadi lunas (resi asli yang sudah dicatat tidak diganti).
 
 Yang dibuat migration:
 - Tabel `leads` (RLS aktif, tanpa akses publik) dan log request bot.
@@ -47,6 +48,7 @@ Yang dibuat migration:
 - `products.product_type`: `mainproduct` (peptides, punya usage_life) atau `misc` (perintilan). Produk seperti bac water, syringe, swab, needle, pen set, vial case, acetic acid, dan service otomatis jadi `misc`; sisanya `mainproduct`. Ini **terpisah** dari `category` (tag kategori di website), yang tidak diubah.
 - Function `create_discord_invoice`, `mark_discord_order_paid`, `record_discord_bot_request` (hanya bisa dipanggil server).
 - Trigger yang menandai lead sebagai customer (`is_customer = true`) begitu order dengan nomor WA yang sama lunas: order dari panel, website, atau `!invoice` setelah `!payment`. Lead baru yang nomornya sudah pernah punya order lunas juga langsung jadi customer. Lead tidak pernah dikembalikan ke prospek otomatis (misal order dibatalkan): ubah manual dengan `!updateleads <wa>` + `is_customer: false`.
+- Order Shopee/Tokopedia dari `!invoice` disimpan langsung lunas (payment `success` dengan nominal = total bersih setelah fee), tanpa kurir, ongkir 0, dan resi `-`.
 - Bucket privat `payment-proofs`.
 
 **Setelah migration, isi usage_life produk peptide.** Reorder reminder hanya muncul untuk produk yang punya usage_life. Isi lewat panel (Products → Edit → Masa Pakai) atau lewat bot:
@@ -187,9 +189,9 @@ Butuh Node.js 22.9 atau lebih baru. Kalau berhasil, log menampilkan `[bot] Onlin
 | Tambah notes/domicile/goal, atau status/alasan berubah | `!updateleads <wa>` |
 | Tiap pagi | `!followup` (H+1/H+3/H+7), `!aftersales` (H+1/H+7/H+14), `!reorder`, `!reorderlast` |
 | Customer setuju beli (closing) | `!invoice` → forward PDF + teks invoice ke customer |
-| Ada order masuk di Shopee/Tokopedia | `!invoice` dengan `order_type: shopee` / `tokopedia`. Pembeli bukan lead: ganti baris `lead` dengan `name: <nama pembeli>` |
-| Customer kirim bukti bayar | `!payment <invoice>` + upload foto bukti → packing slip untuk gudang |
-| Gudang sudah kirim | `!updateshipping <invoice>` → forward teks resi ke customer |
+| Ada order masuk di Shopee/Tokopedia | `!invoice` dengan `order_type: shopee` / `tokopedia` → langsung lunas, packing slip untuk gudang ikut terkirim. Tidak perlu `!payment` dan `!updateshipping` (ongkir 0, resi `-`). Pembeli bukan lead: ganti baris `lead` dengan `name: <nama pembeli>` |
+| Customer WhatsApp kirim bukti bayar | `!payment <invoice>` + upload foto bukti → packing slip untuk gudang |
+| Gudang sudah kirim (order WhatsApp) | `!updateshipping <invoice>` → forward teks resi ke customer |
 | Sore / akhir hari | `!dailyreport` |
 | Harga, usage_life, atau tipe produk berubah | `!updateproduct <produk>` |
 | Direksi | `!addexpense`, `!reimbursement` |
@@ -327,9 +329,9 @@ notes: Kirim sebelum jam 3
 - Harga diambil dari harga produk saat ini, kecuali diisi harga custom. Harga 0 = gratis/bonus.
 - Order Shopee/Tokopedia: ganti jadi `order_type: shopee` (atau `tokopedia`), tambah `marketplace_fee` (dan `marketplace_order_no` kalau ada), lalu hapus baris `discount` dan `payment_type`. Total = subtotal - marketplace_fee.
 - Pembeli Shopee/Tokopedia yang bukan lead (nomor WA-nya tidak ada): hapus baris `lead`, tulis `name: <nama pembeli>`. Order tetap tercatat dan stok dipotong, tapi tidak membuat customer dan tidak masuk !aftersales / !reorder.
-- Order Shopee/Tokopedia tidak dapat teks invoice WhatsApp, karena customer bayar dan dapat invoice dari marketplace. PDF tetap dikirim.
+- Order Shopee/Tokopedia langsung lunas (dibayar di marketplace) dan pengiriman diurus marketplace (ongkir 0, resi -), jadi tidak perlu !payment dan !updateshipping. Bot langsung kirim PDF invoice + packing slip untuk gudang. Teks invoice WhatsApp tidak dikirim, karena customer dapat invoice dari marketplace.
 - Usage life tiap produk dicatat per item untuk reorder reminder (bisa beda-beda per produk).
-- Output: PDF invoice (sama dengan panel) + teks invoice siap di-forward ke customer.
+- Output order WhatsApp: PDF invoice (sama dengan panel) + teks invoice siap di-forward ke customer. Order Shopee/Tokopedia: PDF invoice + packing slip.
 
 ### `!payment`
 
@@ -353,6 +355,7 @@ payment_date: 2026-10-31
 - Upload 1 gambar bukti bayar (JPG/PNG/WebP, maks 5 MB) di pesan yang sama dengan command. Tanpa gambar, command ditolak.
 - Invoice yang sudah lunas atau dibatalkan tidak bisa dibayar lagi.
 - Bot memberi peringatan kalau nominal beda dengan total invoice.
+- Tidak perlu untuk order Shopee/Tokopedia: sudah otomatis lunas saat !invoice, dan packing slip langsung dikirim.
 
 ### `!updateshipping`
 
@@ -374,6 +377,7 @@ tracking_number: JP1234567890
 | `tracking_number` | **ya** | Nomor resi |
 
 - Bot juga mengirim teks info resi siap di-forward ke customer, kecuali order tanpa nomor WA (pembeli Shopee/Tokopedia yang bukan lead).
+- Tidak perlu untuk order Shopee/Tokopedia: pengiriman diurus marketplace (otomatis ongkir 0, resi -). Boleh dipakai kalau mau mencatat resi asli dari marketplace.
 
 ### `!getinvoice`
 

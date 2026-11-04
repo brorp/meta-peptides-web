@@ -112,6 +112,13 @@ export function hasWhatsapp(order) {
   return String(order?.shipping_phone || "").replace(/\D/g, "").length >= 8;
 }
 
+// Shopee/Tokopedia invoices are saved with "-" as the tracking number: the
+// marketplace ships them, so there is no number to show.
+export function hasTrackingNumber(value) {
+  const text = String(value ?? "").trim();
+  return Boolean(text) && text !== "-";
+}
+
 export function buildCustomerInvoiceText(order, { brandName, paymentInfo } = {}) {
   const discount = Number(order.voucher_discount_amount || 0);
   const address = [order.shipping_address, order.shipping_regional, order.shipping_zip]
@@ -195,7 +202,7 @@ export function formatOrderLine(entry, { showUsage = false } = {}) {
   const lines = [
     `**${entry.customer?.name || "-"}** • ${waLink(entry.customer?.phone)} • due ${entry.due_date}`,
     `Beli: ${items || "-"}`,
-    `Invoice ${entry.invoice_number}${isMarketplaceOrder(entry) ? ` (${orderTypeLabel(entry.order_source)})` : ""} • order ${entry.order_date}${entry.tracking_number ? ` • resi ${entry.tracking_number}` : ""}`,
+    `Invoice ${entry.invoice_number}${isMarketplaceOrder(entry) ? ` (${orderTypeLabel(entry.order_source)})` : ""} • order ${entry.order_date}${hasTrackingNumber(entry.tracking_number) ? ` • resi ${entry.tracking_number}` : ""}`,
   ];
   if (lead) {
     lines.push(
@@ -224,7 +231,7 @@ export function formatLeadOrderLine(order) {
 
   const source = fromBot ? "" : ` • dari ${order.order_source === "checkout" ? "website" : "panel"}`;
   const label = order.invoice_label || order.invoice_number || order.id.slice(0, 8);
-  const tracking = order.tracking_number ? ` • resi ${order.tracking_number}` : "";
+  const tracking = hasTrackingNumber(order.tracking_number) ? ` • resi ${order.tracking_number}` : "";
   return `• ${label} • ${jakartaDate(order.created_at)} • ${rupiah(order.total_price)} • ${state}${source}${tracking}`;
 }
 

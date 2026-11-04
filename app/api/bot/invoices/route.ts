@@ -258,8 +258,15 @@ export async function POST(req: NextRequest) {
       return errorResponse("Invoice dibuat tapi gagal dimuat. Cek di panel.", 500);
     }
 
+    // Shopee/Tokopedia orders are saved as paid by the database. An unpaid one
+    // means migration 20261104090000 has not run yet.
+    const setupWarning =
+      isMarketplace && !orderResult.data.is_paid && orderResult.data.status !== "cancelled"
+        ? `Database belum di-update: order ${label} ini belum otomatis lunas. Jalankan migration 20261104090000_auto_paid_marketplace_invoices.sql di Supabase (order ini ikut diperbaiki).`
+        : null;
+
     return successResponse(
-      { ...orderResult.data, duplicate: result.duplicate === true },
+      { ...orderResult.data, duplicate: result.duplicate === true, setup_warning: setupWarning },
       result.duplicate ? "Invoice sudah dibuat" : "Invoice dibuat",
       result.duplicate ? 200 : 201,
     );

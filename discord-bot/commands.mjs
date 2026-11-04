@@ -161,9 +161,9 @@ export const COMMAND_SPECS = {
       "Harga diambil dari harga produk saat ini, kecuali diisi harga custom. Harga 0 = gratis/bonus.",
       "Order Shopee/Tokopedia: ganti jadi `order_type: shopee` (atau `tokopedia`), tambah `marketplace_fee` (dan `marketplace_order_no` kalau ada), lalu hapus baris `discount` dan `payment_type`. Total = subtotal - marketplace_fee.",
       "Pembeli Shopee/Tokopedia yang bukan lead (nomor WA-nya tidak ada): hapus baris `lead`, tulis `name: <nama pembeli>`. Order tetap tercatat dan stok dipotong, tapi tidak membuat customer dan tidak masuk !aftersales / !reorder.",
-      "Order Shopee/Tokopedia tidak dapat teks invoice WhatsApp, karena customer bayar dan dapat invoice dari marketplace. PDF tetap dikirim.",
+      "Order Shopee/Tokopedia langsung lunas (dibayar di marketplace) dan pengiriman diurus marketplace (ongkir 0, resi -), jadi tidak perlu !payment dan !updateshipping. Bot langsung kirim PDF invoice + packing slip untuk gudang. Teks invoice WhatsApp tidak dikirim, karena customer dapat invoice dari marketplace.",
       "Usage life tiap produk dicatat per item untuk reorder reminder (bisa beda-beda per produk).",
-      "Output: PDF invoice (sama dengan panel) + teks invoice siap di-forward ke customer.",
+      "Output order WhatsApp: PDF invoice (sama dengan panel) + teks invoice siap di-forward ke customer. Order Shopee/Tokopedia: PDF invoice + packing slip.",
     ],
     handler: handleInvoice,
   },
@@ -182,6 +182,7 @@ export const COMMAND_SPECS = {
       "Upload 1 gambar bukti bayar (JPG/PNG/WebP, maks 5 MB) di pesan yang sama dengan command. Tanpa gambar, command ditolak.",
       "Invoice yang sudah lunas atau dibatalkan tidak bisa dibayar lagi.",
       "Bot memberi peringatan kalau nominal beda dengan total invoice.",
+      "Tidak perlu untuk order Shopee/Tokopedia: sudah otomatis lunas saat !invoice, dan packing slip langsung dikirim.",
     ],
     handler: handlePayment,
   },
@@ -196,7 +197,10 @@ export const COMMAND_SPECS = {
       { name: "shipping_fee", description: "Ongkir yang kita bayar (angka). Wajib untuk order WhatsApp: dicatat sebagai expense, tidak menambah total invoice. Order Shopee/Tokopedia boleh dikosongkan (ongkir diurus marketplace)", example: "25000" },
       { name: "tracking_number", required: true, description: "Nomor resi", example: "JP1234567890" },
     ],
-    notes: ["Bot juga mengirim teks info resi siap di-forward ke customer, kecuali order tanpa nomor WA (pembeli Shopee/Tokopedia yang bukan lead)."],
+    notes: [
+      "Bot juga mengirim teks info resi siap di-forward ke customer, kecuali order tanpa nomor WA (pembeli Shopee/Tokopedia yang bukan lead).",
+      "Tidak perlu untuk order Shopee/Tokopedia: pengiriman diurus marketplace (otomatis ongkir 0, resi -). Boleh dipakai kalau mau mencatat resi asli dari marketplace.",
+    ],
     handler: handleShipping,
   },
   "!getinvoice": {
@@ -392,9 +396,14 @@ function interestWarningText(data) {
   return `\n⚠️ ${data.interest_warning}${candidates.length ? `\nPilihan: ${candidates.join(" | ")}` : ""}`;
 }
 
-async function sendPdfReply(ctx, { content, path, type, fileName }) {
-  const pdf = await ctx.api.file(path, { query: { type } });
-  await ctx.reply(content, [new AttachmentBuilder(pdf, { name: fileName })]);
+// The same PDFs as the panel's download buttons, attached to one reply.
+async function sendPdfReply(ctx, { content, reference, types }) {
+  const files = [];
+  for (const type of types) {
+    const pdf = await ctx.api.file(`/api/bot/orders/${encodeURIComponent(reference)}/pdf`, { query: { type } });
+    files.push(new AttachmentBuilder(pdf, { name: `${type}-${reference}.pdf` }));
+  }
+  await ctx.reply(content, files);
 }
 
 function invoiceSummary(order) {
@@ -430,6 +439,24 @@ function shippingTextNote(order) {
   if (!isMarketplaceOrder(order)) return "ℹ️ Order ini tidak punya nomor WA, jadi teks info resi tidak dikirim.";
   const label = orderTypeLabel(order.order_source);
   return `ℹ️ Pembeli tanpa nomor WA: resi terlihat di ${label}, jadi teks info resi tidak dikirim.`;
+}
+
+// Shopee/Tokopedia: paid and shipped inside the marketplace, so !invoice sends
+// the packing slip right away and !payment / !updateshipping are not needed.
+function marketplaceInvoiceNote(order) {
+  const label = orderTypeLabel(order.order_source);
+  const lines = [];
+  if (order.is_paid) {
+    lines.push(
+      `🛍️ Order ${label}: sudah dibayar dan dikirim lewat ${label} (ongkir ${rupiah(order.shipping_fee)}, resi ${order.tracking_number || "-"}), jadi tidak perlu !payment dan !updateshipping. Teks invoice WhatsApp tidak dikirim karena customer dapat invoice dari ${label}.`,
+    );
+  } else {
+    // Database without migration 20261104090000: the order is still unpaid.
+    if (order.setup_warning) lines.push(`⚠️ ${order.setup_warning}`);
+    lines.push(customerTextNote(order));
+  }
+  lines.push("📦 Packing slip terlampir untuk gudang.");
+  return lines.join("\n");
 }
 
 // Marketplace customers pay and get their invoice inside Shopee/Tokopedia.
@@ -551,30 +578,45 @@ async function handleInvoice(ctx) {
   const marketplace = isMarketplaceOrder(order);
   const schedule = formatReorderSchedule(order);
   await sendPdfReply(ctx, {
-    path: `/api/bot/orders/${encodeURIComponent(reference)}/pdf`,
-    type: "invoice",
-    fileName: `invoice-${reference}.pdf`,
+    reference,
+    types: marketplace ? ["invoice", "packing-slip"] : ["invoice"],
     content: [
       order.duplicate
         ? `ℹ️ Invoice **${reference}** sudah dibuat dari pesan ini sebelumnya.`
         : `✅ **Invoice ${reference} dibuat**${marketplace ? ` (order ${orderTypeLabel(order.order_source)})` : ""} • stok dipotong${order.lead_id ? " • lead ditandai customer" : ""}`,
       invoiceSummary(order),
       schedule,
-      customerTextNote(order),
+      marketplace ? marketplaceInvoiceNote(order) : customerTextNote(order),
     ].filter(Boolean).join("\n\n"),
   });
   if (!marketplace) await ctx.sendPlain(buildCustomerInvoiceText(order, ctx.config));
 }
 
+// A paid invoice (every Shopee/Tokopedia invoice) needs no !payment. Checked
+// before asking for a proof the team does not have for marketplace orders.
+async function rejectPaidInvoice(ctx, identifier) {
+  const order = await ctx.api.get(`/api/bot/orders/${encodeURIComponent(identifier)}`);
+  if (!order.is_paid) return;
+  const reference = order.invoice_number || order.id;
+  if (isMarketplaceOrder(order)) {
+    const label = orderTypeLabel(order.order_source);
+    throw new CommandInputError(
+      `Invoice ${reference} adalah order ${label}: sudah otomatis lunas saat !invoice (dibayar di ${label}), jadi tidak perlu !payment. Packing slip juga sudah dikirim waktu !invoice.`,
+    );
+  }
+  throw new CommandInputError(`Invoice ${reference} sudah lunas. Kalau ada koreksi, ubah lewat panel.`);
+}
+
 async function handlePayment(ctx) {
   const identifier = requireArgument(ctx, "nomor invoice");
-  checkFields(ctx);
   const { parsed, message } = ctx;
-  checkDateField(parsed.get("payment_date"), "payment_date");
-
   const proof = message.attachments.find((attachment) =>
     String(attachment.contentType || "").startsWith("image/"),
   );
+  if (!proof || !parsed.has("amount")) await rejectPaidInvoice(ctx, identifier);
+  checkFields(ctx);
+  checkDateField(parsed.get("payment_date"), "payment_date");
+
   if (!proof) {
     throw new CommandInputError("Upload foto bukti pembayaran di pesan yang sama dengan command !payment.");
   }
@@ -609,9 +651,8 @@ async function handlePayment(ctx) {
         : `⚠️ **Lebih bayar ${rupiah(difference)}** dari total ${rupiah(order.total_price)}.`;
 
   await sendPdfReply(ctx, {
-    path: `/api/bot/orders/${encodeURIComponent(reference)}/pdf`,
-    type: "packing-slip",
-    fileName: `packing-slip-${reference}.pdf`,
+    reference,
+    types: ["packing-slip"],
     content: [
       `💰 **Pembayaran ${reference} dicatat** — ${rupiah(payment.payment_amount)} via ${payment.payment_type} (${formatDateId(jakartaDate(payment.payment_date))})`,
       customerLine(order),
@@ -658,14 +699,18 @@ async function handleGetInvoice(ctx) {
   checkFields(ctx, { requireAll: false });
   const order = await ctx.api.get(`/api/bot/orders/${encodeURIComponent(identifier)}`);
   const reference = order.invoice_number || order.id;
+  const marketplaceShipped = isMarketplaceOrder(order) && order.tracking_number === "-";
   await sendPdfReply(ctx, {
-    path: `/api/bot/orders/${encodeURIComponent(reference)}/pdf`,
-    type: "invoice",
-    fileName: `invoice-${reference}.pdf`,
+    reference,
+    types: ["invoice"],
     content: [
       `🧾 **Invoice ${reference}**${order.status === "cancelled" ? " (DIBATALKAN)" : ""}`,
       invoiceSummary(order),
-      order.tracking_number ? `Resi: ${order.shipment_type || "-"} ${order.tracking_number}` : null,
+      marketplaceShipped
+        ? `Pengiriman: diurus ${orderTypeLabel(order.order_source)}`
+        : order.tracking_number
+          ? `Resi: ${order.shipment_type || "-"} ${order.tracking_number}`
+          : null,
       formatReorderSchedule(order),
       customerTextNote(order),
     ].filter(Boolean).join("\n\n"),

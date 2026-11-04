@@ -4,6 +4,8 @@ import { errorResponse, successResponse } from "@/lib/api-response";
 import { readDiscordBotJson } from "@/lib/discord-bot-auth";
 import {
   getJakartaDate,
+  isMarketplaceOrderSource,
+  marketplaceLabel,
   normalizePaymentType,
   parseDateOnly,
   resolveOrderIdentifier,
@@ -39,6 +41,16 @@ function hasValidImageSignature(buffer: Buffer, contentType: string) {
   return false;
 }
 
+// Shopee/Tokopedia invoices are paid inside the marketplace and saved as paid
+// by !invoice, so !payment is never needed for them.
+function alreadyPaidMessage(order: { order_source?: string | null }, reference: string) {
+  if (isMarketplaceOrderSource(order.order_source)) {
+    const label = marketplaceLabel(order.order_source);
+    return `Invoice ${reference} adalah order ${label}: sudah otomatis lunas saat !invoice (dibayar di ${label}), jadi tidak perlu !payment.`;
+  }
+  return `Invoice ${reference} sudah lunas. Kalau ada koreksi, ubah lewat panel.`;
+}
+
 // !payment <invoice> + payment proof image
 export async function POST(
   req: NextRequest,
@@ -71,10 +83,7 @@ export async function POST(
       return errorResponse(`Invoice ${reference} sudah dibatalkan`, 400);
     }
     if (order.is_paid) {
-      return errorResponse(
-        `Invoice ${reference} sudah lunas. Kalau ada koreksi, ubah lewat panel.`,
-        409,
-      );
+      return errorResponse(alreadyPaidMessage(order, reference), 409);
     }
 
     const body = auth.body || {};
