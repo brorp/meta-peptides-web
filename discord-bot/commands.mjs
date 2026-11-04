@@ -48,7 +48,7 @@ const CUSTOMER_RULE_TEXT =
 const NEW_LEAD_FIELDS = [
   { name: "wa", description: "Nomor WhatsApp. Boleh 08xx, 62xx, atau +62 xxx", example: "081234567890" },
   { name: "name", description: "Nama lead", example: "Budi Santoso" },
-  { name: "origin", description: ORIGIN_TEXT, example: "ads" },
+  { name: "origin", description: `${ORIGIN_TEXT}. \`existing\` = customer lama dari sebelum ada bot (dipakai otomatis oleh !invoice)`, example: "ads" },
   { name: "status", description: STATUS_TEXT, example: "hot" },
   { name: "interest", description: "Produk yang diminati, boleh singkat: `reta 10 mg` → Retatrutide 10mg. `-` untuk kosong", example: "reta 10 mg" },
   { name: "rejection", description: `Alasan belum beli: ${REJECTION_TEXT}`, example: "-" },
@@ -138,7 +138,7 @@ export const COMMAND_SPECS = {
     summary: "Closing: buat order + invoice PDF, potong stok, lead jadi customer",
     positional: false,
     fields: [
-      { name: "lead", requiredWhen: "untuk order whatsapp", description: "Nomor WA lead (harus sudah dibuat dengan !newleads). Order shopee/tokopedia boleh tanpa lead: hapus baris ini dan isi `name`", example: "081234567890" },
+      { name: "lead", requiredWhen: "untuk order whatsapp", description: "Nomor WA lead. Customer lama yang sudah pernah order lewat panel/website tidak perlu !newleads dulu: lead dibuat otomatis dari data lama. Order shopee/tokopedia boleh tanpa lead: hapus baris ini dan isi `name`", example: "081234567890" },
       { name: "name", requiredWhen: "untuk order shopee/tokopedia tanpa lead", description: "Nama pembeli dari pesanan Shopee/Tokopedia. Hanya dipakai kalau tidak ada lead (nama lead dipakai kalau ada `lead`)" },
       { name: "address", required: true, description: "Alamat lengkap pengiriman", example: "Metland Puri Blok F5 No 21" },
       { name: "city", required: true, description: "Kota/kabupaten, provinsi", example: "Kota Tangerang, Banten" },
@@ -159,6 +159,7 @@ export const COMMAND_SPECS = {
     freeText: ["notes", "address"],
     notes: [
       "Harga diambil dari harga produk saat ini, kecuali diisi harga custom. Harga 0 = gratis/bonus.",
+      "Customer lama (sudah pernah order lewat panel/website sebelum ada bot) tidak perlu !newleads: tulis nomornya di `lead`, bot membuat lead-nya otomatis dari data lama (nama dan domisili dari data customer/order terakhir, status hot, PIC = yang menjalankan !invoice). Origin diambil dari order pertama: shopee / tokopedia / website, atau `existing` kalau order pertamanya order WhatsApp di panel. Bisa diubah lewat !updateleads.",
       "Order Shopee/Tokopedia: ganti jadi `order_type: shopee` (atau `tokopedia`), tambah `marketplace_fee` (dan `marketplace_order_no` kalau ada), lalu hapus baris `discount` dan `payment_type`. Total = subtotal - marketplace_fee.",
       "Pembeli Shopee/Tokopedia yang bukan lead (nomor WA-nya tidak ada): hapus baris `lead`, tulis `name: <nama pembeli>`. Order tetap tercatat dan stok dipotong, tapi tidak membuat customer dan tidak masuk !aftersales / !reorder.",
       "Order Shopee/Tokopedia langsung lunas (dibayar di marketplace) dan pengiriman diurus marketplace (ongkir 0, resi -), jadi tidak perlu !payment dan !updateshipping. Bot langsung kirim PDF invoice + packing slip untuk gudang. Teks invoice WhatsApp tidak dikirim, karena customer dapat invoice dari marketplace.",
@@ -459,6 +460,36 @@ function marketplaceInvoiceNote(order) {
   return lines.join("\n");
 }
 
+// Where another order came from, for the "order lain hari ini" warning.
+function orderSourceText(order) {
+  if (order.from_bot) return "dari bot";
+  if (order.order_source === "checkout") return "dari website";
+  return isMarketplaceOrder(order) ? `dari panel, ${orderTypeLabel(order.order_source)}` : "dari panel";
+}
+
+// !invoice made the lead from old panel/website data (customer from before the
+// bot). Also warns when that number already has another order today, which is
+// usually the same order typed in the panel.
+function leadCreatedNote(info) {
+  if (!info) return null;
+  const last = info.last_order && info.last_order.date !== info.first_order_date
+    ? `, terakhir ${formatDateId(info.last_order.date)}`
+    : "";
+  const history = info.order_count
+    ? `sudah ${info.order_count}x order sejak ${formatDateId(info.first_order_date)}${last}`
+    : "sudah ada di data customer panel";
+  const lines = [
+    `🆕 Nomor ${info.whatsapp_phone} belum ada di leads, tapi ${history} (customer lama). Lead dibuat otomatis dari data itu: **${info.full_name}** • origin ${info.origin} • PIC ${dash(info.pic)}. Ubah lewat \`!updateleads ${info.whatsapp_phone}\` kalau perlu.`,
+  ];
+  const today = info.today_orders || [];
+  if (today.length) {
+    lines.push(
+      `⚠️ Nomor ini sudah punya order lain hari ini: ${today.map((order) => `${order.label} (${orderSourceText(order)})`).join(", ")}. Pastikan bukan order yang sama. Kalau dobel, batalkan salah satunya lewat panel.`,
+    );
+  }
+  return lines.join("\n");
+}
+
 // Marketplace customers pay and get their invoice inside Shopee/Tokopedia.
 function customerTextNote(order) {
   if (!isMarketplaceOrder(order)) return "👇 Teks invoice untuk di-forward ke customer ada di pesan berikut.";
@@ -584,6 +615,7 @@ async function handleInvoice(ctx) {
       order.duplicate
         ? `ℹ️ Invoice **${reference}** sudah dibuat dari pesan ini sebelumnya.`
         : `✅ **Invoice ${reference} dibuat**${marketplace ? ` (order ${orderTypeLabel(order.order_source)})` : ""} • stok dipotong${order.lead_id ? " • lead ditandai customer" : ""}`,
+      leadCreatedNote(order.lead_created),
       invoiceSummary(order),
       schedule,
       marketplace ? marketplaceInvoiceNote(order) : customerTextNote(order),

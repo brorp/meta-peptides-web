@@ -5,7 +5,12 @@ import {
   readDiscordBotJson,
 } from "@/lib/discord-bot-auth";
 import { BOT_LEAD_SELECT, resolveLeadIdentifier } from "@/lib/discord-bot-data";
-import { LeadInputError, normalizeLeadInput } from "@/lib/discord-bot-leads";
+import {
+  LeadInputError,
+  describeExistingCustomer,
+  findExistingCustomer,
+  normalizeLeadInput,
+} from "@/lib/discord-bot-leads";
 import { loadLeadOrders } from "@/lib/discord-bot-orders";
 import { supabaseAdmin } from "@/lib/supabase-server";
 
@@ -19,7 +24,20 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
 
     const { identifier } = await params;
     const leadResult = await resolveLeadIdentifier(decodeURIComponent(identifier));
-    if (!leadResult.data) return errorResponse(leadResult.error, 404);
+    if (!leadResult.data) {
+      // A customer from before the bot needs no !newleads: !invoice makes the
+      // lead from the old order data.
+      const existing = leadResult.missingPhone
+        ? await findExistingCustomer(leadResult.missingPhone)
+        : null;
+      if (existing) {
+        return errorResponse(
+          `Nomor ${existing.whatsapp_phone} belum jadi lead, tapi ${describeExistingCustomer(existing)} (customer lama). Tidak perlu !newleads: lead dibuat otomatis waktu !invoice dengan lead: ${existing.whatsapp_phone}. Kalau mau isi origin/status sendiri, buat dulu dengan !newleads.`,
+          404,
+        );
+      }
+      return errorResponse(leadResult.error, 404);
+    }
 
     // !invoice orders plus panel/website orders on the same WhatsApp number.
     const orders = await loadLeadOrders(

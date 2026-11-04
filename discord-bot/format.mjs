@@ -1,7 +1,8 @@
 // Text formatting for Discord replies and customer-facing (WhatsApp) text.
 
 export const STATUS_EMOJI = { hot: "🔥", warm: "🌤️", cold: "❄️", skip: "⏭️" };
-export const ORIGINS = ["ads", "tokopedia", "instagram", "threads", "tiktok", "fnf", "shopee", "website"];
+// "existing" = customer from before the bot (lead made by !invoice from old orders).
+export const ORIGINS = ["ads", "tokopedia", "instagram", "threads", "tiktok", "fnf", "shopee", "website", "existing"];
 export const STATUSES = ["hot", "warm", "cold", "skip"];
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];

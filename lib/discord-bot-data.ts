@@ -1,6 +1,9 @@
 import { supabaseAdmin } from "@/lib/supabase-server";
 
 export const LEAD_STATUSES = ["hot", "warm", "cold", "skip"] as const;
+// "existing" = customer from before the bot whose first order does not show
+// where they came from (a WhatsApp order made in the panel). !invoice uses it
+// when it creates the lead from old order data (migration 20261104100000).
 export const LEAD_ORIGINS = [
   "ads",
   "tokopedia",
@@ -10,7 +13,9 @@ export const LEAD_ORIGINS = [
   "fnf",
   "shopee",
   "website",
+  "existing",
 ] as const;
+export type LeadOrigin = (typeof LEAD_ORIGINS)[number];
 export const LEAD_REJECTIONS = [
   "harga",
   "company",
@@ -216,15 +221,22 @@ export const BOT_LEAD_SELECT = `${LEAD_COLUMNS}, product:products!leads_interest
 
 type Resolved<T> = { data: T; error: null } | { data: null; error: string };
 
-export async function resolveLeadIdentifier(identifier: string): Promise<Resolved<Record<string, any>>> {
+// missingPhone is set when the identifier is a valid WhatsApp number that has
+// no lead yet, so callers can look for the number in old order data.
+type ResolvedLead =
+  | { data: Record<string, any>; error: null; missingPhone?: undefined }
+  | { data: null; error: string; missingPhone?: string };
+
+export async function resolveLeadIdentifier(identifier: string): Promise<ResolvedLead> {
   const value = String(identifier || "").trim();
   if (!value) return { data: null, error: "Isi nomor WhatsApp atau ID lead" };
 
+  let phone: string | null = null;
   let query = supabaseAdmin.from("leads").select(BOT_LEAD_SELECT);
   if (UUID_PATTERN.test(value)) {
     query = query.eq("id", value);
   } else {
-    const phone = normalizeBotPhone(value);
+    phone = normalizeBotPhone(value);
     if (phone.length < 8) {
       return { data: null, error: `Nomor WhatsApp "${value}" tidak valid` };
     }
@@ -237,6 +249,7 @@ export async function resolveLeadIdentifier(identifier: string): Promise<Resolve
     return {
       data: null,
       error: `Lead ${value} belum ada. Buat dulu dengan !newleads`,
+      missingPhone: phone || undefined,
     };
   }
 

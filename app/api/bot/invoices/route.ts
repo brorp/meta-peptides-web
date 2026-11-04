@@ -9,6 +9,11 @@ import {
   resolveLeadIdentifier,
   translateDatabaseError,
 } from "@/lib/discord-bot-data";
+import {
+  type ExistingCustomer,
+  createLeadFromExistingCustomer,
+  findExistingCustomer,
+} from "@/lib/discord-bot-leads";
 import { loadBotOrderDetail } from "@/lib/discord-bot-orders";
 import {
   ProductMatchError,
@@ -31,6 +36,10 @@ const isBlank = (value: unknown) =>
 // snapshots each product's usage life. A Shopee/Tokopedia buyer does not have
 // to be a lead (marketplaces hide the phone number): then only the buyer's
 // name is saved, like the panel's Shopee label import.
+//
+// A number that is not a lead yet but already ordered before the bot (panel or
+// website orders, the panel's customers table) gets its lead made from that
+// data, so regular customers do not need !newleads first.
 export async function POST(req: NextRequest) {
   try {
     const auth = await readDiscordBotJson(req, { maxRequestsPerMinute: 20 });
@@ -176,15 +185,27 @@ export async function POST(req: NextRequest) {
     }
 
     let leadId: string | null = null;
+    // Saved just before the order, once the items are valid, so a typo in an
+    // item does not leave a new lead behind.
+    let oldCustomer: ExistingCustomer | null = null;
     if (leadIdentifier) {
       const leadResult = await resolveLeadIdentifier(leadIdentifier);
-      if (!leadResult.data) {
-        const hint = isMarketplace
-          ? `. Kalau pembeli ${label} ini bukan lead, hapus baris lead dan tulis name (nama pembeli).`
-          : "";
-        return errorResponse(`${leadResult.error}${hint}`, 404);
+      if (leadResult.data) {
+        leadId = leadResult.data.id;
+      } else {
+        if (leadResult.missingPhone) {
+          oldCustomer = await findExistingCustomer(leadResult.missingPhone);
+        }
+        if (!oldCustomer) {
+          const reason = leadResult.missingPhone
+            ? `Lead ${leadIdentifier} belum ada, dan nomor ini juga belum pernah order (tidak ada di data order/customer panel). Buat dulu dengan !newleads`
+            : leadResult.error;
+          const hint = isMarketplace
+            ? `. Kalau pembeli ${label} ini bukan lead, hapus baris lead dan tulis name (nama pembeli).`
+            : "";
+          return errorResponse(`${reason}${hint}`, 404);
+        }
       }
-      leadId = leadResult.data.id;
     }
 
     const products = await loadBotProducts();
@@ -215,6 +236,32 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    let leadCreated: Record<string, unknown> | null = null;
+    if (oldCustomer) {
+      const created = await createLeadFromExistingCustomer(oldCustomer, auth.context!);
+      if (created.error !== undefined) return errorResponse(created.error, created.status);
+      leadId = created.lead.id;
+      if (created.created) {
+        leadCreated = {
+          whatsapp_phone: created.lead.whatsapp_phone,
+          full_name: created.lead.full_name,
+          origin: created.lead.origin,
+          chat_date: created.lead.chat_date,
+          pic: created.lead.discord_username,
+          order_count: oldCustomer.order_count,
+          first_order_date: oldCustomer.first_order_date,
+          last_order: oldCustomer.last_order,
+          today_orders: oldCustomer.today_orders,
+          customer_source: oldCustomer.customer_source,
+        };
+      }
+    }
+    // The lead stays when the order fails (for example stock is short), so
+    // the team is told it already exists.
+    const leadNote = leadCreated
+      ? ` (Lead ${leadCreated.whatsapp_phone} sudah dibuat otomatis dari data customer lama.)`
+      : "";
+
     const rpcArgs: Record<string, unknown> = {
       p_lead_id: leadId,
       p_shipping_address: shippingAddress,
@@ -242,13 +289,13 @@ export async function POST(req: NextRequest) {
 
     if (createError?.code === "PGRST202") {
       return errorResponse(
-        `Database belum di-update untuk order ${label}${leadId ? "" : " tanpa lead"}. Jalankan migration 20261103090000_allow_marketplace_invoice_without_lead.sql di Supabase.`,
+        `Database belum di-update untuk order ${label}${leadId ? "" : " tanpa lead"}. Jalankan migration 20261103090000_allow_marketplace_invoice_without_lead.sql di Supabase.${leadNote}`,
         503,
       );
     }
     if (createError || !result?.order_id) {
       return errorResponse(
-        translateDatabaseError(createError?.message, "Gagal membuat invoice"),
+        `${translateDatabaseError(createError?.message, "Gagal membuat invoice")}${leadNote}`,
         400,
       );
     }
@@ -266,7 +313,12 @@ export async function POST(req: NextRequest) {
         : null;
 
     return successResponse(
-      { ...orderResult.data, duplicate: result.duplicate === true, setup_warning: setupWarning },
+      {
+        ...orderResult.data,
+        duplicate: result.duplicate === true,
+        setup_warning: setupWarning,
+        lead_created: leadCreated,
+      },
       result.duplicate ? "Invoice sudah dibuat" : "Invoice dibuat",
       result.duplicate ? 200 : 201,
     );

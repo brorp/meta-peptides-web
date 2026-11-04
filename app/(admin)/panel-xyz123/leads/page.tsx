@@ -57,6 +57,8 @@ const ORIGIN_OPTIONS = [
   ["fnf", "FnF"],
   ["shopee", "Shopee"],
   ["website", "Website"],
+  // Customer from before the bot (lead made by !invoice from old orders).
+  ["existing", "Existing customer"],
 ] as const;
 
 const REJECTION_OPTIONS = [

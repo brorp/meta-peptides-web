@@ -253,7 +253,77 @@ discount: 0`,
   assert.match(replies[0].text, /Customer: \*\*Budi\*\* • <https:\/\/wa\.me\/6281234567890>/);
   assert.match(replies[0].text, /Retatrutide 10mg → 26 Des 2026 \(56 hari/);
   assert.match(replies[0].text, /Belum ada usage_life: BPC-157 10 mg/);
+  assert.doesNotMatch(replies[0].text, /belum ada di leads/, "an existing lead gets no lead note");
   assert.match(plains[0], /^\*INVOICE MW-20261031-01001\*/);
+});
+
+const OLD_CUSTOMER_LEAD = {
+  whatsapp_phone: "6285733660667",
+  full_name: "Rina",
+  origin: "existing",
+  chat_date: "2026-04-26",
+  pic: "rp",
+  order_count: 17,
+  first_order_date: "2026-04-26",
+  last_order: { label: "WA-0411", date: "2026-11-04", order_source: "manual_whatsapp", from_bot: false },
+  today_orders: [],
+  customer_source: "order",
+};
+
+test("!invoice for a customer from before the bot says the lead was made from old data", async () => {
+  const { calls, replies, plains } = await run(
+    `!invoice
+lead: 085733660667
+address: Jl. Mawar 1
+city: Tangerang
+item: 2 | reta 10 mg`,
+    { "POST /api/bot/invoices": { ...ORDER, lead_created: OLD_CUSTOMER_LEAD } },
+  );
+  assert.equal(calls[0].json.lead, "085733660667");
+  const text = replies[0].text;
+  assert.match(
+    text,
+    /🆕 Nomor 6285733660667 belum ada di leads, tapi sudah 17x order sejak 26 Apr 2026, terakhir 4 Nov 2026 \(customer lama\)\. Lead dibuat otomatis dari data itu: \*\*Rina\*\* • origin existing • PIC rp\. Ubah lewat `!updateleads 6285733660667` kalau perlu\./,
+  );
+  // Right under the header, above the order summary.
+  assert.ok(text.indexOf("🆕") < text.indexOf("Customer: **"));
+  assert.doesNotMatch(text, /order lain hari ini/);
+  assert.match(plains[0], /^\*INVOICE MW-20261031-01001\*/);
+});
+
+test("!invoice for an old customer warns about another order on the same number today", async () => {
+  const lead = {
+    ...OLD_CUSTOMER_LEAD,
+    order_count: 1,
+    first_order_date: "2026-11-04",
+    last_order: { label: "WA-0411", date: "2026-11-04", order_source: "manual_whatsapp", from_bot: false },
+    today_orders: [
+      { label: "WA-0411", date: "2026-11-04", order_source: "manual_whatsapp", from_bot: false },
+      { label: "BBBBBBBB", date: "2026-11-04", order_source: "checkout", from_bot: false },
+    ],
+  };
+  const { replies } = await run(
+    `!invoice
+lead: 085733660667
+address: Jl. Mawar 1
+city: Tangerang
+item: 2 | reta 10 mg`,
+    { "POST /api/bot/invoices": { ...ORDER, lead_created: lead } },
+  );
+  // One order: no "terakhir" repeating the same date.
+  assert.match(replies[0].text, /tapi sudah 1x order sejak 4 Nov 2026 \(customer lama\)/);
+  assert.match(
+    replies[0].text,
+    /⚠️ Nomor ini sudah punya order lain hari ini: WA-0411 \(dari panel\), BBBBBBBB \(dari website\)\. Pastikan bukan order yang sama\. Kalau dobel, batalkan salah satunya lewat panel\./,
+  );
+});
+
+test("help says customers from before the bot need no !newleads", () => {
+  const invoice = buildCommandHelp("!invoice", COMMAND_SPECS["!invoice"]);
+  assert.match(invoice, /Customer lama yang sudah pernah order lewat panel\/website tidak perlu !newleads dulu/);
+  assert.match(invoice, /atau `existing` kalau order pertamanya order WhatsApp di panel/);
+  const newleads = buildCommandHelp("!newleads", COMMAND_SPECS["!newleads"]);
+  assert.match(newleads, /website \/ existing\. `existing` = customer lama dari sebelum ada bot/);
 });
 
 const SHOPEE_ORDER = {
@@ -583,7 +653,7 @@ test("!dailyreport shows every origin row", async () => {
       by_status: { hot: 1, warm: 1, cold: 0, skip: 0 },
     },
   });
-  for (const origin of ["ads", "tokopedia", "instagram", "threads", "tiktok", "fnf", "shopee", "website"]) {
+  for (const origin of ["ads", "tokopedia", "instagram", "threads", "tiktok", "fnf", "shopee", "website", "existing"]) {
     assert.match(replies[0].text, new RegExp(origin));
   }
   assert.match(replies[0].text, /Total lead baru: \*\*2\*\*/);

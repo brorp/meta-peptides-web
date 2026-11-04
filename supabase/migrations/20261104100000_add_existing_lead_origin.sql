@@ -1,0 +1,14 @@
+-- Customers who bought before the Discord bot (panel or website orders, kept in
+-- the customers table) have no lead. !invoice now creates their lead
+-- automatically from that data, so the team does not have to run !newleads
+-- first for a regular customer.
+--
+-- The lead's origin comes from the customer's first order: shopee, tokopedia,
+-- or website (checkout). When the first order was a WhatsApp order made in the
+-- panel, the real origin is unknown, so the lead gets the new origin
+-- 'existing' (customer from before the bot). The team can change it later
+-- with !updateleads <wa> + origin: ... or in the panel.
+--
+-- Only adds an enum value. Nothing in this file uses it, so it can run inside
+-- the SQL editor's transaction.
+ALTER TYPE public.lead_origin_enum ADD VALUE IF NOT EXISTS 'existing';
