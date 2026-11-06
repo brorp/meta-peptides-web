@@ -10,6 +10,7 @@
     "bot:start": "npm --prefix discord-bot start",
     "bot:dev": "npm --prefix discord-bot run dev",
     "bot:test": "npm --prefix discord-bot test",
+    "test:orders-report": "node --experimental-strip-types --test tests/order-report.test.mjs",
     "lint": "next lint"
   },
   "dependencies": {

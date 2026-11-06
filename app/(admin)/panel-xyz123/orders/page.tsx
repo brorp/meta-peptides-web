@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
 import { useApiQuery } from "@/hooks/api/useApiQuery";
 import { useQueryClient } from "@tanstack/react-query";
+import { OrderExportDialog } from "@/components/admin/order-export-dialog";
 
 const STATUS_TABS = [
     { label: "All", value: "" },
@@ -713,19 +714,22 @@ export default function AdminOrdersPage() {
                 ))}
             </div>
 
-            {/* Search */}
-            <div className="relative max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <input
-                    type="text"
-                    placeholder="Search by name, email, or marketplace order no..."
-                    value={keyword}
-                    onChange={(e) => {
-                        setKeyword(e.target.value);
-                        setPage(1);
-                    }}
-                    className="w-full bg-card border border-border rounded-xl py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
-                />
+            {/* Search and report export */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="relative w-full sm:max-w-sm">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                        type="text"
+                        placeholder="Search by name, email, or marketplace order no..."
+                        value={keyword}
+                        onChange={(e) => {
+                            setKeyword(e.target.value);
+                            setPage(1);
+                        }}
+                        className="w-full bg-card border border-border rounded-xl py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
+                    />
+                </div>
+                <OrderExportDialog />
             </div>
 
             {/* Table */}
