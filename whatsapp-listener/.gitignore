@@ -1,0 +1,7 @@
+# WhatsApp session keys: whoever has these files can read the CS number's chats.
+auth/
+auth-*/
+node_modules/
+.env
+# Local control socket for the Discord bot.
+control.sock

@@ -34,6 +34,7 @@ import {
   statusLabel,
   waLink,
 } from "./format.mjs";
+import { WA_SETTINGS_SPECS } from "./wa-settings.mjs";
 
 const ORIGIN_TEXT = ORIGINS.join(" / ");
 const STATUS_TEXT = STATUSES.join(" / ");
@@ -48,7 +49,7 @@ const CUSTOMER_RULE_TEXT =
 const NEW_LEAD_FIELDS = [
   { name: "wa", description: "Nomor WhatsApp. Boleh 08xx, 62xx, atau +62 xxx", example: "081234567890" },
   { name: "name", description: "Nama lead", example: "Budi Santoso" },
-  { name: "origin", description: `${ORIGIN_TEXT}. \`existing\` = customer lama dari sebelum ada bot (dipakai otomatis oleh !invoice)`, example: "ads" },
+  { name: "origin", description: `${ORIGIN_TEXT}. \`existing\` = customer lama dari sebelum ada bot (dipakai otomatis oleh !invoice). \`unknown\` = lead dari chat WA otomatis yang sumbernya belum diketahui: ganti dengan origin yang benar`, example: "ads" },
   { name: "status", description: STATUS_TEXT, example: "hot" },
   { name: "interest", description: "Produk yang diminati, boleh singkat: `reta 10 mg` → Retatrutide 10mg. `-` untuk kosong", example: "reta 10 mg" },
   { name: "rejection", description: `Alasan belum beli: ${REJECTION_TEXT}`, example: "-" },
@@ -131,6 +132,57 @@ export const COMMAND_SPECS = {
       "Urutan: hot → warm → cold → skip. Nomor WA bisa diklik langsung.",
     ],
     handler: handleFollowup,
+  },
+  "!ignorewa": {
+    group: "WhatsApp",
+    usage: "!ignorewa <wa>",
+    summary: "Chat WA dari nomor ini tidak dijadikan lead otomatis (teman, keluarga, supplier)",
+    argument: "nomor WA",
+    example: { firstLine: "!ignorewa 081234567890" },
+    fields: [{ name: "note", description: "Catatan kenapa diabaikan (opsional)", example: "supplier botol" }],
+    notes: [
+      "Hanya untuk chat yang masuk ke nomor WhatsApp CS (dibaca otomatis oleh WhatsApp listener). Lead yang sudah ada tidak diubah: kalau perlu, ubah statusnya dengan `!updateleads <wa>` + `status: skip`.",
+      "Batalkan dengan `!unignorewa <wa>`.",
+    ],
+    handler: handleIgnoreWhatsapp,
+  },
+  "!unignorewa": {
+    group: "WhatsApp",
+    usage: "!unignorewa <wa>",
+    summary: "Chat WA dari nomor ini bisa jadi lead otomatis lagi",
+    argument: "nomor WA",
+    example: { firstLine: "!unignorewa 081234567890" },
+    fields: [],
+    notes: [],
+    handler: handleUnignoreWhatsapp,
+  },
+  ...WA_SETTINGS_SPECS,
+  "!analyze": {
+    group: "Leads",
+    usage: "!analyze <wa>",
+    summary: "AI membaca chat WA lead ini dan mengusulkan status, minat, alasan, goal, domisili",
+    argument: "nomor WA lead",
+    example: { firstLine: "!analyze 081234567890" },
+    fields: [],
+    notes: [
+      "Chat dibaca otomatis tiap hari jam 12.00 dan 23.00 WIB untuk semua lead yang ada chat baru (hasilnya muncul di channel WhatsApp Leads). Pakai !analyze kalau ingin sekarang juga.",
+      "Hanya chat yang tersimpan sejak WhatsApp listener jalan. Lead yang sudah jadi customer tidak dinilai otomatis.",
+      "Ini usulan: lead belum berubah sampai kamu jalankan !applyai.",
+    ],
+    handler: handleAnalyzeLead,
+  },
+  "!applyai": {
+    group: "Leads",
+    usage: "!applyai <wa>",
+    summary: "Terapkan usulan AI terakhir ke lead (status, minat, alasan; goal/domisili kalau masih kosong)",
+    argument: "nomor WA lead",
+    example: { firstLine: "!applyai 081234567890" },
+    fields: [],
+    notes: [
+      "Usulan yang dipakai: yang terbaru dalam 7 hari terakhir dan belum diterapkan. Goal dan domisili hanya diisi kalau masih kosong.",
+      "Kalau ada yang kurang pas, ubah sendiri dengan !updateleads.",
+    ],
+    handler: handleApplyAi,
   },
   "!invoice": {
     group: "Order",
@@ -559,6 +611,75 @@ async function handleLeadLookup(ctx) {
     ? data.orders.map(formatLeadOrderLine).join("\n")
     : "Belum ada invoice.";
   await ctx.reply(`${formatLeadCard(data.lead)}\n\n**Invoice terakhir**\n${orders}`);
+}
+
+async function handleIgnoreWhatsapp(ctx) {
+  const wa = requireArgument(ctx, "nomor WA");
+  checkFields(ctx, { requireAll: false });
+  const data = await ctx.api.post("/api/bot/whatsapp/ignored", { wa, ...pickFields(ctx.parsed, ["note"]) });
+  const lead = data.lead
+    ? `\nℹ️ Nomor ini sudah jadi lead **${data.lead.full_name}** (status ${data.lead.status}); lead-nya tidak diubah. Kalau bukan calon pembeli: \`!updateleads ${data.phone}\` + \`status: skip\`.`
+    : "";
+  await ctx.reply(`🔕 Chat WA dari **${data.phone}** tidak akan dijadikan lead otomatis.${data.note ? ` Catatan: ${data.note}` : ""}${lead}`);
+}
+
+async function handleUnignoreWhatsapp(ctx) {
+  const wa = requireArgument(ctx, "nomor WA");
+  checkFields(ctx, { requireAll: false });
+  const data = await ctx.api.post("/api/bot/whatsapp/ignored/remove", { wa });
+  await ctx.reply(
+    data.removed
+      ? `🔔 Chat WA dari **${data.phone}** bisa jadi lead otomatis lagi.`
+      : `ℹ️ ${data.phone} memang tidak ada di daftar abaikan.`,
+  );
+}
+
+const CONFIDENCE_TEXT = { high: "yakin", medium: "cukup yakin", low: "ragu" };
+
+function aiSuggestionText(data) {
+  const name = `**${data.full_name}** (${data.whatsapp_phone})`;
+  if (data.result === "no_messages") return `ℹ️ ${name}: belum ada chat WhatsApp tersimpan. Chat hanya tersimpan sejak WhatsApp listener jalan.`;
+  if (data.result === "not_enough_info") return `ℹ️ ${name}: chat belum cukup untuk dinilai (misalnya baru salam).`;
+  if (data.result === "refusal") return `⚠️ ${name}: AI tidak mau menganalisa chat ini. Nilai sendiri dan pakai !updateleads.`;
+  if (data.result === "skipped") return `ℹ️ ${name}: ${data.reason || "tidak dianalisa"}.`;
+
+  const changes = data.changes || [];
+  const status = data.status && data.status !== data.current_status
+    ? `${statusLabel(data.current_status)} → **${statusLabel(data.status)}**`
+    : `${statusLabel(data.current_status)} (tetap)`;
+  const lines = [`🧠 ${name} • ${status} • ${CONFIDENCE_TEXT[data.confidence] || data.confidence}`];
+  const details = [
+    data.interest && `minat: ${oneLine(data.interest, 60)}`,
+    data.rejection && `alasan: ${data.rejection}`,
+    data.goal && `goal: ${oneLine(data.goal, 80)}`,
+    data.domicile && `domisili: ${oneLine(data.domicile, 40)}`,
+  ].filter(Boolean);
+  if (details.length) lines.push(details.join(" • "));
+  if (data.evidence) lines.push(`> ${oneLine(data.evidence, 150)}`);
+  if (data.summary) lines.push(oneLine(data.summary, 300));
+  const waiting = changes.filter((field) => !(data.applied || []).includes(field));
+  if (data.applied?.length) lines.push(`✅ Diterapkan otomatis: ${data.applied.join(", ")}.`);
+  if (waiting.length) lines.push(`Terapkan (${waiting.join(", ")}): \`!applyai ${data.whatsapp_phone}\``);
+  else if (!data.applied?.length) lines.push("Tidak ada yang perlu diubah.");
+  return lines.join("\n");
+}
+
+async function handleAnalyzeLead(ctx) {
+  const wa = requireArgument(ctx, "nomor WA lead");
+  checkFields(ctx, { requireAll: false });
+  const data = await ctx.api.post("/api/bot/ai/analyze", { wa });
+  await ctx.reply(aiSuggestionText(data));
+}
+
+async function handleApplyAi(ctx) {
+  const wa = requireArgument(ctx, "nomor WA lead");
+  checkFields(ctx, { requireAll: false });
+  const data = await ctx.api.post("/api/bot/ai/apply", { wa });
+  await ctx.reply(
+    data.changes.length
+      ? `✅ **Usulan AI diterapkan** (${data.changes.join(", ")})\n${formatLeadCard(data.lead)}`
+      : `ℹ️ Usulan AI tidak mengubah apa-apa (data lead sudah sama). Usulan ditandai sudah dipakai.`,
+  );
 }
 
 async function handleFollowup(ctx) {

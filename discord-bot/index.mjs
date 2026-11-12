@@ -3,6 +3,7 @@ import { BotApiError, requestFile, requestJson } from "./api-client.mjs";
 import { COMMAND_SPECS, getCommandSpec } from "./commands.mjs";
 import { splitMessage } from "./format.mjs";
 import { CommandInputError, parseCommandMessage } from "./parser.mjs";
+import { WaControlError, createWaControl } from "./wa-control.mjs";
 
 const REQUIRED_ENV = [
   "DISCORD_BOT_TOKEN",
@@ -24,8 +25,16 @@ const parseIds = (value) =>
 
 const guildId = String(process.env.DISCORD_GUILD_ID).trim();
 const directorChannels = parseIds(process.env.DISCORD_DIRECTORS_CHANNEL_IDS);
-// Director channels are always allowed, even if not repeated in the list.
-const allowedChannels = new Set([...parseIds(process.env.DISCORD_ALLOWED_CHANNEL_IDS), ...directorChannels]);
+// Optional: channel(s) for !walogin, !wastatus, ... (WhatsApp listener).
+const waSettingsChannels = parseIds(process.env.DISCORD_WA_SETTINGS_CHANNEL_IDS);
+// Director and WhatsApp settings channels are always allowed, even if not
+// repeated in the list.
+const allowedChannels = new Set([
+  ...parseIds(process.env.DISCORD_ALLOWED_CHANNEL_IDS),
+  ...directorChannels,
+  ...waSettingsChannels,
+]);
+const waControl = createWaControl();
 const config = {
   brandName: process.env.INVOICE_BRAND_NAME || "MetaPeptides",
   paymentInfo: String(process.env.INVOICE_PAYMENT_INFO || "").replace(/\\n/g, "\n").trim(),
@@ -61,6 +70,9 @@ function createContext(message, parsed, name, spec) {
         await message.channel.send({ content: chunk, ...quiet });
       }
     },
+    // One message that the handler can edit or delete later (QR for !walogin).
+    post: (payload) => message.channel.send({ ...quiet, ...payload }),
+    wa: waControl,
     api: {
       get: (path, options = {}) => request("GET", path, { query: options.query }),
       post: (path, json) => request("POST", path, { json }),
@@ -72,7 +84,7 @@ function createContext(message, parsed, name, spec) {
 }
 
 function formatError(error, name) {
-  if (error instanceof CommandInputError) {
+  if (error instanceof CommandInputError || error instanceof WaControlError) {
     return `❌ ${error.message}`;
   }
   if (error instanceof BotApiError) {
@@ -96,7 +108,7 @@ const client = new Client({
 });
 
 client.once(Events.ClientReady, (readyClient) => {
-  console.log(`[bot] Online sebagai ${readyClient.user.tag}. Channel aktif: ${allowedChannels.size}, channel direksi: ${directorChannels.size}.`);
+  console.log(`[bot] Online sebagai ${readyClient.user.tag}. Channel aktif: ${allowedChannels.size}, channel direksi: ${directorChannels.size}, channel WhatsApp settings: ${waSettingsChannels.size}.`);
 });
 
 client.on(Events.MessageCreate, async (message) => {
@@ -110,6 +122,11 @@ client.on(Events.MessageCreate, async (message) => {
   const quiet = { allowedMentions: { parse: [], repliedUser: false } };
   if (spec.directorsOnly && !directorChannels.has(message.channelId)) {
     await message.reply({ content: `🔒 ${firstWord} hanya bisa dipakai di channel direksi.`, ...quiet });
+    return;
+  }
+  if (spec.waSettingsOnly && !waSettingsChannels.has(message.channelId)) {
+    const hint = waSettingsChannels.size ? "" : " Isi `DISCORD_WA_SETTINGS_CHANNEL_IDS` di discord-bot/.env dulu.";
+    await message.reply({ content: `🔒 ${firstWord} hanya bisa dipakai di channel whatsapp-settings.${hint}`, ...quiet });
     return;
   }
 

@@ -37,12 +37,15 @@ export async function POST(req: NextRequest) {
 
     const { data: existing } = await supabaseAdmin
       .from("leads")
-      .select("id, full_name, status, is_customer")
+      .select("id, full_name, status, is_customer, discord_username")
       .eq("whatsapp_phone", data.whatsapp_phone as string)
       .maybeSingle();
     if (existing) {
+      const fromWhatsapp = existing.discord_username === "wa-bot"
+        ? " Lead ini dibuat otomatis dari chat WhatsApp yang masuk."
+        : "";
       return errorResponse(
-        `Nomor ${data.whatsapp_phone} sudah terdaftar sebagai lead "${existing.full_name}" (status ${existing.status}${existing.is_customer ? ", sudah customer" : ""}). Pakai !updateleads ${data.whatsapp_phone} untuk mengubah datanya.`,
+        `Nomor ${data.whatsapp_phone} sudah terdaftar sebagai lead "${existing.full_name}" (status ${existing.status}${existing.is_customer ? ", sudah customer" : ""}).${fromWhatsapp} Pakai !updateleads ${data.whatsapp_phone} untuk mengubah datanya.`,
         409,
       );
     }

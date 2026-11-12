@@ -59,6 +59,7 @@ const ORIGIN_OPTIONS = [
   ["website", "Website"],
   // Customer from before the bot (lead made by !invoice from old orders).
   ["existing", "Existing customer"],
+  ["unknown", "Belum diisi (chat WA)"],
 ] as const;
 
 const REJECTION_OPTIONS = [

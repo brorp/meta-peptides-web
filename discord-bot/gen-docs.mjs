@@ -13,7 +13,8 @@ export function renderCommandDocs() {
   const out = [];
   for (const [name, spec] of Object.entries(COMMAND_SPECS)) {
     if (name === "!help") continue;
-    out.push(`### \`${name}\`${spec.directorsOnly ? " 🔒 direksi" : ""}`, "", `${spec.summary}.`, "");
+    const lock = spec.directorsOnly ? " 🔒 direksi" : spec.waSettingsOnly ? " 🔒 whatsapp-settings" : "";
+    out.push(`### \`${name}\`${lock}`, "", `${spec.summary}.`, "");
     if (spec.argument) out.push(`Setelah nama command: ${spec.argument}.`, "");
     out.push("```text", buildTemplate(spec), "```", "");
     if (spec.fields?.length) {

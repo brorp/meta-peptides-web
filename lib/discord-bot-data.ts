@@ -4,6 +4,8 @@ export const LEAD_STATUSES = ["hot", "warm", "cold", "skip"] as const;
 // "existing" = customer from before the bot whose first order does not show
 // where they came from (a WhatsApp order made in the panel). !invoice uses it
 // when it creates the lead from old order data (migration 20261104100000).
+// "unknown" = lead made from a WhatsApp chat that did not show where the
+// person came from; the team fills it in (migration 20261111090000).
 export const LEAD_ORIGINS = [
   "ads",
   "tokopedia",
@@ -14,6 +16,7 @@ export const LEAD_ORIGINS = [
   "shopee",
   "website",
   "existing",
+  "unknown",
 ] as const;
 export type LeadOrigin = (typeof LEAD_ORIGINS)[number];
 export const LEAD_REJECTIONS = [

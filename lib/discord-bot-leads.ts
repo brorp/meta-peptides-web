@@ -287,25 +287,29 @@ type CreatedLead =
   | { lead?: undefined; created?: undefined; error: string; status: number };
 
 // Saves the lead for a customer found by findExistingCustomer. The person who
-// ran the command becomes the PIC, like !newleads.
+// ran the command becomes the PIC, like !newleads. The WhatsApp listener
+// passes its own source and status (an old customer chatting again is not
+// ordering yet).
 export async function createLeadFromExistingCustomer(
   existing: ExistingCustomer,
-  context: { userId: string; username: string; messageId: string },
+  context: { userId: string | null; username: string; messageId: string },
+  options: { source?: string; status?: "hot" | "warm" } = {},
 ): Promise<CreatedLead> {
+  const source = options.source || "!invoice";
   const { data, error } = await supabaseAdmin
     .from("leads")
     .insert({
       whatsapp_phone: existing.whatsapp_phone,
       full_name: existing.full_name,
       origin: existing.origin,
-      // Ordering right now.
-      status: "hot",
+      // !invoice: ordering right now.
+      status: options.status || "hot",
       chat_date: existing.chat_date,
       domicile: existing.domicile,
       customer_id: existing.customer_id,
       notes: existing.first_order_date
-        ? `Dibuat otomatis oleh !invoice dari data customer lama (order pertama ${existing.first_order_date}).`
-        : "Dibuat otomatis oleh !invoice dari data customer panel.",
+        ? `Dibuat otomatis oleh ${source} dari data customer lama (order pertama ${existing.first_order_date}).`
+        : `Dibuat otomatis oleh ${source} dari data customer panel.`,
       // Inserted as false like !newleads: the database marks the lead as a
       // customer when the number already has a paid order (migration
       // 20261103100000).

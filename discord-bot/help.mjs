@@ -1,7 +1,11 @@
 // Builds !help text from the command specs in commands.mjs so the help and
 // the parser always agree on field names.
 
-const GROUP_ORDER = ["Leads", "Order", "Reminder", "Report", "Produk", "Direksi", "Bantuan"];
+const GROUP_ORDER = ["Leads", "WhatsApp", "Order", "Reminder", "Report", "Produk", "Direksi", "Bantuan"];
+const GROUP_NOTE = {
+  Direksi: " (khusus channel direksi)",
+  WhatsApp: " (🔒 = khusus channel whatsapp-settings)",
+};
 
 export function buildHelpIndex(specs) {
   const lines = [
@@ -14,9 +18,9 @@ export function buildHelpIndex(specs) {
   for (const group of GROUP_ORDER) {
     const entries = Object.entries(specs).filter(([, spec]) => spec.group === group);
     if (!entries.length) continue;
-    lines.push(`**${group}${group === "Direksi" ? " (khusus channel direksi)" : ""}**`);
+    lines.push(`**${group}${GROUP_NOTE[group] || ""}**`);
     for (const [name, spec] of entries) {
-      lines.push(`\`${spec.usage}\` — ${spec.summary}`);
+      lines.push(`\`${spec.usage}\`${spec.waSettingsOnly ? " 🔒" : ""} — ${spec.summary}`);
     }
     lines.push("");
   }
@@ -51,6 +55,7 @@ export function buildCommandHelp(name, spec) {
   const lines = [`**${name}** — ${spec.summary}`];
 
   if (spec.directorsOnly) lines.push("🔒 Hanya bisa dipakai di channel direksi.");
+  if (spec.waSettingsOnly) lines.push("🔒 Hanya bisa dipakai di channel whatsapp-settings.");
   if (spec.description) lines.push(spec.description);
 
   lines.push("", "**Format** (copy, lalu ganti isinya):", "```", buildTemplate(spec), "```");

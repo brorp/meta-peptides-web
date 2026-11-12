@@ -323,7 +323,74 @@ test("help says customers from before the bot need no !newleads", () => {
   assert.match(invoice, /Customer lama yang sudah pernah order lewat panel\/website tidak perlu !newleads dulu/);
   assert.match(invoice, /atau `existing` kalau order pertamanya order WhatsApp di panel/);
   const newleads = buildCommandHelp("!newleads", COMMAND_SPECS["!newleads"]);
-  assert.match(newleads, /website \/ existing\. `existing` = customer lama dari sebelum ada bot/);
+  assert.match(newleads, /website \/ existing \/ unknown\. `existing` = customer lama dari sebelum ada bot/);
+  assert.match(newleads, /`unknown` = lead dari chat WA otomatis yang sumbernya belum diketahui/);
+});
+
+test("!ignorewa / !unignorewa call the API and explain an existing lead", async () => {
+  const calls = [];
+  const replies = [];
+  const run = async (content, data) => {
+    const parsed = parseCommandMessage(content, getCommandSpec);
+    const spec = COMMAND_SPECS[parsed.command];
+    await spec.handler({
+      message: {}, parsed, name: parsed.command, spec, config: {},
+      reply: async (text) => replies.push(text),
+      api: { post: async (path, json) => { calls.push({ path, json }); return data; } },
+    });
+  };
+  await run("!ignorewa 081234567890\nnote: supplier botol", { phone: "6281234567890", note: "supplier botol", lead: { full_name: "Pak Supplier", status: "warm" } });
+  assert.deepEqual(calls.at(-1), { path: "/api/bot/whatsapp/ignored", json: { wa: "081234567890", note: "supplier botol" } });
+  assert.equal(replies.at(-1), "🔕 Chat WA dari **6281234567890** tidak akan dijadikan lead otomatis. Catatan: supplier botol\nℹ️ Nomor ini sudah jadi lead **Pak Supplier** (status warm); lead-nya tidak diubah. Kalau bukan calon pembeli: `!updateleads 6281234567890` + `status: skip`.");
+  await run("!unignorewa 081234567890", { phone: "6281234567890", removed: true });
+  assert.deepEqual(calls.at(-1), { path: "/api/bot/whatsapp/ignored/remove", json: { wa: "081234567890" } });
+  assert.equal(replies.at(-1), "🔔 Chat WA dari **6281234567890** bisa jadi lead otomatis lagi.");
+  await run("!unignorewa 081234567890", { phone: "6281234567890", removed: false });
+  assert.equal(replies.at(-1), "ℹ️ 6281234567890 memang tidak ada di daftar abaikan.");
+});
+
+test("!analyze shows the suggestion; !applyai shows what changed", async () => {
+  const replies = [];
+  const calls = [];
+  const run = async (content, data) => {
+    const parsed = parseCommandMessage(content, getCommandSpec);
+    const spec = COMMAND_SPECS[parsed.command];
+    await spec.handler({
+      message: {}, parsed, name: parsed.command, spec, config: {},
+      reply: async (text) => replies.push(text),
+      api: { post: async (path, json) => { calls.push({ path, json }); return data; } },
+    });
+  };
+  const suggestion = {
+    result: "suggested", whatsapp_phone: "6281234567890", full_name: "Budi", current_status: "warm",
+    status: "hot", rejection: null, interest: "Retatrutide 10mg", goal: "turun BB 10 kg", domicile: "Surabaya",
+    summary: "Customer minta nomor rekening setelah tanya harga.", evidence: "rekeningnya apa kak?", confidence: "high",
+    changes: ["status", "interest", "goal", "domicile"], applied: [],
+  };
+  await run("!analyze 081234567890", suggestion);
+  assert.deepEqual(calls.at(-1), { path: "/api/bot/ai/analyze", json: { wa: "081234567890" } });
+  assert.equal(replies.at(-1), [
+    "🧠 **Budi** (6281234567890) • 🌤️ warm → **🔥 hot** • yakin",
+    "minat: Retatrutide 10mg • goal: turun BB 10 kg • domisili: Surabaya",
+    "> rekeningnya apa kak?",
+    "Customer minta nomor rekening setelah tanya harga.",
+    "Terapkan (status, interest, goal, domicile): `!applyai 6281234567890`",
+  ].join("\n"));
+
+  await run("!analyze 081234567890", { ...suggestion, result: "no_change", status: "warm", changes: [], interest: null, goal: null, domicile: null, evidence: null });
+  assert.match(replies.at(-1), /🌤️ warm \(tetap\)[\s\S]*Tidak ada yang perlu diubah\.$/);
+  await run("!analyze 081234567890", { result: "no_messages", whatsapp_phone: "6281234567890", full_name: "Budi" });
+  assert.equal(replies.at(-1), "ℹ️ **Budi** (6281234567890): belum ada chat WhatsApp tersimpan. Chat hanya tersimpan sejak WhatsApp listener jalan.");
+  await run("!analyze 081234567890", { ...suggestion, applied: ["status"] });
+  assert.match(replies.at(-1), /✅ Diterapkan otomatis: status\.\nTerapkan \(interest, goal, domicile\): `!applyai 6281234567890`$/);
+  await run("!analyze 081234567890", { ...suggestion, changes: ["status"], applied: ["status"] });
+  assert.match(replies.at(-1), /✅ Diterapkan otomatis: status\.$/);
+
+  await run("!applyai 081234567890", { changes: ["status", "interest"], lead: { whatsapp_phone: "6281234567890", full_name: "Budi", origin: "ads", status: "hot", chat_date: "2026-11-11", is_customer: false } });
+  assert.deepEqual(calls.at(-1), { path: "/api/bot/ai/apply", json: { wa: "081234567890" } });
+  assert.match(replies.at(-1), /^✅ \*\*Usulan AI diterapkan\*\* \(status, interest\)\n/);
+  await run("!applyai 081234567890", { changes: [], lead: {} });
+  assert.equal(replies.at(-1), "ℹ️ Usulan AI tidak mengubah apa-apa (data lead sudah sama). Usulan ditandai sudah dipakai.");
 });
 
 const SHOPEE_ORDER = {
@@ -653,7 +720,7 @@ test("!dailyreport shows every origin row", async () => {
       by_status: { hot: 1, warm: 1, cold: 0, skip: 0 },
     },
   });
-  for (const origin of ["ads", "tokopedia", "instagram", "threads", "tiktok", "fnf", "shopee", "website", "existing"]) {
+  for (const origin of ["ads", "tokopedia", "instagram", "threads", "tiktok", "fnf", "shopee", "website", "existing", "unknown"]) {
     assert.match(replies[0].text, new RegExp(origin));
   }
   assert.match(replies[0].text, /Total lead baru: \*\*2\*\*/);

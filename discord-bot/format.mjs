@@ -2,7 +2,8 @@
 
 export const STATUS_EMOJI = { hot: "🔥", warm: "🌤️", cold: "❄️", skip: "⏭️" };
 // "existing" = customer from before the bot (lead made by !invoice from old orders).
-export const ORIGINS = ["ads", "tokopedia", "instagram", "threads", "tiktok", "fnf", "shopee", "website", "existing"];
+// "unknown" = lead made from a WhatsApp chat whose source is not known yet.
+export const ORIGINS = ["ads", "tokopedia", "instagram", "threads", "tiktok", "fnf", "shopee", "website", "existing", "unknown"];
 export const STATUSES = ["hot", "warm", "cold", "skip"];
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"];
