@@ -10,7 +10,9 @@ Group=ubuntu
 WorkingDirectory=/home/ubuntu/meta-peptides-web/whatsapp-listener
 Environment=HOME=/home/ubuntu
 Environment=NODE_ENV=production
-Environment=PM2_HOME=/home/ubuntu/.pm2
+# Its own pm2 home: the Discord bot's pm2-runtime already uses ~/.pm2, and two
+# pm2-runtime processes on one home would fight over the same daemon sockets.
+Environment=PM2_HOME=/home/ubuntu/.pm2-wa-listener
 ExecStart=/usr/bin/pm2-runtime start /home/ubuntu/meta-peptides-web/whatsapp-listener/ecosystem.config.cjs --only metawellness-wa-listener
 Restart=always
 RestartSec=5
