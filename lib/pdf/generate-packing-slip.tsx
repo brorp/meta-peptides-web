@@ -105,53 +105,6 @@ const styles = StyleSheet.create({
         color: "#000",
         marginTop: 1,
     },
-    section: {
-        marginBottom: 5,
-    },
-    sectionTitle: {
-        fontFamily: "Helvetica-Bold",
-        fontSize: 10,
-        color: "#000",
-        marginBottom: 2,
-        textTransform: "uppercase" as const,
-    },
-    tableHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        paddingVertical: 3,
-        borderBottomWidth: 2,
-        borderBottomColor: "#000",
-    },
-    headerText: {
-        fontFamily: "Helvetica-Bold",
-        fontSize: 9,
-        color: "#000",
-        textTransform: "uppercase" as const,
-    },
-    itemRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        paddingVertical: 3,
-        borderBottomWidth: 1,
-        borderBottomColor: "#000",
-    },
-    itemName: {
-        fontSize: 10,
-        color: "#000",
-        flex: 5,
-        lineHeight: 1.1,
-    },
-    itemNameCompact: {
-        fontSize: 9,
-        lineHeight: 1.05,
-    },
-    itemQty: {
-        fontSize: 11,
-        color: "#000",
-        flex: 1,
-        textAlign: "right" as const,
-        fontFamily: "Helvetica-Bold",
-    },
     trackingBox: {
         marginTop: 5,
         borderWidth: 2,
@@ -183,10 +136,7 @@ function formatDate(dateStr: string) {
 }
 
 function getOrderItems(order: any) {
-    return (order.order_items || []).map((item: any) => ({
-        ...item,
-        isComplimentary: Number(item.price_at_purchase) === 0,
-    }));
+    return order.order_items || [];
 }
 
 function sanitizeSlipText(value: unknown) {
@@ -195,10 +145,6 @@ function sanitizeSlipText(value: unknown) {
         .replace(/metapeptides/gi, "")
         .replace(/\s{2,}/g, " ")
         .trim();
-}
-
-function getPackingSlipItemCode(product: any) {
-    return sanitizeSlipText(product?.label) || "Product";
 }
 
 export function PackingSlipDocument({ order }: { order: any }) {
@@ -210,11 +156,10 @@ export function PackingSlipDocument({ order }: { order: any }) {
     const orderCode = order.invoice_number
         ? sanitizeSlipText(order.invoice_number)
         : sanitizeSlipText(order.id).slice(0, 8).toUpperCase();
-    const isDenseOrder = orderItems.length > 6;
 
     return (
         <Document>
-            <Page size={[288, 432]} style={styles.page}>
+            <Page size={[288, 288]} style={styles.page}>
                 <View style={styles.body} wrap={false}>
                     <View style={styles.header}>
                         <Image src={PACKING_SLIP_LOGO_SRC} style={styles.logo} />
@@ -224,8 +169,8 @@ export function PackingSlipDocument({ order }: { order: any }) {
                     <View style={styles.addressRow}>
                         <View style={styles.addressBox}>
                             <Text style={styles.addressLabel}>Sender</Text>
-                            <Text style={styles.senderText}>MetaWellness</Text>
-                            <Text style={styles.senderSmall}>081513392028</Text>
+                            <Text style={styles.senderText}>Meta Wellness</Text>
+                            <Text style={styles.senderSmall}>081323838583</Text>
                         </View>
                         <View style={styles.addressBox}>
                             <Text style={styles.addressLabel}>Recipient</Text>
@@ -261,35 +206,6 @@ export function PackingSlipDocument({ order }: { order: any }) {
                             <Text style={styles.metaLabel}>Qty</Text>
                             <Text style={styles.metaValue}>{totalQuantity}</Text>
                         </View>
-                    </View>
-
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Package Contents</Text>
-                        <View style={styles.tableHeader}>
-                            <Text style={[styles.headerText, { flex: 5 }]}>Item</Text>
-                            <Text
-                                style={[
-                                    styles.headerText,
-                                    { flex: 1, textAlign: "right" },
-                                ]}
-                            >
-                                Qty
-                            </Text>
-                        </View>
-                        {orderItems.map((item: any, i: number) => (
-                            <View key={i} style={styles.itemRow}>
-                                <Text
-                                    style={[
-                                        styles.itemName,
-                                        isDenseOrder ? styles.itemNameCompact : {},
-                                    ]}
-                                >
-                                    {getPackingSlipItemCode(item.products)}
-                                    {item.isComplimentary ? " (FREE)" : ""}
-                                </Text>
-                                <Text style={styles.itemQty}>{item.quantity}</Text>
-                            </View>
-                        ))}
                     </View>
 
                     <View style={styles.trackingBox}>
