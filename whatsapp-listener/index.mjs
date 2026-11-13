@@ -166,6 +166,22 @@ async function warnUnresolvedLid() {
   unresolvedLids = 0;
 }
 
+// The API refusing every chat (secrets that differ, a migration not run):
+// no chat becomes a lead until someone fixes it, so say so in
+// whatsapp-settings, at most every 30 minutes per kind of problem.
+const lastApiAlert = new Map();
+async function alertApiRefusing(error) {
+  const status = Number(error?.status) || 0;
+  if (![401, 403, 503].includes(status)) return;
+  if (Date.now() - (lastApiAlert.get(status) || 0) < 30 * 60 * 1000) return;
+  lastApiAlert.set(status, Date.now());
+  const reason =
+    status === 503
+      ? error.message
+      : `API menolak listener (HTTP ${status}): WHATSAPP_LISTENER_SECRET di whatsapp-listener/.env (VPS) harus sama persis dengan di Vercel. Setelah dibetulkan: redeploy Vercel kalau yang diubah di Vercel, atau \`!warestart\` kalau yang diubah di VPS.`;
+  await notifySettings(`⚠️ WhatsApp listener: ${reason}\nSelama belum dibetulkan, chat baru **tidak** jadi lead.`);
+}
+
 async function handleMessage(sock, message) {
   const selfPhone = parseJid(sock.user?.id)?.user || null;
   // Someone else's number was linked: never read its chats.
@@ -188,7 +204,7 @@ async function handleMessage(sock, message) {
     log(`inbound gagal (…${mapped.payload.phone.slice(-4)}): ${error.status || ""} ${error.message}`);
     stats.failed += 1;
     stats.lastError = { at: nowIso(), message: `${error.status ? `${error.status} ` : ""}${error.message}` };
-    if (error.status === 503) await notifySettings(`⚠️ WhatsApp listener: ${error.message}`);
+    await alertApiRefusing(error);
     return;
   }
   if (mapped.payload.direction === "in") {

@@ -30,6 +30,9 @@ import {
 const MESSAGE_TYPES = ["text", "image", "video", "audio", "document", "sticker", "location", "contact", "other"];
 const MESSAGE_ID_PATTERN = /^[A-Za-z0-9._:-]{4,128}$/;
 const LISTENER_USERNAME = "wa-bot";
+// source_message_id tells whether this very message made the lead (the
+// listener only posts a Discord card then); BOT_LEAD_SELECT leaves it out.
+const INBOUND_LEAD_SELECT = `${BOT_LEAD_SELECT}, source_message_id`;
 
 const clip = (value: unknown, max: number) => {
   const text = String(value ?? "")
@@ -93,10 +96,11 @@ export async function POST(req: NextRequest) {
 
     let { data: lead } = await supabaseAdmin
       .from("leads")
-      .select(BOT_LEAD_SELECT)
+      .select(INBOUND_LEAD_SELECT)
       .eq("whatsapp_phone", phone)
       .maybeSingle();
     let existingCustomer: string | null = null;
+    let createdNow = false;
 
     if (!lead) {
       if (direction === "out") return successResponse({ action: "skipped" }, "Bukan lead");
@@ -110,6 +114,7 @@ export async function POST(req: NextRequest) {
         );
         if (created.error !== undefined) return errorResponse(created.error, created.status);
         lead = created.lead as any;
+        createdNow = created.created;
         existingCustomer = describeExistingCustomer(old);
       } else {
         const today = getJakartaDate();
@@ -130,13 +135,13 @@ export async function POST(req: NextRequest) {
             discord_username: LISTENER_USERNAME,
             source_message_id: sourceMessageId,
           })
-          .select(BOT_LEAD_SELECT)
+          .select(INBOUND_LEAD_SELECT)
           .single();
         if (error?.code === "23505") {
           // Saved a moment ago (retry, or someone ran !newleads): use it.
           ({ data: lead } = await supabaseAdmin
             .from("leads")
-            .select(BOT_LEAD_SELECT)
+            .select(INBOUND_LEAD_SELECT)
             .eq("whatsapp_phone", phone)
             .maybeSingle());
         } else if (error?.code === "22P02" && origin === "unknown") {
@@ -148,6 +153,7 @@ export async function POST(req: NextRequest) {
           return errorResponse("Gagal membuat lead dari chat WhatsApp", 500);
         } else {
           lead = data as any;
+          createdNow = true;
         }
       }
       if (!lead) return errorResponse("Gagal membuat lead dari chat WhatsApp", 500);
@@ -175,7 +181,7 @@ export async function POST(req: NextRequest) {
 
     // A lead made by this very message: the listener posts it to Discord.
     // After a retry where the message was already saved, the card was too.
-    const createdHere = leadRow.source_message_id === sourceMessageId;
+    const createdHere = createdNow || leadRow.source_message_id === sourceMessageId;
     const action = duplicate
       ? "duplicate"
       : createdHere
