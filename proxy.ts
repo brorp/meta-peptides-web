@@ -23,6 +23,7 @@ const STAFF_ADMIN_PANEL_PREFIXES = [
   "/panel-xyz123/users",
   "/panel-xyz123/products",
   "/panel-xyz123/vouchers",
+  "/panel-xyz123/daily-report",
 ];
 
 const STAFF_ADMIN_API_PREFIXES = [
@@ -35,6 +36,7 @@ const STAFF_ADMIN_API_PREFIXES = [
   "/api/admin/products",
   "/api/admin/vouchers",
   "/api/admin/upload",
+  "/api/admin/cs-daily-reports",
 ];
 
 async function verifyAdminToken(token: string): Promise<AdminRole | null> {

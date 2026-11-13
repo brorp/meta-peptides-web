@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
 import { useIndonesiaRegions } from "@/hooks/use-indonesia-regions";
 import { useApiQuery } from "@/hooks/api/useApiQuery";
+import { calculateMarketplaceAmounts } from "@/lib/marketplace-amounts";
 import {
     SearchableProductSelect,
     type SearchableProductOption,
@@ -144,7 +145,7 @@ export default function NewManualOrderPage() {
         manual_reference: "",
         status: "processing",
         manual_discount_amount: "0",
-        marketplace_fee: "0",
+        marketplace_net_total: "",
         shipment_type: "",
         shipping_fee: "0",
         note: "",
@@ -211,7 +212,8 @@ export default function NewManualOrderPage() {
             manual_discount_amount: String(
                 Number(duplicatedOrder.voucher_discount_amount || 0),
             ),
-            marketplace_fee: String(Number(duplicatedOrder.marketplace_fee || 0)),
+            marketplace_net_total: isMarketplaceSource(source)
+                ? String(Number(duplicatedOrder.total_price ?? 0)) : "",
             shipment_type: duplicatedOrder.shipment_type || "",
             shipping_fee: String(Number(duplicatedOrder.shipping_fee || 0)),
             note: duplicatedOrder.note || "",
@@ -245,9 +247,13 @@ export default function NewManualOrderPage() {
         0,
     );
     const manualDiscount = isMarketplace ? 0 : Math.max(0, Number(form.manual_discount_amount || 0));
-    const marketplaceFee = isMarketplace ? Math.max(0, Number(form.marketplace_fee || 0)) : 0;
+    const marketplaceAmounts = calculateMarketplaceAmounts(subtotal, form.marketplace_net_total);
+    const marketplaceFee = isMarketplace && marketplaceAmounts.success
+        ? marketplaceAmounts.values.marketplaceFee : 0;
     const shipmentFee = isMarketplace ? 0 : Math.max(0, Number(form.shipping_fee || 0));
-    const total = Math.max(0, subtotal - manualDiscount - marketplaceFee);
+    const total = isMarketplace
+        ? marketplaceAmounts.success ? marketplaceAmounts.values.totalPrice : 0
+        : Math.max(0, subtotal - manualDiscount);
 
     const selectedSource =
         ORDER_SOURCES.find((source) => source.value === form.order_source) ||
@@ -397,13 +403,17 @@ export default function NewManualOrderPage() {
             toast.error("Please add at least one product");
             return;
         }
+        if (isMarketplace && !marketplaceAmounts.success) {
+            toast.error(marketplaceAmounts.message);
+            return;
+        }
 
         setSaving(true);
         try {
             const { data } = await axios.post("/admin/orders", {
                 ...form,
                 manual_discount_amount: manualDiscount,
-                marketplace_fee: marketplaceFee,
+                marketplace_net_total: isMarketplace ? form.marketplace_net_total : undefined,
                 shipment_type: isMarketplace ? null : form.shipment_type,
                 shipping_fee: shipmentFee,
                 payment_type: form.payment_type,
@@ -904,22 +914,36 @@ export default function NewManualOrderPage() {
                             </label>
                         )}
 
-                        {/* Marketplace fee */}
+                        {/* Marketplace payout */}
                         {isMarketplace && (
                             <label className="space-y-2 block">
                                 <span className="text-xs font-medium text-muted-foreground">
-                                    {selectedSource.label} Fee (Marketplace Fee)
+                                    <span id="marketplace-net-label">Total Bersih {selectedSource.label} (IDR)</span>
                                 </span>
                                 <input
                                     type="number"
                                     min="0"
-                                    value={form.marketplace_fee}
+                                    step="0.01"
+                                    max={subtotal}
+                                    required
+                                    value={form.marketplace_net_total}
                                     onChange={(e) =>
-                                        updateForm("marketplace_fee", e.target.value)
+                                        updateForm("marketplace_net_total", e.target.value)
                                     }
+                                    aria-describedby="marketplace-net-help marketplace-net-error"
+                                    aria-labelledby="marketplace-net-label"
+                                    aria-invalid={Boolean(form.marketplace_net_total) && !marketplaceAmounts.success}
                                     className="w-full bg-background border border-border rounded-xl px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-accent/20 focus:border-accent"
-                                    placeholder={`Biaya platform ${selectedSource.label}`}
+                                    placeholder={`Total bersih yang diterima dari ${selectedSource.label}`}
                                 />
+                                <span id="marketplace-net-help" className="block text-xs text-muted-foreground">
+                                    Salin angka bersih dari {selectedSource.label}. Marketplace fee dihitung otomatis dari selisih total invoice dan total bersih.
+                                </span>
+                                {form.marketplace_net_total && !marketplaceAmounts.success && (
+                                    <span id="marketplace-net-error" role="alert" className="block text-xs text-red-500">
+                                        {marketplaceAmounts.message}
+                                    </span>
+                                )}
                             </label>
                         )}
 
@@ -955,9 +979,9 @@ export default function NewManualOrderPage() {
                                     </span>
                                 </div>
                             )}
-                            {isMarketplace && marketplaceFee > 0 && (
+                            {isMarketplace && marketplaceAmounts.success && (
                                 <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Marketplace Fee</span>
+                                    <span className="text-muted-foreground">Marketplace Fee (otomatis)</span>
                                     <span className="text-orange-500">
                                         -{formatCurrency(marketplaceFee)}
                                     </span>
@@ -974,13 +998,15 @@ export default function NewManualOrderPage() {
                                 </div>
                             )}
                             <div className="flex justify-between border-t border-border pt-3 font-bold">
-                                <span className="text-foreground">Total</span>
-                                <span className="text-accent">{formatCurrency(total)}</span>
+                                <span className="text-foreground">{isMarketplace ? "Total Bersih Marketplace" : "Total"}</span>
+                                <span className="text-accent">
+                                    {isMarketplace && !marketplaceAmounts.success ? "Belum diisi" : formatCurrency(total)}
+                                </span>
                             </div>
                         </div>
                         <button
                             type="submit"
-                            disabled={saving || loadingProducts}
+                            disabled={saving || loadingProducts || (isMarketplace && !marketplaceAmounts.success)}
                             className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-medium text-accent-foreground transition-all hover:bg-accent/90 disabled:opacity-60"
                         >
                             {saving ? (

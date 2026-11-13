@@ -119,6 +119,25 @@ function scheduleContacts() {
   if (saveContacts) setInterval(() => contactSync.run(), 2 * 60 * 1000).unref();
 }
 
+// Director-only supervision is evaluated independently of the twice-daily
+// lead analysis. Await the ingestion queue so a just-received CS reply is
+// saved before measuring response time. Never post findings to staff chats.
+let supervising = false;
+async function supervise() {
+  if (supervising) return;
+  supervising = true;
+  try {
+    await queue;
+    await postListenerWithRetry("/api/bot/whatsapp/supervise", { connected:wa.state === "open" }, { config, attempts:1, timeoutMs:65_000 });
+  } catch (error) {
+    log(`supervisi belum selesai (HTTP ${Number(error?.status) || 0}); dicoba lagi pada jadwal berikutnya`);
+  } finally { supervising = false; }
+}
+function scheduleSupervision() {
+  setTimeout(supervise, 15_000).unref();
+  setInterval(supervise, 2 * 60 * 1000).unref();
+}
+
 function setState(state) {
   if (wa.state === state) return;
   wa.state = state;
@@ -665,5 +684,6 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
 
 scheduleDaily();
 scheduleContacts();
+scheduleSupervision();
 await startControl();
 connect().catch(fatal);

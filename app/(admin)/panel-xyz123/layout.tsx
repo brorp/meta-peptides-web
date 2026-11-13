@@ -18,6 +18,7 @@ import {
     ReceiptText,
     Warehouse,
     Magnet,
+    ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
@@ -33,6 +34,8 @@ const ROOT_NAV_ITEMS = [
     { label: "Products", href: "/panel-xyz123/products", icon: Package },
     { label: "Inventory", href: "/panel-xyz123/inventory", icon: Warehouse },
     { label: "Orders", href: "/panel-xyz123/orders", icon: ShoppingCart },
+    { label: "CS Supervision", href: "/panel-xyz123/cs-supervision", icon: ShieldCheck },
+    { label: "Daily Report", href: "/panel-xyz123/daily-report", icon: FileText },
     { label: "Vouchers", href: "/panel-xyz123/vouchers", icon: BadgePercent },
     { label: "Expenses", href: "/panel-xyz123/expenses", icon: ReceiptText },
     { label: "Preorders", href: "/panel-xyz123/preorders", icon: Ticket },
@@ -41,6 +44,7 @@ const ROOT_NAV_ITEMS = [
 
 const ADMIN_NAV_ITEMS = [
     { label: "Orders", href: "/panel-xyz123/orders", icon: ShoppingCart },
+    { label: "Daily Report", href: "/panel-xyz123/daily-report", icon: FileText },
     { label: "Leads", href: "/panel-xyz123/leads", icon: Magnet },
     { label: "Customers", href: "/panel-xyz123/customers", icon: Users },
     { label: "Users", href: "/panel-xyz123/users", icon: Users },
@@ -93,7 +97,7 @@ function AdminSidebar({
 
             {/* Navigation */}
             <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-                {(role === "admin" ? ADMIN_NAV_ITEMS : ROOT_NAV_ITEMS).map((item) => {
+                {(role === "root" ? ROOT_NAV_ITEMS : role === "admin" ? ADMIN_NAV_ITEMS : []).map((item) => {
                     const isActive =
                         pathname === item.href ||
                         (item.href !== "/panel-xyz123" &&

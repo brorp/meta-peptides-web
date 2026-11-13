@@ -18,6 +18,7 @@ import {
     syncShipmentExpenseForOrder,
 } from "@/lib/shipment-expenses";
 import { requireAdminApiSession } from "@/lib/admin-api";
+import { resolveMarketplaceCreateAmounts } from "@/lib/marketplace-amounts";
 
 const ORDER_STATUSES = [
     "pending_review",
@@ -260,7 +261,9 @@ export async function POST(req: NextRequest) {
             0,
             Number(body.manual_discount_amount || 0),
         );
-        const marketplaceFee = Math.max(0, Number(body.marketplace_fee || 0));
+        if (!isMarketplaceOrder && body.marketplace_net_total !== undefined) {
+            return errorResponse("Total bersih marketplace hanya untuk order Shopee atau Tokopedia.", 400);
+        }
         const shipmentType =
             orderSource === "manual_whatsapp"
                 ? normalizeShipmentType(body.shipment_type)
@@ -330,10 +333,14 @@ export async function POST(req: NextRequest) {
             (sum, item) => sum + item.quantity * item.price_at_purchase,
             0,
         );
-        const totalPrice = Math.max(
-            0,
-            subtotal - manualDiscountAmount - (isMarketplaceOrder ? marketplaceFee : 0),
-        );
+        let marketplaceFee = 0;
+        let totalPrice = Math.max(0, subtotal - manualDiscountAmount);
+        if (isMarketplaceOrder) {
+            const amounts = resolveMarketplaceCreateAmounts(subtotal, body);
+            if (!amounts.success) return errorResponse(amounts.message, 400);
+            marketplaceFee = amounts.values.marketplaceFee;
+            totalPrice = amounts.values.totalPrice;
+        }
         const transactionCode =
             String(body.transaction_code || "").trim() ||
             manualReference ||

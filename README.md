@@ -74,6 +74,12 @@
 
 Command bot for the sales team (`!newleads`, `!invoice`, `!payment`, `!reorder`, ...) that calls the `/api/bot/*` routes. Setup, environment variables, and the full command onboarding are in [`discord-bot/README.md`](discord-bot/README.md).
 
+## CS Supervision & Daily Report
+
+Director-only KPI logs, evidence review, monthly penalty points, and a staff Daily
+Report form. Activation, database migrations, working hours, and observation
+limits are documented in [`docs/cs-supervision.md`](docs/cs-supervision.md).
+
 ---
 
 ## 📂 Project Architecture

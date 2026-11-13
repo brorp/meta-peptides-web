@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
 import { useIndonesiaRegions } from "@/hooks/use-indonesia-regions";
 import { useApiQuery } from "@/hooks/api/useApiQuery";
+import { calculateMarketplaceAmounts } from "@/lib/marketplace-amounts";
 
 const ORDER_STATUSES = [
     "pending_review",
@@ -136,14 +137,14 @@ export default function AdminOrderDetailPage({
     const [selectedCityDisplayName, setSelectedCityDisplayName] = useState("");
     const [subtotal, setSubtotal] = useState("");
     const [discountAmount, setDiscountAmount] = useState("");
-    const [marketplaceFee, setMarketplaceFee] = useState("");
-    const [totalPrice, setTotalPrice] = useState("");
+    const [marketplaceNetTotal, setMarketplaceNetTotal] = useState("");
     const [shipmentType, setShipmentType] = useState("");
     const [shippingFee, setShippingFee] = useState("");
     const [paymentType, setPaymentType] = useState("Bank Transfer");
     const trackingNumberSupported = order?._schema?.tracking_number !== false;
     const isMarketplace = isMarketplaceSource(order?.order_source);
     const marketplaceName = getMarketplaceName(order?.order_source);
+    const marketplaceAmounts = calculateMarketplaceAmounts(subtotal, marketplaceNetTotal, discountAmount);
     const canSyncShipmentExpense = Boolean(order && !isMarketplace);
     const shipmentExpenseLabel =
         order?.order_source === "manual_whatsapp"
@@ -188,10 +189,9 @@ export default function AdminOrderDetailPage({
         setShippingAddress(fetchedOrder.shipping_address || "");
         setShippingRegional(fetchedOrder.shipping_regional || "");
         setShippingZip(fetchedOrder.shipping_zip || "");
-        setSubtotal(String(Number(fetchedOrder.subtotal || fetchedOrder.total_price || 0)));
+        setSubtotal(String(Number(fetchedOrder.subtotal ?? fetchedOrder.total_price ?? 0)));
         setDiscountAmount(String(Number(fetchedOrder.voucher_discount_amount || 0)));
-        setMarketplaceFee(String(Number(fetchedOrder.marketplace_fee || 0)));
-        setTotalPrice(String(Number(fetchedOrder.total_price || 0)));
+        setMarketplaceNetTotal(String(Number(fetchedOrder.total_price ?? 0)));
         setShipmentType(fetchedOrder.shipment_type || "");
         setShippingFee(String(Number(fetchedOrder.shipping_fee || 0)));
         setPaymentType(
@@ -203,6 +203,10 @@ export default function AdminOrderDetailPage({
     }, [orderResponse]);
 
     const handleSave = async () => {
+        if (isMarketplace && !marketplaceAmounts.success) {
+            toast.error(marketplaceAmounts.message);
+            return;
+        }
         setSaving(true);
         try {
             const payload: Record<string, any> = {
@@ -234,8 +238,7 @@ export default function AdminOrderDetailPage({
             if (isMarketplaceSource(order.order_source)) {
                 payload.subtotal = Number(subtotal || 0);
                 payload.voucher_discount_amount = Number(discountAmount || 0);
-                payload.marketplace_fee = Number(marketplaceFee || 0);
-                payload.total_price = Number(totalPrice || 0);
+                payload.marketplace_net_total = marketplaceNetTotal;
             }
 
             const { data } = await axios.put(`/admin/orders/${id}`, payload);
@@ -254,12 +257,11 @@ export default function AdminOrderDetailPage({
                 setShippingAddress(data.data.shipping_address || "");
                 setShippingRegional(data.data.shipping_regional || "");
                 setShippingZip(data.data.shipping_zip || "");
-                setSubtotal(String(Number(data.data.subtotal || data.data.total_price || 0)));
+                setSubtotal(String(Number(data.data.subtotal ?? data.data.total_price ?? 0)));
                 setDiscountAmount(
                     String(Number(data.data.voucher_discount_amount || 0)),
                 );
-                setMarketplaceFee(String(Number(data.data.marketplace_fee || 0)));
-                setTotalPrice(String(Number(data.data.total_price || 0)));
+                setMarketplaceNetTotal(String(Number(data.data.total_price ?? 0)));
                 setShipmentType(data.data.shipment_type || "");
                 setShippingFee(String(Number(data.data.shipping_fee || 0)));
                 setPaymentType(
@@ -882,6 +884,7 @@ export default function AdminOrderDetailPage({
                                         type="number"
                                         min="0"
                                         value={subtotal}
+                                        step="0.01"
                                         onChange={(e) => setSubtotal(e.target.value)}
                                         className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
                                     />
@@ -894,40 +897,54 @@ export default function AdminOrderDetailPage({
                                         type="number"
                                         min="0"
                                         value={discountAmount}
+                                        step="0.01"
                                         onChange={(e) => setDiscountAmount(e.target.value)}
                                         className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
                                     />
                                 </label>
                                 <label className="block space-y-1.5">
                                     <span className="text-xs font-medium text-muted-foreground">
-                                        {marketplaceName} Fee (Marketplace Fee)
+                                        <span id="marketplace-net-label">Total Bersih {marketplaceName} (IDR)</span>
                                     </span>
                                     <input
                                         type="number"
                                         min="0"
-                                        value={marketplaceFee}
-                                        onChange={(e) => setMarketplaceFee(e.target.value)}
+                                        step="0.01"
+                                        max={Math.max(0, Number(subtotal || 0) - Number(discountAmount || 0))}
+                                        required
+                                        value={marketplaceNetTotal}
+                                        onChange={(e) => setMarketplaceNetTotal(e.target.value)}
+                                        aria-describedby="marketplace-net-help marketplace-net-error"
+                                        aria-labelledby="marketplace-net-label"
+                                        aria-invalid={Boolean(marketplaceNetTotal) && !marketplaceAmounts.success}
                                         className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
                                     />
-                                </label>
-                                <label className="block space-y-1.5">
-                                    <span className="text-xs font-medium text-muted-foreground">
-                                        Final Total / Income
+                                    <span id="marketplace-net-help" className="block text-xs text-muted-foreground">
+                                        Salin angka bersih yang diterima dari {marketplaceName}. Fee dihitung otomatis dari invoice setelah diskon dikurangi total bersih.
                                     </span>
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={totalPrice}
-                                        onChange={(e) => setTotalPrice(e.target.value)}
-                                        className="w-full bg-background border border-border rounded-xl py-2.5 px-3 text-sm text-foreground focus:ring-2 focus:ring-accent/30 focus:border-accent outline-none transition-all"
-                                    />
                                 </label>
+                                {marketplaceAmounts.success ? (
+                                    <div className="space-y-2 border-t border-border pt-3 text-xs">
+                                        <div className="flex justify-between gap-2">
+                                            <span className="text-muted-foreground">Total invoice setelah diskon</span>
+                                            <span>{formatCurrency(marketplaceAmounts.values.subtotal - marketplaceAmounts.values.discount)}</span>
+                                        </div>
+                                        <div className="flex justify-between gap-2">
+                                            <span className="text-muted-foreground">Marketplace Fee (otomatis)</span>
+                                            <span className="font-medium text-orange-500">{formatCurrency(marketplaceAmounts.values.marketplaceFee)}</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p id="marketplace-net-error" role="alert" className="text-xs text-red-500">
+                                        {marketplaceAmounts.message}
+                                    </p>
+                                )}
                             </div>
                         )}
 
                         <button
                             onClick={handleSave}
-                            disabled={saving}
+                            disabled={saving || (isMarketplace && !marketplaceAmounts.success)}
                             className="w-full inline-flex items-center justify-center gap-2 bg-accent hover:bg-accent/90 text-accent-foreground px-4 py-2.5 rounded-xl text-sm font-medium transition-all disabled:opacity-50"
                         >
                             {saving ? (

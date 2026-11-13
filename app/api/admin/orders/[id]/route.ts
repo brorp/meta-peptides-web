@@ -16,6 +16,7 @@ import {
   syncShipmentExpenseForOrder,
 } from "@/lib/shipment-expenses";
 import { requireAdminApiSession } from "@/lib/admin-api";
+import { resolveMarketplaceUpdate } from "@/lib/marketplace-amounts";
 
 const ORDER_STATUSES = [
   "pending_review",
@@ -181,6 +182,17 @@ export async function PUT(
 
         updateData[moneyField] = amount;
       }
+    }
+
+    const marketplaceAmounts = resolveMarketplaceUpdate(currentOrder, body);
+    if (!marketplaceAmounts.success) {
+      return errorResponse(marketplaceAmounts.message, 400);
+    }
+    if (marketplaceAmounts.values) {
+      updateData.subtotal = marketplaceAmounts.values.subtotal;
+      updateData.voucher_discount_amount = marketplaceAmounts.values.discount;
+      updateData.total_price = marketplaceAmounts.values.totalPrice;
+      updateData.marketplace_fee = marketplaceAmounts.values.marketplaceFee;
     }
 
     // Allow updating the order date

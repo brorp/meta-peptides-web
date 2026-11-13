@@ -120,3 +120,12 @@ Log hanya mencatat 4 digit terakhir nomor dan alasan error, tanpa isi chat. Jang
 ## Developer
 
 `npm test` di folder ini: tes pemetaan pesan Baileys, tanda tangan request, kartu Discord, socket kontrol, kontak WhatsApp (`contacts.mjs`), dan tes read-only. Endpoint API ada di `app/api/bot/whatsapp/` (auth: `lib/whatsapp-listener-auth.ts`). Socket kontrol untuk bot: `control.mjs` (server) dan `../discord-bot/wa-control.mjs` (client); command-nya di `../discord-bot/wa-settings.mjs`.
+
+## Supervisi CS untuk direksi
+
+Listener memanggil `/api/bot/whatsapp/supervise` dengan HMAC setiap dua menit.
+Temuan dan poin hanya tersedia di panel root; hasilnya tidak dikirim ke channel
+staff atau WhatsApp. Terapkan kedua migration KPI, deploy web, lalu restart
+`metawellness-wa-listener` setelah update kode. Panduan aktivasi, jadwal,
+Daily Report, review manual, dan keterbatasan observasi ada di
+[`docs/cs-supervision.md`](../docs/cs-supervision.md).
