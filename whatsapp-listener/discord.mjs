@@ -51,10 +51,9 @@ export function leadCardText(result, payload) {
       `> ${preview}`,
     ].join("\n");
   }
-  const origin = lead.origin === "unknown" ? "**unknown** (isi lewat !updateleads)" : `**${lead.origin}**`;
   return [
     `🆕 **Lead baru dari WhatsApp** • ⏳ belum dianalisa`,
-    `**${name}** • ${link} • origin ${origin} • status ${lead.status}`,
+    `**${name}** • ${link} • origin **${lead.origin}** • status ${lead.status}`,
     `> ${preview}`,
     `Koreksi kalau perlu: \`!updateleads ${phone}\` lalu \`name:\` / \`origin:\` / \`status:\``,
   ].join("\n");

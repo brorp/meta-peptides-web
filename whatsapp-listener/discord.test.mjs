@@ -18,12 +18,12 @@ test("customer text cannot add formatting, mentions or fake lines", () => {
 
 test("new lead card", () => {
   const text = leadCardText(
-    { action: "lead_created", lead: { whatsapp_phone: "6281234567890", full_name: "Budi_", origin: "unknown", status: "warm" } },
+    { action: "lead_created", lead: { whatsapp_phone: "6281234567890", full_name: "Budi_", origin: "ads", status: "warm" } },
     { phone: "6281234567890", text: "Halo kak", message_type: "text" },
   );
   assert.equal(text, [
     "🆕 **Lead baru dari WhatsApp** • ⏳ belum dianalisa",
-    "**Budi\\_** • [6281234567890](<https://wa.me/6281234567890>) • origin **unknown** (isi lewat !updateleads) • status warm",
+    "**Budi\\_** • [6281234567890](<https://wa.me/6281234567890>) • origin **ads** • status warm",
     "> Halo kak",
     "Koreksi kalau perlu: `!updateleads 6281234567890` lalu `name:` / `origin:` / `status:`",
   ].join("\n"));

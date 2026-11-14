@@ -41,9 +41,10 @@ Jalankan file ini **berurutan** di Supabase (SQL Editor, atau `supabase db push`
 7. `supabase/migrations/20261104090000_auto_paid_marketplace_invoices.sql` (`!invoice` Shopee/Tokopedia langsung lunas, ongkir 0, resi `-`: tidak perlu `!payment` dan `!updateshipping`)
 8. `supabase/migrations/20261104100000_add_existing_lead_origin.sql` (origin lead baru `existing` untuk customer lama dari sebelum ada bot, dipakai saat `!invoice` membuat lead otomatis)
 9. `supabase/migrations/20261104110000_allow_hidden_products_in_orders.sql` (produk yang di-Hide di panel tetap bisa di-`!invoice`: Hide hanya menyembunyikan dari /shop. Sebelum migration ini dijalankan, `!invoice` dengan produk Hidden ditolak dengan pesan untuk menjalankannya)
-10. `supabase/migrations/20261111090000_add_whatsapp_listener.sql` (WhatsApp listener: chat WA dari nomor baru otomatis jadi lead, origin `unknown`, daftar abaikan untuk `!ignorewa`. Hanya perlu kalau listener dipakai, lihat bagian 7)
+10. `supabase/migrations/20261111090000_add_whatsapp_listener.sql` (WhatsApp listener: chat WA dari nomor baru otomatis jadi lead, daftar abaikan untuk `!ignorewa`. Hanya perlu kalau listener dipakai, lihat bagian 7)
 11. `supabase/migrations/20261111100000_add_whatsapp_contact_to_leads.sql` (lead otomatis jadi kontak di akun WhatsApp CS. Hanya perlu kalau WhatsApp listener dipakai, lihat bagian 8)
 12. `supabase/migrations/20261111110000_add_lead_chat_analysis.sql` (analisa chat AI: usulan status/minat/alasan, `!analyze`, `!applyai`, dan aturan ghosting. Butuh nomor 10, lihat bagian 9)
+13. `supabase/migrations/20261114090000_whatsapp_leads_origin_ads.sql` (lead dari chat WA yang dulu dibuat dengan origin `unknown` jadi `ads`, sama seperti lead WA baru. Tidak membuat apa pun error kalau belum dijalankan)
 
 > ⚠️ Kalau kode di-deploy sebelum migration, halaman order di panel ikut error karena kolom baru (`invoice_number`, `is_paid`, dll.) belum ada. Khusus file nomor 4 dan 5: tanpa file ini `!invoice` WhatsApp tetap jalan, tapi `!invoice` Shopee/Tokopedia (nomor 4) atau Shopee/Tokopedia tanpa lead (nomor 5) ditolak dengan pesan untuk menjalankan migration. File nomor 6 tidak membuat apa pun error kalau belum dijalankan: lead yang beli lewat panel/website saja yang masih muncul di `!followup`. Begitu dijalankan, lead lama yang sudah punya order lunas langsung ikut diubah jadi customer. File nomor 7 juga tidak membuat error kalau belum dijalankan: `!invoice` Shopee/Tokopedia masih tercatat belum lunas dan bot menampilkan peringatan untuk menjalankan migration. Order Shopee/Tokopedia lama dari `!invoice` ikut diubah jadi lunas (resi asli yang sudah dicatat tidak diganti). File nomor 8 juga tidak membuat error kalau belum dijalankan: customer lama yang order pertamanya lewat Shopee/Tokopedia/website tetap otomatis dibuatkan lead, tapi yang order pertamanya order WhatsApp di panel ditolak dengan pesan untuk menjalankan migration (atau buat dulu dengan `!newleads`). File nomor 9 juga tidak membuat error kalau belum dijalankan: `!invoice` dengan produk Hidden saja yang ditolak dengan pesan untuk menjalankannya. Order panel dengan produk Hidden sudah bisa tanpa migration ini.
 
@@ -339,7 +340,7 @@ rejection: -
 | --- | --- | --- |
 | `wa` | **ya** | Nomor WhatsApp. Boleh 08xx, 62xx, atau +62 xxx |
 | `name` | **ya** | Nama lead |
-| `origin` | **ya** | ads / tokopedia / instagram / threads / tiktok / fnf / shopee / website / existing / unknown. `existing` = customer lama dari sebelum ada bot (dipakai otomatis oleh !invoice). `unknown` = lead dari chat WA otomatis yang sumbernya belum diketahui: ganti dengan origin yang benar |
+| `origin` | **ya** | ads / tokopedia / instagram / threads / tiktok / fnf / shopee / website / existing / unknown. `existing` = customer lama dari sebelum ada bot (dipakai otomatis oleh !invoice). Lead dari chat WA otomatis dibuat dengan origin `ads`: ganti kalau bukan dari iklan. `unknown` = sumber tidak diketahui (data lama) |
 | `status` | **ya** | hot / warm / cold / skip |
 | `interest` | - | Produk yang diminati, boleh singkat: `reta 10 mg` → Retatrutide 10mg. `-` untuk kosong |
 | `rejection` | - | Alasan belum beli: harga / company / cara_penggunaan / perizinan / produk_tidak_ada / ghosting / - (kosong) |
@@ -369,7 +370,7 @@ notes: Tanya dosis, minta dikabari pas gajian
 | Field | Wajib | Isi |
 | --- | --- | --- |
 | `name` | - | Nama lead |
-| `origin` | - | ads / tokopedia / instagram / threads / tiktok / fnf / shopee / website / existing / unknown. `existing` = customer lama dari sebelum ada bot (dipakai otomatis oleh !invoice). `unknown` = lead dari chat WA otomatis yang sumbernya belum diketahui: ganti dengan origin yang benar |
+| `origin` | - | ads / tokopedia / instagram / threads / tiktok / fnf / shopee / website / existing / unknown. `existing` = customer lama dari sebelum ada bot (dipakai otomatis oleh !invoice). Lead dari chat WA otomatis dibuat dengan origin `ads`: ganti kalau bukan dari iklan. `unknown` = sumber tidak diketahui (data lama) |
 | `status` | - | hot / warm / cold / skip |
 | `interest` | - | Produk yang diminati, boleh singkat: `reta 10 mg` → Retatrutide 10mg. `-` untuk kosong |
 | `rejection` | - | Alasan belum beli: harga / company / cara_penggunaan / perizinan / produk_tidak_ada / ghosting / - (kosong) |

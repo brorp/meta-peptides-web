@@ -10,7 +10,7 @@ Proses kecil di VPS yang terhubung ke nomor WhatsApp CS sebagai **linked device*
 
 | Chat dari | Hasil |
 | --- | --- |
-| Nomor baru | Lead dibuat: nama = nama profil WA (atau `WA 1234`), status `warm` sementara, chat_date hari ini, PIC `wa-bot`. Origin `ads` kalau chat datang dari iklan Click-to-WhatsApp (atau teks pertamanya cocok dengan `WA_AD_TEXT_PATTERNS`), `instagram` kalau dari tombol WA di Instagram, selain itu `unknown`. Kartu "🆕 Lead baru dari WhatsApp" dikirim ke Discord. |
+| Nomor baru | Lead dibuat: nama = nama profil WA (atau `WA 1234`), status `warm` sementara, chat_date hari ini, PIC `wa-bot`. Origin selalu `ads` (sebagian besar chat datang dari iklan; yang bukan diganti CS lewat `!updateleads`). Kalau chat terdeteksi dari iklan Click-to-WhatsApp (atau teks pertamanya cocok dengan `WA_AD_TEXT_PATTERNS`), judul iklannya ditulis di notes; kalau dari tombol WA di Instagram, sumbernya ditulis di notes. Kartu "🆕 Lead baru dari WhatsApp" dikirim ke Discord. |
 | Customer lama (pernah order lewat panel/website) | Lead dibuat dari data order lama, sama seperti `!invoice`. Kartu "🔁 Customer lama chat lagi". |
 | Nomor yang sudah jadi lead | Pesan disimpan untuk analisa chat nanti. Tidak ada kartu. |
 | Nomor di daftar abaikan (`!ignorewa`) | Tidak disimpan sama sekali. |

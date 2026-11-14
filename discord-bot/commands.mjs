@@ -49,7 +49,7 @@ const CUSTOMER_RULE_TEXT =
 const NEW_LEAD_FIELDS = [
   { name: "wa", description: "Nomor WhatsApp. Boleh 08xx, 62xx, atau +62 xxx", example: "081234567890" },
   { name: "name", description: "Nama lead", example: "Budi Santoso" },
-  { name: "origin", description: `${ORIGIN_TEXT}. \`existing\` = customer lama dari sebelum ada bot (dipakai otomatis oleh !invoice). \`unknown\` = lead dari chat WA otomatis yang sumbernya belum diketahui: ganti dengan origin yang benar`, example: "ads" },
+  { name: "origin", description: `${ORIGIN_TEXT}. \`existing\` = customer lama dari sebelum ada bot (dipakai otomatis oleh !invoice). Lead dari chat WA otomatis dibuat dengan origin \`ads\`: ganti kalau bukan dari iklan. \`unknown\` = sumber tidak diketahui (data lama)`, example: "ads" },
   { name: "status", description: STATUS_TEXT, example: "hot" },
   { name: "interest", description: "Produk yang diminati, boleh singkat: `reta 10 mg` → Retatrutide 10mg. `-` untuk kosong", example: "reta 10 mg" },
   { name: "rejection", description: `Alasan belum beli: ${REJECTION_TEXT}`, example: "-" },

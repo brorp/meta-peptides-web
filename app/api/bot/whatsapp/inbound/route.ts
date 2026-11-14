@@ -17,9 +17,9 @@ import {
 //   * number on the ignore list (!ignorewa): nothing is saved;
 //   * number that is already a lead: the message is saved for the later chat
 //     analysis;
-//   * new number writing in: a lead is made (origin from the ad / Instagram
-//     info in the message, otherwise "unknown"; status warm until the chat is
-//     analysed), and the listener posts it to Discord;
+//   * new number writing in: a lead is made (origin always "ads": most chats
+//     come from the ads, and the CS changes the rest with !updateleads; status
+//     warm until the chat is analysed), and the listener posts it to Discord;
 //   * number that ordered before the bot: the lead is made from the old data,
 //     like !invoice does;
 //   * a message the CS sends to a number that is not a lead: ignored (only
@@ -48,18 +48,15 @@ function leadName(pushName: unknown, phone: string) {
   return /[\p{L}\p{N}]/u.test(name) ? name : `WA ${phone.slice(-4)}`;
 }
 
-function leadOrigin(input: { isAd: boolean; entryApp: string }) {
-  if (input.isAd) return "ads";
-  if (input.entryApp === "instagram") return "instagram";
-  return "unknown";
-}
+// Every lead from a WhatsApp chat starts as "ads".
+const AUTO_LEAD_ORIGIN = "ads";
 
 function leadNotes(input: { isAd: boolean; adTitle: string; entryApp: string; entrySource: string }) {
   if (input.isAd) {
     return `Dibuat otomatis dari chat WhatsApp masuk lewat iklan${input.adTitle ? `: ${input.adTitle}` : ""}.`;
   }
   const entry = [input.entryApp, input.entrySource].filter(Boolean).join(" / ");
-  return `Dibuat otomatis dari chat WhatsApp masuk${entry ? ` (sumber: ${entry})` : ""}. Isi origin lewat !updateleads.`;
+  return `Dibuat otomatis dari chat WhatsApp masuk${entry ? ` (sumber: ${entry})` : ""}. Origin otomatis ads, ubah lewat !updateleads kalau bukan dari iklan.`;
 }
 
 export async function POST(req: NextRequest) {
@@ -119,13 +116,12 @@ export async function POST(req: NextRequest) {
       } else {
         const today = getJakartaDate();
         const chatDate = getJakartaDate(sentAt);
-        const origin = leadOrigin({ isAd, entryApp });
         const { data, error } = await supabaseAdmin
           .from("leads")
           .insert({
             whatsapp_phone: phone,
             full_name: leadName(body.push_name, phone),
-            origin,
+            origin: AUTO_LEAD_ORIGIN,
             // Until the chat is analysed.
             status: "warm",
             chat_date: chatDate > today ? today : chatDate,
@@ -144,11 +140,6 @@ export async function POST(req: NextRequest) {
             .select(INBOUND_LEAD_SELECT)
             .eq("whatsapp_phone", phone)
             .maybeSingle());
-        } else if (error?.code === "22P02" && origin === "unknown") {
-          return errorResponse(
-            "Database belum kenal origin unknown. Jalankan migration 20261111090000_add_whatsapp_listener.sql di Supabase.",
-            503,
-          );
         } else if (error || !data) {
           return errorResponse("Gagal membuat lead dari chat WhatsApp", 500);
         } else {

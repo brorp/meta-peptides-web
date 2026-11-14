@@ -4,8 +4,8 @@ export const LEAD_STATUSES = ["hot", "warm", "cold", "skip"] as const;
 // "existing" = customer from before the bot whose first order does not show
 // where they came from (a WhatsApp order made in the panel). !invoice uses it
 // when it creates the lead from old order data (migration 20261104100000).
-// "unknown" = lead made from a WhatsApp chat that did not show where the
-// person came from; the team fills it in (migration 20261111090000).
+// "unknown" = source not known. WhatsApp chat leads used it until they
+// started as "ads" (migrations 20261111090000 and 20261114090000).
 export const LEAD_ORIGINS = [
   "ads",
   "tokopedia",

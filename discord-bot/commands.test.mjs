@@ -324,7 +324,7 @@ test("help says customers from before the bot need no !newleads", () => {
   assert.match(invoice, /atau `existing` kalau order pertamanya order WhatsApp di panel/);
   const newleads = buildCommandHelp("!newleads", COMMAND_SPECS["!newleads"]);
   assert.match(newleads, /website \/ existing \/ unknown\. `existing` = customer lama dari sebelum ada bot/);
-  assert.match(newleads, /`unknown` = lead dari chat WA otomatis yang sumbernya belum diketahui/);
+  assert.match(newleads, /Lead dari chat WA otomatis dibuat dengan origin `ads`: ganti kalau bukan dari iklan/);
 });
 
 test("!ignorewa / !unignorewa call the API and explain an existing lead", async () => {
