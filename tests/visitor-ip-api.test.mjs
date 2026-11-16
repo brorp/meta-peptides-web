@@ -364,6 +364,7 @@ test("historical bot-only IPs disappear before pagination; mixed IPs retain only
           return this;
         },
         not(column, op, value) {
+          if (table === "visitor_device_locations" || column === "locations.observed_at") return this;
           assert.equal(op, "imatch");
           const parts = column.split(".");
           filters.push({ relation: parts.length > 1 ? parts[0] : "",

@@ -1,4 +1,5 @@
 import type { VisitorGeo } from "@/lib/visitor-ip-core";
+import type { VisitorLocation, VisitorLocationSummary } from "@/lib/visitor-location";
 export type VisitorIp = {
   id: string;
   ip_address: string;
@@ -11,6 +12,7 @@ export type VisitorIp = {
   geo_checked_at: string | null;
   visitor_ip_devices?: Array<{ count: number }>;
   visitor_ip_identities?: Array<{ count: number }>;
+  locations?: VisitorLocationSummary[];
 };
 export type VisitorDevice = {
   id: string;
@@ -55,6 +57,8 @@ export type VisitorDetail = {
   device_count: number;
   identities: VisitorIdentity[];
   identity_count: number;
+  device_locations: VisitorLocation[];
+  locations_available: boolean;
 };
 export type VisitorList = {
   items: VisitorIp[];

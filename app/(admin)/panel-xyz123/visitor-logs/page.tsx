@@ -7,6 +7,7 @@ import {
   visitorTime,
 } from "@/components/admin/visitor-ip-detail";
 import type { VisitorList } from "@/interface/visitor-logs";
+import { locationAccuracy, locationIsFresh } from "@/lib/visitor-location";
 const field =
   "rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none focus:border-accent";
 export default function VisitorLogsPage() {
@@ -27,7 +28,7 @@ export default function VisitorLogsPage() {
     ["visitor-logs", search, hostname, page],
     `/admin/visitor-logs?${params}`,
     undefined,
-    { enabled: isRoot },
+    { enabled: isRoot, refetchInterval: 10_000 },
   );
   const data = query.data?.data;
   function filter(event: FormEvent) {
@@ -54,7 +55,8 @@ export default function VisitorLogsPage() {
         Browser/perangkat baru ditambahkan ke detail IP. Bot/crawler yang dikenali
         otomatis dikecualikan. Lokasi IP merupakan perkiraan jaringan;
         nama/telepon hanya tersedia jika pernah diberikan melalui akun atau
-        checkout.
+        checkout. Lokasi perangkat yang dibagikan pengunjung menjadi sumber utama
+        di detail. Daftar diperbarui setiap 10 detik saat panel aktif.
       </div>
       <div className="flex flex-wrap justify-between gap-3">
         <form onSubmit={filter} className="flex min-w-0 flex-wrap gap-2">
@@ -104,7 +106,7 @@ export default function VisitorLogsPage() {
         data && (
           <>
             <p className="text-sm text-muted-foreground">
-              {data.pagination.total} IP unik dalam filter ini
+              {data.pagination.total} IP unik dalam filter ini · Sinkronisasi {visitorTime(new Date(query.dataUpdatedAt).toISOString())} WIB
             </p>
             <div className="overflow-x-auto rounded-2xl border border-border">
               <table className="w-full min-w-[850px] text-left text-sm">
@@ -113,7 +115,7 @@ export default function VisitorLogsPage() {
                     {[
                       "IP",
                       "Domain",
-                      "Lokasi perkiraan",
+                      "Lokasi perangkat / estimasi IP",
                       "ISP / ASN",
                       "Perangkat / akun",
                       "Pertama terlihat (WIB)",
@@ -141,7 +143,14 @@ export default function VisitorLogsPage() {
                         ))}
                       </td>
                       <td className="p-4">
-                        <p>
+                        {row.locations?.[0] && <div className="mb-2 text-xs">
+                          <p className={locationIsFresh(row.locations[0], query.dataUpdatedAt) ? "text-emerald-500" : "text-muted-foreground"}>
+                            Lokasi perangkat · {locationIsFresh(row.locations[0], query.dataUpdatedAt) ? "Aktif" : "Lokasi terakhir"}
+                          </p>
+                          <p className="mt-1">Akurasi {locationAccuracy(row.locations[0].accuracy_m)} · {visitorTime(row.locations[0].observed_at)} WIB</p>
+                        </div>}
+                        <p className="text-xs text-muted-foreground">
+                          Estimasi IP:{" "}
                           {[
                             row.geo.city,
                             row.geo.region,

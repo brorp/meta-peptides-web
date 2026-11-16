@@ -14,7 +14,7 @@
     "test:marketplace-orders": "node --experimental-strip-types --test tests/marketplace-orders.test.mjs",
     "test:cs-kpi": "node --experimental-strip-types --test tests/cs-kpi.test.mjs tests/cs-kpi-api.test.mjs",
     "test:cs-kpi-db": "node --test tests/cs-kpi-migration.test.mjs",
-    "test:visitor-logs": "node --experimental-strip-types --test tests/visitor-ip.test.mjs tests/visitor-ip-api.test.mjs",
+    "test:visitor-logs": "node --experimental-strip-types --test tests/visitor-ip.test.mjs tests/visitor-ip-api.test.mjs tests/visitor-location.test.mjs",
     "test:visitor-logs-db": "node --test tests/visitor-ip-migration.test.mjs",
     "test:lead-analysis": "node --experimental-strip-types --test tests/lead-chat-analysis.test.mjs",
     "test:lead-contacts": "node --experimental-strip-types --test tests/lead-wa-contacts.test.mjs",

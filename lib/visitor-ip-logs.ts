@@ -143,7 +143,7 @@ export async function listVisitorIps(params: URLSearchParams) {
   let query = supabaseAdmin
     .from("visitor_ip_logs")
     .select(
-      "id,ip_address,first_seen_at,hostnames,entry_path,geo,geo_status,geo_source,geo_checked_at,visitor_ip_devices(count),visitor_ip_identities(count),browser_agents:visitor_ip_devices!inner(metadata)",
+      "id,ip_address,first_seen_at,hostnames,entry_path,geo,geo_status,geo_source,geo_checked_at,visitor_ip_devices(count),visitor_ip_identities(count),browser_agents:visitor_ip_devices!inner(metadata),locations:visitor_device_locations(session_id,accuracy_m,observed_at,received_at,sharing,ended_at)",
       { count: "exact" },
     )
     // Filter before pagination/counting. !inner retains a shared IP when it has
@@ -156,7 +156,10 @@ export async function listVisitorIps(params: URLSearchParams) {
     .or("metadata->>is_bot.is.null,metadata->>is_bot.neq.true", {
       referencedTable: "visitor_ip_devices",
     })
-    .limit(1, { referencedTable: "browser_agents" });
+    .limit(1, { referencedTable: "browser_agents" })
+    .not("locations.observed_at", "is", null)
+    .order("received_at", { referencedTable: "locations", ascending: false })
+    .limit(1, { referencedTable: "locations" });
   if (hostname) query = query.contains("hostnames", [hostname]);
   const ip = publicIp(search);
   if (ip) query = query.eq("ip_address", ip);
@@ -183,7 +186,7 @@ export async function listVisitorIps(params: URLSearchParams) {
   };
 }
 export async function getVisitorIp(id: string) {
-  const [ip, devices, identities] = await Promise.all([
+  const [ip, devices, identities, locations] = await Promise.all([
     supabaseAdmin
       .from("visitor_ip_logs")
       .select("*")
@@ -203,11 +206,20 @@ export async function getVisitorIp(id: string) {
       .eq("ip_id", id)
       .order("first_seen_at", { ascending: false })
       .limit(50),
+    supabaseAdmin
+      .from("visitor_device_locations")
+      .select("session_id,ip_id,device_key,hostname,latitude,longitude,accuracy_m,observed_at,received_at,consented_at,sharing,ended_at,device:visitor_ip_devices(metadata)")
+      .eq("ip_id", id)
+      .not("observed_at", "is", null)
+      .order("received_at", { ascending: false })
+      .limit(50),
   ]);
   if (ip.error || devices.error || identities.error)
     throw new VisitorLogError("Gagal memuat detail IP.");
   if (!ip.data || !devices.data?.length)
     throw new VisitorLogError("IP tidak ditemukan.", 404);
+  if (locations.error && !["42P01", "PGRST205"].includes(locations.error.code))
+    throw new VisitorLogError("Gagal memuat lokasi perangkat.");
   const users = (identities.data || []).map((row) => row.user_id);
   const [profiles, orders] = users.length
     ? await Promise.all([
@@ -233,6 +245,8 @@ export async function getVisitorIp(id: string) {
   return {
     ip: ip.data,
     devices: devices.data,
+    device_locations: locations.data || [],
+    locations_available: !locations.error,
     device_count: devices.count || 0,
     identity_count: identities.count || 0,
     identities: (identities.data || []).map((row) => ({

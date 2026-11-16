@@ -74,6 +74,8 @@ test("Visitor IP migration deduplicates IPs/devices/accounts and restricts all a
       ),
     );
     run(psql, readFileSync("tests/visitor-ip-migration.sql", "utf8"));
+    run(psql, readFileSync("supabase/migrations/20261116160000_add_visitor_device_locations.sql", "utf8"));
+    run(psql, readFileSync("tests/visitor-location-migration.sql", "utf8"));
   } finally {
     spawnSync("docker", ["rm", "--force", name], {
       encoding: "utf8",

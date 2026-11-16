@@ -14,6 +14,7 @@ import {
 import { useApiQuery } from "@/hooks/api/useApiQuery";
 import { api } from "@/lib/axios";
 import type { VisitorDetail } from "@/interface/visitor-logs";
+import { VisitorDeviceLocations } from "./visitor-device-locations";
 export const visitorTime = (value?: string | null) =>
   value
     ? new Date(value).toLocaleString("id-ID", { timeZone: "Asia/Jakarta" })
@@ -29,6 +30,8 @@ export function VisitorIpDetail({
   const query = useApiQuery<{ success: boolean; data: VisitorDetail }>(
     ["visitor-ip-detail", id],
     `/admin/visitor-logs/${id}`,
+    undefined,
+    { refetchInterval: 5000 },
   );
   const data = query.data?.data;
   const [loading, setLoading] = useState(false);
@@ -100,9 +103,11 @@ export function VisitorIpDetail({
                   <p className="mt-1 break-all">{data.ip.entry_path}</p>
                 </div>
               </section>
+              <VisitorDeviceLocations locations={data.device_locations || []} available={data.locations_available !== false} />
+              <p className="text-xs text-muted-foreground">Panel diperbarui: {visitorTime(new Date(query.dataUpdatedAt).toISOString())} WIB · sinkronisasi setiap 5 detik saat panel aktif.</p>
               <section className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h3 className="font-semibold">Perkiraan lokasi IP</h3>
+                  <h3 className="font-semibold">Estimasi jaringan IP · cadangan</h3>
                   <button
                     disabled={loading}
                     onClick={lookup}

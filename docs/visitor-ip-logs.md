@@ -47,6 +47,51 @@ localhost requests are skipped. Preview-deployment hostnames are not captured.
 
 ## Available information
 
+### Consented device location (primary)
+
+Apply `supabase/migrations/20261116160000_add_visitor_device_locations.sql`
+after the original IP migration, before deploying device location support.
+The new table and three RPCs are server-only; existing observations are preserved.
+
+The storefront has an optional, explicit sharing control explaining what is
+stored and who uses it. Only after clicking and granting browser permission does
+the browser send coordinates. `watchPosition` uses `enableHighAccuracy: true`,
+zero cached age, and a fresh `getCurrentPosition` request every ten seconds while
+the page is visible. Requests are batched to at most one update every 5.5 seconds;
+the database also rejects rapid/out-of-order fixes. Device/OS support and the
+browser determine actual accuracy, so high accuracy is a request, not a guarantee.
+
+Positions are separate from IP geolocation and kept per random sharing session,
+not per account, UA fingerprint or shared IP. Only the latest position, accuracy
+in meters, device observation time and server receipt time are stored. No movement
+timeline is collected. Network changes move the session's latest observation to
+the current server-derived IP. A new session is required after stopping/reloading;
+there is no automatic consent renewal or background tracking after closing.
+
+Sharing pauses when the page is hidden and resumes on return. Stop, permission
+denial and page exit clear the watch and end the session; an ended database row
+also rejects an already in-flight update. Exit beacons are best effort. Root
+marks readings active only when both observation and receipt are at most 45 seconds
+old, even if a disconnect prevented the stop message from arriving. The final
+reading remains labeled as the last location. Each tab has its own signed,
+HttpOnly, SameSite-strict cookie scoped to the write endpoint, expiring after
+two hours; location credentials are never stored in localStorage.
+
+The public endpoint accepts only same-origin writes, checks the signed session,
+browser signature, trusted request IP and coordinate/timestamp bounds, and never
+returns stored positions. Body size is capped at 2 KiB; new sessions are capped
+at 100 per IP per hour. Supabase anon/authenticated roles cannot read or call the
+table/RPCs. Browser readings can be spoofed and do not verify identity or physical
+presence. Only root sees the positions and their OpenStreetMap previews.
+
+Root list refreshes every ten seconds and detail every five seconds while visible.
+The list shows the latest measured session and the detail shows up to 50 sessions
+separately, with source, fresh/last status, time and accuracy. IP-derived country/
+city and ISP remain explicitly labeled as network estimates/fallback information;
+refreshing IPQuery never overwrites device positions.
+
+### IP and account context
+
 IP, first-seen time, domains, initial path, ISP, ASN organization, approximate
 country/region/city/postcode/timezone and coordinates, and available VPN/proxy/
 Tor/hosting/mobile-network indicators. User-Agent and client hints provide
@@ -74,7 +119,8 @@ linked accounts and 100 recent checkout references, with limits indicated.
 
 Query strings/fragments and referrer query strings are stripped, preventing auth
 codes/reset tokens in URLs from entering the log. Passwords, auth tokens, browser
-storage, precise GPS and contact lists are not collected.
+storage and contact lists are not collected. Device coordinates are collected
+only through the optional, consented flow described above.
 
 ## Checks
 
@@ -87,7 +133,11 @@ npm run build
 Database tests exercise deduplication, IPv6 canonicalization, separate identities
 on shared IPs, first-seen preservation, lookup cooldown and restricted permissions.
 Route tests verify root-only APIs and the guest flow without email calls.
+Location tests cover signed session isolation, same-origin/validated writes,
+bounded update frequency, freshness, distinct sessions behind one IP, network
+changes, stop-before-first-fix races and restricted database access.
 
 References: [Vercel request headers](https://vercel.com/docs/headers/request-headers),
 [IPQuery API](https://ipquery.io/developers/api),
-[IPQuery field meanings](https://ipquery.io/developers/fields).
+[IPQuery field meanings](https://ipquery.io/developers/fields),
+[browser watchPosition](https://developer.mozilla.org/en-US/docs/Web/API/Geolocation/watchPosition).

@@ -10,6 +10,7 @@ import { createClientComponentClient } from "@/lib/supabase-client";
 import { PromoModal } from "./promo-modal";
 import OneModal from "./one-modal";
 import { usePathname } from "next/navigation";
+import { VisitorLocationSharing } from "./visitor-location-sharing";
 
 export function LayoutClient({
   children,
@@ -42,6 +43,7 @@ export function LayoutClient({
     <div className="storefront-shell">
       {!isCampaignLanding && <Navbar />}
       <main>{children}</main>
+      <VisitorLocationSharing />
       {!isCampaignLanding && <OneModal />}
       {!isCampaignLanding && <FloatingActions />}
       {!isCampaignLanding && <Footer />}
