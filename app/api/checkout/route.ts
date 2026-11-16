@@ -7,6 +7,8 @@ import { User } from "@supabase/supabase-js";
 import { sendOrderCreatedEmails } from "@/lib/email-service";
 import { discount as memberDiscountRate } from "@/contants/discount";
 import { deductOrderInventory, normalizePaymentType } from "@/lib/inventory";
+import { after } from "next/server";
+import { recordVisitorRequest } from "@/lib/visitor-ip-logs";
 
 type CheckoutItemPayload = {
   product_id: string;
@@ -490,6 +492,7 @@ export const POST = withAuth(async (request: Request, user: User | null) => {
       );
     }
 
+    if (user) after(() => recordVisitorRequest(request, { user, source: "checkout" }));
     return successResponse(
       {
         orderId: order.id,

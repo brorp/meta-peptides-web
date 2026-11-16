@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { jwtVerify } from "jose";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest, type NextFetchEvent } from "next/server";
+import { shouldLogVisitor } from "@/lib/visitor-ip-core";
+import { recordVisitorRequest } from "@/lib/visitor-ip-logs";
 
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET;
 
@@ -55,8 +57,9 @@ const isAllowedForStaffAdmin = (pathname: string, prefixes: string[]) =>
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 
-export async function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest, event: NextFetchEvent) {
   const { pathname } = request.nextUrl;
+  if (shouldLogVisitor(request)) event.waitUntil(recordVisitorRequest(request));
 
   // --- ADMIN ROUTE PROTECTION ---
   if (pathname.startsWith("/panel-xyz123")) {
@@ -123,6 +126,9 @@ export async function proxy(request: NextRequest) {
   }
 
   // --- STOREFRONT ROUTE PROTECTION (existing logic) ---
+  if (!pathname.startsWith("/auth") && !pathname.startsWith("/checkout") && !pathname.startsWith("/api/checkout")) {
+    return NextResponse.next();
+  }
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -179,6 +185,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/((?!api|_next|.*\\.(?:js|css|png|jpg|jpeg|gif|webp|svg|ico|mp4|woff|woff2|txt|xml|map|pdf)$).*)",
     "/auth/:path*",
     "/checkout/:path*",
     "/api/checkout/:path*",

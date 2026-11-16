@@ -1,4 +1,5 @@
-import { NextRequest } from "next/server";
+import { after, NextRequest } from "next/server";
+import { recordVisitorRequest } from "@/lib/visitor-ip-logs";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { supabaseAdmin } from "@/lib/supabase-server";
 import {
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest) {
     }
 
     const shopUrl = getTrustedRequestOrigin(req.url);
+    after(() => recordVisitorRequest(req, { user, source: "register" }));
 
     await sendRegisteredUserEmails({
       customerName: getUserDisplayName(user),

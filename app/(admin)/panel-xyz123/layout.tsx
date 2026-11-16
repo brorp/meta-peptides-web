@@ -19,6 +19,7 @@ import {
     Warehouse,
     Magnet,
     ShieldCheck,
+    Globe,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api as axios } from "@/lib/axios";
@@ -35,6 +36,7 @@ const ROOT_NAV_ITEMS = [
     { label: "Inventory", href: "/panel-xyz123/inventory", icon: Warehouse },
     { label: "Orders", href: "/panel-xyz123/orders", icon: ShoppingCart },
     { label: "CS Supervision", href: "/panel-xyz123/cs-supervision", icon: ShieldCheck },
+    { label: "Visitor Logs", href: "/panel-xyz123/visitor-logs", icon: Globe },
     { label: "Daily Report", href: "/panel-xyz123/daily-report", icon: FileText },
     { label: "Vouchers", href: "/panel-xyz123/vouchers", icon: BadgePercent },
     { label: "Expenses", href: "/panel-xyz123/expenses", icon: ReceiptText },

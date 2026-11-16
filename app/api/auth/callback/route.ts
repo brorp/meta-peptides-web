@@ -1,5 +1,6 @@
 import { createClientCookies } from "@/lib/supabase-server";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { recordVisitorRequest } from "@/lib/visitor-ip-logs";
 import {
   buildVisitorMetadata,
   ensureProfileExistsForUser,
@@ -23,6 +24,7 @@ export async function GET(request: Request) {
         } = await supabase.auth.getUser();
 
         if (user && !user.is_anonymous && user.email) {
+          after(() => recordVisitorRequest(request, { user, source: "oauth" }));
           const isNewUser = await ensureProfileExistsForUser(user);
 
           if (isNewUser) {

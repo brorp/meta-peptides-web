@@ -1,11 +1,11 @@
-import { NextRequest } from "next/server";
+import { after, NextRequest } from "next/server";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { createClientCookies } from "@/lib/supabase-server";
 import {
   buildVisitorMetadata,
   getProviderLabel,
 } from "@/lib/auth-notifications";
-import { sendGuestSessionAlertEmail } from "@/lib/email-service";
+import { recordVisitorRequest } from "@/lib/visitor-ip-logs";
 
 type GuestRequestBody = {
   language?: string;
@@ -53,11 +53,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await sendGuestSessionAlertEmail({
-      guestId: data.user.id,
-      createdAt: data.user.created_at,
-      metadata: visitorMetadata,
-    });
+    const guestUser = data.user;
+    after(() => recordVisitorRequest(req, { user: guestUser, source: "guest" }));
 
     return successResponse(
       {

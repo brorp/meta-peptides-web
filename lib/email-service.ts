@@ -8,9 +8,7 @@ import {
   type PasswordResetEmailData,
   registeredUserWelcomeTemplate,
   registeredUserAdminTemplate,
-  guestSessionAdminTemplate,
   type RegisteredUserEmailData,
-  type GuestSessionEmailData,
 } from "./email-templates";
 
 const normalizeRecipientEmail = (email?: string | null) =>
@@ -240,34 +238,4 @@ export async function sendRegisteredUserEmails(
   }
 
   return result;
-}
-
-export async function sendGuestSessionAlertEmail(
-  data: GuestSessionEmailData,
-): Promise<boolean> {
-  if (!process.env.RESEND_API_KEY) {
-    console.warn("[Email] RESEND_API_KEY not configured. Skipping email.");
-    return false;
-  }
-
-  try {
-    const template = guestSessionAdminTemplate(data);
-    const { error } = await resend.emails.send({
-      from: `Meta Peptides Guests <${RESEND_FROM_EMAIL}>`,
-      to: ADMIN_EMAIL,
-      subject: template.subject,
-      html: template.html,
-    });
-
-    if (error) {
-      console.error("[Email] Guest session alert email failed:", error);
-      return false;
-    }
-
-    console.log(`[Email] Guest session alert sent to ${ADMIN_EMAIL}`);
-    return true;
-  } catch (err) {
-    console.error("[Email] Guest session alert exception:", err);
-    return false;
-  }
 }

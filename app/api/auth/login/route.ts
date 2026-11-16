@@ -1,4 +1,5 @@
-import { NextRequest } from "next/server";
+import { after, NextRequest } from "next/server";
+import { recordVisitorRequest } from "@/lib/visitor-ip-logs";
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { createClientCookies } from "@/lib/supabase-server";
 
@@ -12,10 +13,12 @@ export async function POST(req: NextRequest) {
       password,
     });
 
-    if (error) {
+    if (error || !data.user) {
       return errorResponse("Invalid credentials or unverified email.", 401);
     }
 
+    const loggedInUser = data.user;
+    after(() => recordVisitorRequest(req, { user: loggedInUser, source: "login" }));
     return successResponse(
       { user: data.user, session: data.session },
       "Login Successfully. Welcome back to MetaPeptides.",

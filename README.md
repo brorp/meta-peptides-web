@@ -80,6 +80,13 @@ Director-only KPI logs, evidence review, monthly penalty points, and a staff Dai
 Report form. Activation, database migrations, working hours, and observation
 limits are documented in [`docs/cs-supervision.md`](docs/cs-supervision.md).
 
+## Visitor IP Logs
+
+Root-only visitor logs replace guest-session emails. Unique IPs from both
+storefront domains include network/location data, browser signatures, and
+user-provided account/checkout contacts. See [`docs/visitor-ip-logs.md`](docs/visitor-ip-logs.md)
+for activation, deduplication, access controls, and location limitations.
+
 ---
 
 ## 📂 Project Architecture

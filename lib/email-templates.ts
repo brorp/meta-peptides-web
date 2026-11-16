@@ -63,12 +63,6 @@ type RegisteredUserEmailData = {
   metadata?: VisitorMetadata;
 };
 
-type GuestSessionEmailData = {
-  guestId: string;
-  createdAt?: string | null;
-  metadata?: VisitorMetadata;
-};
-
 function formatCurrencyEmail(value: number): string {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -623,36 +617,10 @@ export function registeredUserAdminTemplate(
   };
 }
 
-export function guestSessionAdminTemplate(data: GuestSessionEmailData): {
-  subject: string;
-  html: string;
-} {
-  const content = `
-    <h2 style="color:#111827;font-size:20px;margin:0 0 6px;font-weight:800;">Guest Session Started</h2>
-    <p style="color:#6b7280;font-size:13px;margin:0 0 24px;line-height:1.6;">
-      A visitor chose <strong>Continue as Guest</strong>. No customer email was collected,
-      but the metadata below may help identify the session.
-    </p>
-
-    ${detailsTable([
-      { label: "Session Type", value: "Guest / Anonymous", accent: true },
-      { label: "Guest ID", value: data.guestId },
-      { label: "Created", value: formatDateTimeEmail(data.createdAt) },
-    ])}
-
-    ${metadataBlock("Guest Metadata", data.metadata)}`;
-
-  return {
-    subject: `Guest Session Started: ${data.guestId.slice(0, 8)}...`,
-    html: baseLayout(content),
-  };
-}
-
 export type {
   OrderEmailData,
   OrderItem,
   PasswordResetEmailData,
   RegisteredUserEmailData,
-  GuestSessionEmailData,
   VisitorMetadata,
 };

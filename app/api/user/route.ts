@@ -2,8 +2,10 @@ export const dynamic = "force-dynamic";
 
 import { errorResponse, successResponse } from "@/lib/api-response";
 import { createClientCookies } from "@/lib/supabase-server";
+import { after } from "next/server";
+import { recordVisitorRequest } from "@/lib/visitor-ip-logs";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const supabaseServer = await createClientCookies();
     const {
@@ -14,6 +16,7 @@ export async function GET() {
     if (authError || !user) {
       return errorResponse("User not found or not authenticated", 401);
     }
+    after(() => recordVisitorRequest(request, { user, source: "session" }));
 
     const { data: profile } = await supabaseServer
       .from("profiles")
