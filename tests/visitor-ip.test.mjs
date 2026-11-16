@@ -5,6 +5,8 @@ import {
   visitorRequestIp,
   visitorHostname,
   visitorDevice,
+  visitorAutomation,
+  VISITOR_BOT_PATTERN,
   parseIpQuery,
   edgeVisitorGeo,
   shouldLogVisitor,
@@ -12,6 +14,60 @@ import {
   safeVisitorReferer,
   visitorMapUrl,
 } from "../lib/visitor-ip-core.ts";
+
+test("Meta preview crawlers are classified as automation without labeling Facebook app browsers as bots", () => {
+  const ua =
+    "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)";
+  const result = visitorDevice(new Headers({ "user-agent": ua }));
+  assert.equal(result.metadata.is_bot, true);
+  assert.equal(result.metadata.device_type, "Bot / automation");
+  assert.equal(result.metadata.browser, "Meta link preview");
+  for (const name of [
+    "meta-externalagent",
+    "meta-externalfetcher",
+    "meta-webindexer",
+    "meta-externalads",
+    "Facebot",
+  ])
+    assert.equal(visitorAutomation(`${name}/1.1`), "Meta crawler");
+  assert.equal(
+    visitorAutomation("Mozilla/5.0 Chrome/130.0 [FBAN/FB4A;FBAV/490.0]"),
+    null,
+  );
+});
+
+test("known automation is excluded while ordinary and social-app browsers remain eligible", () => {
+  const pattern = new RegExp(VISITOR_BOT_PATTERN, "i");
+  for (const ua of [
+    "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+    "meta-externalagent/1.1",
+    "Mozilla/5.0 (compatible; bingbot/2.0; +http://www.bing.com/bingbot.htm)",
+    "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+    "MetaPeptides-Deployment-Monitor/1.0",
+    "http://meta-peptides.com/wp-admin/install.php?step=1",
+    "curl/8.7.1",
+    "python-requests/2.32.0",
+    "Go-http-client/1.1",
+    "Mozilla/5.0 HeadlessChrome/130.0.0.0",
+  ]) {
+    assert.equal(pattern.test(ua), true, ua);
+    assert.equal(visitorDevice(new Headers({ "user-agent": ua })).metadata.is_bot, true, ua);
+    assert.equal(shouldLogVisitor(new Request("https://metawellness.id/shop", {
+      headers: { "user-agent": ua },
+    })), false, ua);
+  }
+  for (const ua of [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Version/18.0 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 Chrome/130.0 [FBAN/FB4A;FBAV/490.0]",
+    "Mozilla/5.0 Chrome/130.0 Instagram 350.0.0.0",
+  ]) {
+    assert.equal(pattern.test(ua), false, ua);
+    assert.equal(shouldLogVisitor(new Request("https://metawellness.id/shop", {
+      headers: { "user-agent": ua },
+    })), true, ua);
+  }
+});
 
 test("public IPv4/IPv6 normalization rejects private, reserved, spoofed and malformed values", () => {
   assert.equal(publicIp("8.8.8.8"), "8.8.8.8");

@@ -51,10 +51,10 @@ export default function VisitorLogsPage() {
       </header>
       <div className="rounded-xl border border-border bg-card p-4 text-xs leading-relaxed text-muted-foreground">
         Satu baris untuk setiap IP; kunjungan ulang tidak membuat log baru.
-        Browser/perangkat baru ditambahkan ke detail IP. Email notifikasi guest
-        sudah diganti dengan pencatatan ini. Lokasi IP merupakan perkiraan
-        jaringan; nama/telepon hanya tersedia jika pernah diberikan melalui akun
-        atau checkout.
+        Browser/perangkat baru ditambahkan ke detail IP. Bot/crawler yang dikenali
+        otomatis dikecualikan. Lokasi IP merupakan perkiraan jaringan;
+        nama/telepon hanya tersedia jika pernah diberikan melalui akun atau
+        checkout.
       </div>
       <div className="flex flex-wrap justify-between gap-3">
         <form onSubmit={filter} className="flex min-w-0 flex-wrap gap-2">

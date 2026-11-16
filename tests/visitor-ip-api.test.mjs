@@ -273,6 +273,19 @@ test("a new IP is enriched once and provider failure still preserves capture", a
   }
 });
 
+test("bot requests never write IPs/devices/identities or call enrichment, including auth hooks", async () => {
+  const { handlers, calls } = recorder({ created: true });
+  for (const ua of ["facebookexternalhit/1.1", "Googlebot/2.1", "curl/8.7.1"]) {
+    const req = pageRequest();
+    req.headers.set("user-agent", ua);
+    await handlers.recordVisitorRequest(req);
+    await handlers.recordVisitorRequest(req, {
+      user: { id, is_anonymous: true }, source: "guest",
+    });
+  }
+  assert.deepEqual(calls, []);
+});
+
 test("proxy captures storefront pages in background without adding an auth roundtrip; staff remains blocked", async () => {
   const capture = [],
     background = [];
@@ -325,4 +338,93 @@ test("proxy captures storefront pages in background without adding an auth round
     (await make("admin").proxy(req("/panel-xyz123/visitor-logs"), event)).url,
     "https://meta-peptides.com/panel-xyz123/orders",
   );
+});
+
+test("historical bot-only IPs disappear before pagination; mixed IPs retain only browser devices", async () => {
+  const bot = { user_agent: "facebookexternalhit/1.1", is_bot: false };
+  const browser = { user_agent: "Mozilla/5.0 Chrome/130.0", is_bot: false };
+  const ips = [
+    { id: "bot-only", devices: [{ metadata: bot }] },
+    { id: "flagged-bot", devices: [{ metadata: { ...browser, is_bot: true } }] },
+    { id, devices: [{ metadata: bot }, { metadata: browser }] },
+    ...Array.from({ length: 30 }, (_, i) => ({
+      id: `browser-${i}`, devices: [{ metadata: browser }],
+    })),
+  ];
+  const db = {
+    from(table) {
+      let fields = "", ipId, start = 0, end = Infinity;
+      const filters = [];
+      const matching = (devices, relation = "") => devices.filter((row) =>
+        filters.filter((f) => f.relation === relation).every((f) => f.test(row.metadata)),
+      );
+      return {
+        select(value) {
+          fields = value;
+          return this;
+        },
+        not(column, op, value) {
+          assert.equal(op, "imatch");
+          const parts = column.split(".");
+          filters.push({ relation: parts.length > 1 ? parts[0] : "",
+            test: (metadata) => !new RegExp(value, "i").test(metadata.user_agent) });
+          return this;
+        },
+        or(_expression, options) {
+          filters.push({ relation: options?.referencedTable || "",
+            test: (metadata) => metadata.is_bot !== true });
+          return this;
+        },
+        order() { return this; },
+        limit() { return this; },
+        range(a, b) {
+          start = a; end = b;
+          return this;
+        },
+        eq(_column, value) {
+          ipId = value;
+          return this;
+        },
+        async maybeSingle() {
+          return { data: ips.find((row) => row.id === ipId), error: null };
+        },
+        then(resolve) {
+          let data = [];
+          if (table === "visitor_ip_logs") {
+            data = ips.map((row) => ({
+              id: row.id,
+              visitor_ip_devices: [{ count: matching(row.devices, "visitor_ip_devices").length }],
+              browser_agents: matching(row.devices, "browser_agents"),
+            })).filter((row) => !fields.includes("!inner") || row.browser_agents.length);
+          } else if (table === "visitor_ip_devices") {
+            data = matching(ips.find((row) => row.id === ipId)?.devices || []);
+          }
+          return Promise.resolve({
+            data: data.slice(start, end + 1), count: data.length,
+            error: null,
+          }).then(resolve);
+        },
+      };
+    },
+  };
+  const handlers = load("../lib/visitor-ip-logs.ts", {
+    "@/lib/supabase-server": { supabaseAdmin: db },
+    "@/lib/visitor-ip-core": core,
+  });
+  const list = await handlers.listVisitorIps(new URLSearchParams());
+  assert.equal(list.pagination.total, 31);
+  assert.equal(list.pagination.total_pages, 2);
+  assert.equal(list.items.length, 30);
+  assert.equal(list.items[0].id, id);
+  assert.equal(list.items[0].visitor_ip_devices[0].count, 1);
+  assert.equal("browser_agents" in list.items[0], false);
+  const last = await handlers.listVisitorIps(new URLSearchParams({ page: "2" }));
+  assert.equal(last.items.length, 1);
+  assert.equal(last.pagination.total, 31);
+  const detail = await handlers.getVisitorIp(id);
+  assert.equal(detail.device_count, 1);
+  assert.equal(detail.devices[0].metadata.user_agent, browser.user_agent);
+  await assert.rejects(handlers.getVisitorIp("bot-only"), { status: 404 });
+  await assert.rejects(handlers.getVisitorIp("flagged-bot"), { status: 404 });
+  assert.equal(bot.is_bot, false, "historical evidence stays unchanged");
 });

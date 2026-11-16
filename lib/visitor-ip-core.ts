@@ -157,12 +157,26 @@ export function parseIpQuery(data: any, expectedIp: string): VisitorGeo | null {
     if (typeof data.risk?.[key] === "boolean") result[key] = data.risk[key];
   return Object.keys(result).length ? result : null;
 }
+// Keep this pattern compatible with JavaScript and PostgreSQL ARE (PostgREST
+// imatch), so capture and historical filtering make the same decision.
+export const VISITOR_BOT_PATTERN =
+  "facebookexternalhit|meta-(externalagent|externalfetcher|externalads|webindexer)|facebot|bot([^a-z0-9_]|$)|crawler|spider|slurp|headless|curl/|wget/|python-requests|python-urllib|aiohttp|Go-http-client/|PostmanRuntime/|monitor|^https?://";
+const visitorBotPattern = new RegExp(VISITOR_BOT_PATTERN, "i");
+export function visitorAutomation(userAgent: string): string | null {
+  if (/^facebookexternalhit(?:\/|\s|$)/i.test(userAgent))
+    return "Meta link preview";
+  if (
+    /^(?:meta-(?:externalagent|externalfetcher|externalads|webindexer)|facebot)(?:\/|\s|$)/i.test(
+      userAgent,
+    )
+  )
+    return "Meta crawler";
+  return visitorBotPattern.test(userAgent) ? "Bot / automation" : null;
+}
 export function visitorDevice(headers: Headers) {
   const ua = clip(headers.get("user-agent"), 1600);
-  const bot =
-    /bot\b|crawler|spider|slurp|headless|curl\/|wget\/|python-requests|monitor/i.test(
-      ua,
-    );
+  const automation = visitorAutomation(ua);
+  const bot = Boolean(automation);
   const tablet =
     /iPad|Tablet|Android(?!.*Mobile)/i.test(ua) ||
     (/Macintosh/.test(ua) && /Mobile/.test(ua));
@@ -183,7 +197,7 @@ export function visitorDevice(headers: Headers) {
     [/(?:Chrome|CriOS)\/([\d.]+)/, "Chrome"],
     [/Version\/([\d.]+).*Safari/, "Safari"],
   ] as const;
-  let browser = bot ? "Automation" : "Unknown",
+  let browser = automation || "Unknown",
     browser_version = "";
   if (!bot)
     for (const [pattern, name] of browserTests) {
@@ -248,6 +262,7 @@ export function shouldLogVisitor(request: Request) {
   const path = new URL(request.url).pathname;
   return (
     ["GET", "HEAD"].includes(request.method) &&
+    !visitorAutomation(request.headers.get("user-agent") || "") &&
     !/^\/(?:api(?:\/|$)|_next(?:\/|$)|panel-xyz123(?:\/|$)|login-panel(?:\/|$))/.test(
       path,
     ) &&

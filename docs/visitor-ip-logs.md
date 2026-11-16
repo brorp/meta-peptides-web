@@ -19,6 +19,19 @@ login, registration, OAuth, user-session and checkout requests can link the
 server-verified account to the same IP. Requests blocked before reaching the
 application (for example by a firewall) are outside this log's coverage.
 
+Recognized bot/crawler User-Agents (including Meta link previews, Google/Bing,
+headless tools, monitors and command-line HTTP clients) are skipped before any
+database write or enrichment, including on auth/checkout hooks. The panel also
+filters existing bot devices and bot-only IPs using the raw User-Agent, covering
+older Meta records whose `is_bot` flag was false. Filtering happens in the query
+before pagination and totals. Mixed IPs remain visible if they have a non-bot
+device; only those devices are counted/shown. Stored historical evidence is not
+deleted. No schema migration is needed for this filter.
+
+This removes identifiable automation, not every possible bot: a bot can imitate
+a browser User-Agent. Country, ISP and datacenter flags alone do not exclude an
+IP, so legitimate visitors using VPNs or shared networks are not discarded.
+
 - One canonical IPv4/IPv6 record per IP, across both domains.
 - A repeated IP, browser signature or linked account creates no duplicate row.
 - New browser/device signatures become child records of the existing IP.

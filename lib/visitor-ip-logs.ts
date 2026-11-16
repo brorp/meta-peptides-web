@@ -9,6 +9,7 @@ import {
   visitorHostname,
   visitorRequestIp,
   VISITOR_HOSTS,
+  VISITOR_BOT_PATTERN,
   VISITOR_MIGRATION_MESSAGE,
 } from "@/lib/visitor-ip-core";
 import type { User } from "@supabase/supabase-js";
@@ -104,6 +105,8 @@ export async function recordVisitorRequest(
     const ip = visitorRequestIp(request.headers, vercel, development);
     if (!hostname || !ip) return;
     const device = visitorDevice(request.headers);
+    // Auth/checkout hooks also call this directly, outside the proxy filter.
+    if (device.metadata.is_bot) return;
     const result = await supabaseAdmin
       .rpc("visitor_log_record", {
         p_ip: ip,
@@ -140,9 +143,20 @@ export async function listVisitorIps(params: URLSearchParams) {
   let query = supabaseAdmin
     .from("visitor_ip_logs")
     .select(
-      "id,ip_address,first_seen_at,hostnames,entry_path,geo,geo_status,geo_source,geo_checked_at,visitor_ip_devices(count),visitor_ip_identities(count)",
+      "id,ip_address,first_seen_at,hostnames,entry_path,geo,geo_status,geo_source,geo_checked_at,visitor_ip_devices(count),visitor_ip_identities(count),browser_agents:visitor_ip_devices!inner(metadata)",
       { count: "exact" },
-    );
+    )
+    // Filter before pagination/counting. !inner retains a shared IP when it has
+    // a normal browser, even if a crawler was its first recorded device.
+    .not("browser_agents.metadata->>user_agent", "imatch", VISITOR_BOT_PATTERN)
+    .or("metadata->>is_bot.is.null,metadata->>is_bot.neq.true", {
+      referencedTable: "browser_agents",
+    })
+    .not("visitor_ip_devices.metadata->>user_agent", "imatch", VISITOR_BOT_PATTERN)
+    .or("metadata->>is_bot.is.null,metadata->>is_bot.neq.true", {
+      referencedTable: "visitor_ip_devices",
+    })
+    .limit(1, { referencedTable: "browser_agents" });
   if (hostname) query = query.contains("hostnames", [hostname]);
   const ip = publicIp(search);
   if (ip) query = query.eq("ip_address", ip);
@@ -160,7 +174,7 @@ export async function listVisitorIps(params: URLSearchParams) {
     .range((page - 1) * 30, page * 30 - 1);
   if (result.error) throw new VisitorLogError(VISITOR_MIGRATION_MESSAGE, 503);
   return {
-    items: result.data || [],
+    items: (result.data || []).map(({ browser_agents, ...row }) => row),
     pagination: {
       page,
       total: result.count || 0,
@@ -179,6 +193,8 @@ export async function getVisitorIp(id: string) {
       .from("visitor_ip_devices")
       .select("*", { count: "exact" })
       .eq("ip_id", id)
+      .not("metadata->>user_agent", "imatch", VISITOR_BOT_PATTERN)
+      .or("metadata->>is_bot.is.null,metadata->>is_bot.neq.true")
       .order("first_seen_at", { ascending: false })
       .limit(100),
     supabaseAdmin
@@ -190,7 +206,8 @@ export async function getVisitorIp(id: string) {
   ]);
   if (ip.error || devices.error || identities.error)
     throw new VisitorLogError("Gagal memuat detail IP.");
-  if (!ip.data) throw new VisitorLogError("IP tidak ditemukan.", 404);
+  if (!ip.data || !devices.data?.length)
+    throw new VisitorLogError("IP tidak ditemukan.", 404);
   const users = (identities.data || []).map((row) => row.user_id);
   const [profiles, orders] = users.length
     ? await Promise.all([
@@ -215,7 +232,7 @@ export async function getVisitorIp(id: string) {
     throw new VisitorLogError("Gagal memuat data akun terkait.");
   return {
     ip: ip.data,
-    devices: devices.data || [],
+    devices: devices.data,
     device_count: devices.count || 0,
     identity_count: identities.count || 0,
     identities: (identities.data || []).map((row) => ({
